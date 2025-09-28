@@ -96,50 +96,80 @@ fun LoginScreen(
                         Log.e(TAG, "WebView error: ${error?.description ?: "unknown"}")
                     }
 
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        Log.d(TAG, "Finished loading: $url")
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            super.onPageFinished(view, url)
+                            Log.d(TAG, "Finished loading: $url")
 
-                        // 目的のホーム URL に到達したら Cookie から SESSION を取る
-                        if (!url.isNullOrBlank() && url.startsWith(SCOMB_HOME_URL)) {
-                            try {
-                                val cookies = CookieManager.getInstance().getCookie(url)
-                                Log.d(TAG, "CookieManager cookies: $cookies")
+                            // ホームページに到達したらCookieを取得
+                            if (!url.isNullOrBlank() && url.startsWith(SCOMB_HOME_URL)) {
+                                // 少し待機してからCookieを取得（非同期処理の完了を待つ）
+                                view?.postDelayed({
+                                    try {
+                                        // CookieManager.flush()を呼んで確実に保存
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                            CookieManager.getInstance().flush()
+                                        }
 
-                                // SESSION=... を探す
-                                val sessionCookie = cookies
+                                        val cookies = CookieManager.getInstance().getCookie(url)
+                                        Log.d(TAG, "All cookies: $cookies")
+
+                                        if (!cookies.isNullOrBlank()) {
+                                            // SESSION cookieを探す
+                                            val sessionCookie = cookies
+                                                .split(";")
+                                                .map { it.trim() }
+                                                .firstOrNull { it.startsWith("SESSION=") }
+
+                                            if (!sessionCookie.isNullOrBlank()) {
+                                                val sessionId = sessionCookie.substringAfter("SESSION=").trim()
+                                                Log.d(TAG, "Session ID found: $sessionId")
+                                                viewModel.onLoginSuccess(sessionId)
+                                            } else {
+                                                // JavaScriptでdocument.cookieを取得（フォールバック）
+                                                tryGetCookieViaJavaScript(view, url)
+                                            }
+                                        } else {
+                                            Log.w(TAG, "No cookies found from CookieManager")
+                                            tryGetCookieViaJavaScript(view, url)
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "Error retrieving cookies", e)
+                                    }
+                                }, 1000) // 1秒待機
+                            }
+                        }
+
+                        private fun tryGetCookieViaJavaScript(view: WebView?, url: String) {
+                            Log.d(TAG, "Trying to get cookie via JavaScript")
+                            view?.evaluateJavascript(
+                                """
+            (function() {
+                var cookies = document.cookie;
+                console.log('Document cookies: ' + cookies);
+                return cookies;
+            })()
+            """.trimIndent()
+                            ) { result ->
+                                Log.d(TAG, "JavaScript cookie result: $result")
+                                val raw = result?.removeSurrounding("\"")
+                                    ?.replace("\\u003D", "=")
+                                    ?.replace("\\u0026", "&")
+
+                                val session = raw
                                     ?.split(";")
                                     ?.map { it.trim() }
                                     ?.firstOrNull { it.startsWith("SESSION=") }
 
-                                if (!sessionCookie.isNullOrBlank()) {
-                                    val sessionId = sessionCookie.substringAfter("SESSION=").trim()
-                                    Log.d(TAG, "sessionId found: $sessionId")
+                                if (!session.isNullOrBlank()) {
+                                    val sessionId = session.substringAfter("SESSION=").trim()
+                                    Log.d(TAG, "Session ID from JS: $sessionId")
                                     viewModel.onLoginSuccess(sessionId)
                                 } else {
-                                    // HttpOnly / SameSite 等で取れない可能性あり → document.cookie を試す（HttpOnly は無理）
-                                    view?.evaluateJavascript("document.cookie") { result ->
-                                        Log.d(TAG, "document.cookie: $result")
-                                        // result は文字列リテラルなので整形
-                                        val raw = result?.removeSurrounding("\"")?.replace("\\u003D", "=")?.replace("\\u0026", "&")
-                                        val session = raw
-                                            ?.split(";")
-                                            ?.map { it.trim() }
-                                            ?.firstOrNull { it.startsWith("SESSION=") }
-                                        if (!session.isNullOrBlank()) {
-                                            val sessionId = session.substringAfter("SESSION=").trim()
-                                            Log.d(TAG, "sessionId from document.cookie: $sessionId")
-                                            viewModel.onLoginSuccess(sessionId)
-                                        } else {
-                                            Log.w(TAG, "No session cookie found after JS check")
-                                        }
-                                    }
+                                    Log.e(TAG, "Failed to retrieve session cookie")
+                                    // エラーをUIに表示する処理を追加
                                 }
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Cookie read failed", e)
                             }
                         }
-                    }
 
                     // 別タブや外部のリンクをアプリ内で開きたい場合に制御
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {

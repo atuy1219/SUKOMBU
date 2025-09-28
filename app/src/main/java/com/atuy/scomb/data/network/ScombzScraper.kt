@@ -9,6 +9,7 @@ import com.atuy.scomb.util.SessionExpiredException
 import org.jsoup.Jsoup
 import retrofit2.Retrofit
 import java.lang.Exception
+import android.util.Log
 
 object ScombzConstant {
     const val SCOMBZ_DOMAIN = "https://scombz.shibaura-it.ac.jp"
@@ -39,9 +40,10 @@ class ScombzScraper {
     suspend fun fetchTimetable(sessionId: String, year: Int, term: String): List<ClassCell> {
         val response = api.getTimetable("SESSION=$sessionId", year, term)
         val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for Timetable")
-        if (html.contains("ログイン")) throw SessionExpiredException()
-
         val document = Jsoup.parse(html)
+        if (document.title() != "時間割") {
+            throw SessionExpiredException()
+        }
         val timetableRows = document.getElementsByClass(ScombzConstant.TIMETABLE_ROW_CSS_CLASS_NM)
         val timetableTitle = "$year-$term"
         val classCells = mutableListOf<ClassCell>()
@@ -89,57 +91,85 @@ class ScombzScraper {
     }
 
     suspend fun fetchTasks(sessionId: String): List<Task> {
-        val response = api.getTaskList("SESSION=$sessionId")
-        val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for Tasks")
-        if (html.contains("ログイン")) throw SessionExpiredException()
+        Log.d("ScombzScraper", "Fetching tasks with session: $sessionId")
 
-        val document = Jsoup.parse(html)
-        val taskRows = document.getElementsByClass(ScombzConstant.TASK_LIST_CSS_CLASS_NM)
+        try {
+            val response = api.getTaskList("SESSION=$sessionId")
+            Log.d("ScombzScraper", "Response code: ${response.code()}")
+            Log.d("ScombzScraper", "Response headers: ${response.headers()}")
 
-        return taskRows.mapNotNull { row ->
-            try {
-                if (row.children().size < 5) return@mapNotNull null
-                val className = row.child(0).text()
-                val titleElement = row.child(2).child(0)
-                val title = titleElement.text()
-                val url = ScombzConstant.SCOMBZ_DOMAIN + titleElement.attr("href")
-                val deadlineText =
-                    row.getElementsByClass(ScombzConstant.TASK_LIST_DEADLINE_CULUMN_CSS_NM)
-                        .firstOrNull()?.child(1)?.text() ?: ""
-                val deadline = DateUtils.stringToTime(deadlineText)
-
-                val uri = java.net.URI(url)
-                val queryParams = uri.query.split("&")
-                    .associate { val parts = it.split("="); parts[0] to parts.getOrNull(1) }
-                val classId = queryParams["idnumber"] ?: ""
-                val reportId = queryParams["reportId"] ?: queryParams["examinationId"] ?: ""
-
-                val taskTypeText = row.child(1).text()
-                val taskType = when {
-                    taskTypeText.contains("課題") -> 0
-                    taskTypeText.contains("テスト") -> 1
-                    taskTypeText.contains("アンケート") -> 2
-                    else -> 3
-                }
-
-                Task(
-                    id = "$taskType-$classId-$reportId", title = title, className = className,
-                    taskType = taskType, deadline = deadline, url = url, classId = classId,
-                    reportId = reportId, customColor = null, addManually = false, done = false
+            if (!response.isSuccessful) {
+                Log.e(
+                    "ScombzScraper",
+                    "Failed response: ${response.code()} - ${response.message()}"
                 )
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
+                throw ScrapingFailedException("HTTP ${response.code()}: ${response.message()}")
+            }
+
+            val html = response.body()?.string()
+                ?: throw ScrapingFailedException("Empty response body")
+
+            Log.d("ScombzScraper", "HTML length: ${html.length}")
+            Log.d("ScombzScraper", "HTML preview: ${html.take(500)}")
+
+            // ログインページにリダイレクトされていないかチェック
+            val document = Jsoup.parse(html)
+            if (document.title() != "課題・テスト一覧") {
+                throw SessionExpiredException()
+            }
+            val taskRows = document.getElementsByClass(ScombzConstant.TASK_LIST_CSS_CLASS_NM)
+            Log.d("ScombzScraper", "Found ${taskRows.size} task rows")
+
+            return taskRows.mapNotNull { row ->
+                try {
+                    if (row.children().size < 5) return@mapNotNull null
+                    val className = row.child(0).text()
+                    val titleElement = row.child(2).child(0)
+                    val title = titleElement.text()
+                    val url = ScombzConstant.SCOMBZ_DOMAIN + titleElement.attr("href")
+                    val deadlineText =
+                        row.getElementsByClass(ScombzConstant.TASK_LIST_DEADLINE_CULUMN_CSS_NM)
+                            .firstOrNull()?.child(1)?.text() ?: ""
+                    val deadline = DateUtils.stringToTime(deadlineText)
+
+                    val uri = java.net.URI(url)
+                    val queryParams = uri.query.split("&")
+                        .associate { val parts = it.split("="); parts[0] to parts.getOrNull(1) }
+                    val classId = queryParams["idnumber"] ?: ""
+                    val reportId = queryParams["reportId"] ?: queryParams["examinationId"] ?: ""
+
+                    val taskTypeText = row.child(1).text()
+                    val taskType = when {
+                        taskTypeText.contains("課題") -> 0
+                        taskTypeText.contains("テスト") -> 1
+                        taskTypeText.contains("アンケート") -> 2
+                        else -> 3
+                    }
+
+                    Task(
+                        id = "$taskType-$classId-$reportId", title = title, className = className,
+                        taskType = taskType, deadline = deadline, url = url, classId = classId,
+                        reportId = reportId, customColor = null, addManually = false, done = false
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
             }
         }
-    }
+            catch (e: Exception) {
+                Log.e("ScombzScraper", "Error fetching tasks", e)
+                throw e
+            }
+        }
 
     suspend fun fetchSurveys(sessionId: String): List<Task> {
         val response = api.getSurveyList("SESSION=$sessionId")
         val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for Surveys")
-        if (html.contains("ログイン")) throw SessionExpiredException()
-
         val document = Jsoup.parse(html)
+        if (document.title() != "アンケート一覧") {
+            throw SessionExpiredException()
+        }
         val surveyRows = document.getElementsByClass(ScombzConstant.SURVEY_ROW_CSS_NM)
 
         return surveyRows.mapNotNull { row ->
@@ -184,9 +214,10 @@ class ScombzScraper {
     suspend fun fetchNews(sessionId: String): List<NewsItem> {
         val response = api.getNewsList("SESSION=$sessionId")
         val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for News")
-        if (html.contains("ログイン")) throw SessionExpiredException()
-
         val document = Jsoup.parse(html)
+        if (document.title() != "Home") {
+            throw SessionExpiredException()
+        }
         val newsRows = document.getElementsByClass(ScombzConstant.NEWS_LIST_ITEM_CSS_NM)
 
         return newsRows.mapNotNull { row ->
