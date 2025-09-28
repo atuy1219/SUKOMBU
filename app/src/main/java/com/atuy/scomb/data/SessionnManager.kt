@@ -33,4 +33,10 @@ class SessionManager @Inject constructor(@ApplicationContext private val context
     val sessionIdFlow: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[SESSION_ID_KEY]
     }
+
+    suspend fun clearSessionId() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(SESSION_ID_KEY)
+        }
+    }
 }

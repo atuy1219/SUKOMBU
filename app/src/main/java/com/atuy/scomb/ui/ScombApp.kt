@@ -1,3 +1,4 @@
+// FILE: app/src/main/java/com/atuy/scomb/ui/ScombApp.kt
 package com.atuy.scomb.ui
 
 import androidx.compose.foundation.layout.Box
@@ -21,8 +22,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.atuy.scomb.ui.features.HomeScreen
 import com.atuy.scomb.ui.features.LoginScreen
+import com.atuy.scomb.ui.features.NewsScreen
+import com.atuy.scomb.ui.features.SettingsScreen
 import com.atuy.scomb.ui.features.TaskListScreen
+import com.atuy.scomb.ui.features.TimetableScreen
 import com.atuy.scomb.ui.viewmodel.AuthState
 import com.atuy.scomb.ui.viewmodel.MainViewModel
 
@@ -40,13 +45,13 @@ fun ScombApp(
             }
         }
         is AuthState.Authenticated, is AuthState.Unauthenticated -> {
-            val startDestination = if (authState is AuthState.Authenticated) Screen.Tasks.route else Screen.Login.route
+            // ログイン後の開始画面をホームに変更
+            val startDestination = if (authState is AuthState.Authenticated) Screen.Home.route else Screen.Login.route
 
             Scaffold(
                 bottomBar = {
-                    // ログイン成功後のみボトムバーを表示
                     if (authState is AuthState.Authenticated) {
-                        val items = listOf(Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
+                        val items = listOf(Screen.Timetable, Screen.Tasks, Screen.Home, Screen.News, Screen.Settings)
                         NavigationBar {
                             val navBackStackEntry by navController.currentBackStackEntryAsState()
                             val currentDestination = navBackStackEntry?.destination
@@ -76,16 +81,18 @@ fun ScombApp(
                     composable(Screen.Login.route) {
                         LoginScreen(
                             onLoginSuccess = {
-                                navController.navigate(Screen.Tasks.route) {
+                                // ログイン成功時はホーム画面に遷移
+                                navController.navigate(Screen.Home.route) {
                                     popUpTo(Screen.Login.route) { inclusive = true }
                                 }
                             }
                         )
                     }
+                    composable(Screen.Home.route) { HomeScreen() } // ホーム画面のルートを追加
                     composable(Screen.Tasks.route) { TaskListScreen() }
-                    composable(Screen.Timetable.route) { Text("時間割画面") }
-                    composable(Screen.News.route) { Text("お知らせ画面") }
-                    composable(Screen.Settings.route) { Text("設定画面") }
+                    composable(Screen.Timetable.route) { TimetableScreen() }
+                    composable(Screen.News.route) { NewsScreen() }
+                    composable(Screen.Settings.route) { SettingsScreen(navController = navController) }
                 }
             }
         }

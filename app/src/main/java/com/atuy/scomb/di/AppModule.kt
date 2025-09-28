@@ -1,3 +1,5 @@
+// FILE: app/src/main/java/com/atuy/scomb/di/AppModule.kt
+
 package com.atuy.scomb.di
 
 import android.content.Context
@@ -36,16 +38,14 @@ object AppModule {
         classCellDao: com.atuy.scomb.data.db.ClassCellDao,
         newsItemDao: com.atuy.scomb.data.db.NewsItemDao,
         scraper: ScombzScraper,
-        sessionManager: com.atuy.scomb.data.SessionManager,
-        @ApplicationContext context: Context
-    ): com.atuy.scomb.data.repository.ScombzRepository {
-        return com.atuy.scomb.data.repository.ScombzRepository(
+        sessionManager: com.atuy.scomb.data.SessionManager
+    ): ScombzRepository {
+        return ScombzRepository(
             taskDao,
             classCellDao,
             newsItemDao,
             scraper,
-            sessionManager,
-            context
+            sessionManager
         )
     }
 }
