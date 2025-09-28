@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:name=".MyApplication"
@@ -23,6 +24,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".auth.LoginRedirectActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter android:label="auth callback">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <!-- 例: myapp://auth/callback -->
+                <data android:scheme="myapp" android:host="auth" android:pathPrefix="/callback"/>
+            </intent-filter>
+        </activity>
+
     </application>
 
 </manifest>

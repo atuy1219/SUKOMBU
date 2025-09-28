@@ -1,53 +1,56 @@
 package com.atuy.scomb.ui.features
 
-import android.webkit.CookieManager
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.content.Context
+import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.atuy.scomb.ui.viewmodel.LoginUiState
-import com.atuy.scomb.ui.viewmodel.LoginViewModel
-import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import com.atuy.scomb.R
 
-const val SCOMB_LOGIN_PAGE_URL = "https://scombz.shibaura-it.ac.jp/saml/login?idp=http://adfs.sic.shibaura-it.ac.jp/adfs/services/trust"
-const val SCOMB_HOME_URL = "https://scombz.shibaura-it.ac.jp/portal/home"
+// Scomb のログインページ（redirect_uri は myapp://auth/callback を登録しておく）
+const val SCOMB_LOGIN_PAGE_URL =
+    "https://scombz.shibaura-it.ac.jp/saml/login?idp=http://adfs.sic.shibaura-it.ac.jp/adfs/services/trust&redirect_uri=myapp://auth/callback"
 
-@Composable
-fun LoginScreen(
-    viewModel: LoginViewModel = hiltViewModel(),
-    onLoginSuccess: () -> Unit
+/**
+ * Chrome Custom Tabs を開くヘルパー
+ */
+private fun openLoginWithCustomTab(
+    context: Context,
+    loginUrl: String,
+    toolbarColorResId: Int? = null
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val builder = CustomTabsIntent.Builder()
+        .setShowTitle(true)
 
-    // ログイン成功を検知したら、引数で渡された関数を実行
-    LaunchedEffect(uiState) {
-        if (uiState is LoginUiState.Success) {
-            onLoginSuccess()
-        }
+    toolbarColorResId?.let {
+        val color = ContextCompat.getColor(context, it)
+        builder.setToolbarColor(color)
     }
 
-    // ComposeからAndroidのWebViewを呼び出す
-    AndroidView(factory = { context ->
-        WebView(context).apply {
-            settings.javaScriptEnabled = true
-            webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    // ページ読み込み完了ごとにCookieをチェック
-                    if (url == SCOMB_HOME_URL) {
-                        val cookies = CookieManager.getInstance().getCookie(url)
-                        val sessionId = cookies?.split(";")?.find { it.trim().startsWith("SESSION=") }
-                        if (sessionId != null) {
-                            // SESSIONが見つかったらViewModelに通知
-                            viewModel.onLoginSuccess(sessionId.trim())
-                        }
-                    }
-                }
-            }
-            loadUrl(SCOMB_LOGIN_PAGE_URL)
-        }
-    })
+    val customTabsIntent = builder.build()
+    customTabsIntent.launchUrl(context, Uri.parse(loginUrl))
+}
+
+/**
+ * ログイン画面 (Custom Tabs 版)
+ */
+@Composable
+fun LoginScreen(
+    onLoginStarted: () -> Unit = {}
+) {
+    val context = LocalContext.current
+
+    Button(onClick = {
+        openLoginWithCustomTab(
+            context = context,
+            loginUrl = SCOMB_LOGIN_PAGE_URL,
+            toolbarColorResId = R.color.primary
+        )
+        onLoginStarted()
+    }) {
+        Text("Login (Open in browser)")
+    }
 }

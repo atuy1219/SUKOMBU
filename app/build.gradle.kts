@@ -58,21 +58,15 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
-    // Room
     implementation(libs.androidx.room.runtime)
-    ksp(libs.androidx.room.room.compiler) // Kotlinなら ksp を使う（既存）
+    ksp(libs.androidx.room.room.compiler)
     implementation(libs.androidx.room.ktx)
-
     implementation(libs.retrofit)
-    // <- 修正: 未クオートのコロンを使っていた行を正しい Maven 座標に変更
     implementation(libs.logging.interceptor)
     implementation(libs.jsoup)
-
-    // Hilt: kapt を利用するのが互換性高い（※kspでの使用は一部制限あり）
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
-
+    implementation(libs.androidx.browser)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.navigation.compose)
