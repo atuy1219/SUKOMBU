@@ -7,7 +7,6 @@ import androidx.activity.enableEdgeToEdge
 import dagger.hilt.android.AndroidEntryPoint
 import com.atuy.scomb.ui.ScombApp
 import com.atuy.scomb.ui.theme.ScombTheme
-import android.content.Intent
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -21,12 +20,6 @@ class MainActivity : ComponentActivity() {
                 // ここでアプリのルート Composable を呼び出す
                 ScombApp()
             }
-        }
-    }
-    override fun onNewIntent(intent: Intent?) {
-        super.onNewIntent(intent)
-        intent?.getStringExtra("auth_result_saml")?.let { saml ->
-            // ViewModel 等に投げる、UI を遷移させる、トークンを保存する等
         }
     }
 }
