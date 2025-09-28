@@ -15,30 +15,37 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-    @Provides
-    @Singleton
+    @Provides @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context) = AppDatabase.getDatabase(context)
 
-    @Provides
-    @Singleton
+    @Provides @Singleton
     fun provideTaskDao(db: AppDatabase) = db.taskDao()
 
-    @Provides
-    @Singleton
+    @Provides @Singleton
     fun provideClassCellDao(db: AppDatabase) = db.classCellDao()
 
-    @Provides
-    @Singleton
+    @Provides @Singleton
+    fun provideNewsItemDao(db: AppDatabase) = db.newsItemDao()
+
+    @Provides @Singleton
     fun provideScombzScraper() = ScombzScraper()
 
-    @Provides
-    @Singleton
+    @Provides @Singleton
     fun provideScombzRepository(
         taskDao: com.atuy.scomb.data.db.TaskDao,
         classCellDao: com.atuy.scomb.data.db.ClassCellDao,
+        newsItemDao: com.atuy.scomb.data.db.NewsItemDao,
         scraper: ScombzScraper,
+        sessionManager: com.atuy.scomb.data.SessionManager,
         @ApplicationContext context: Context
-    ): ScombzRepository {
-        return ScombzRepository(taskDao, classCellDao, scraper, context)
+    ): com.atuy.scomb.data.repository.ScombzRepository {
+        return com.atuy.scomb.data.repository.ScombzRepository(
+            taskDao,
+            classCellDao,
+            newsItemDao,
+            scraper,
+            sessionManager,
+            context
+        )
     }
 }

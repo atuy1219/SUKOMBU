@@ -34,9 +34,8 @@ class TaskListViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = TaskListUiState.Loading
             try {
-                // TODO: ログイン機能実装後、動的にsessionIdを取得する
-                val sessionId = "YOUR_SESSION_ID"
-                val tasks = repository.getAllTasks(sessionId, forceRefresh)
+                // Repository の実装に合わせる（sessionId は Repository が DataStore から取得する）
+                val tasks = repository.getTasksAndSurveys(forceRefresh)
                 _uiState.value = TaskListUiState.Success(tasks)
             } catch (e: Exception) {
                 _uiState.value = TaskListUiState.Error(e.message ?: "An unknown error occurred")

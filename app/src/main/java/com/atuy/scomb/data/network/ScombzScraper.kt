@@ -50,20 +50,36 @@ class ScombzScraper {
             cells.forEachIndexed { dayOfWeek, cell ->
                 if (cell.children().isEmpty()) return@forEachIndexed
 
-                val header = cell.getElementsByClass(ScombzConstant.TIMETABLE_CELL_HEADER_CSS_CLASS_NM).first() ?: return@forEachIndexed
-                val detail = cell.getElementsByClass(ScombzConstant.TIMETABLE_CELL_DETAIL_CSS_CLASS_NM).first() ?: return@forEachIndexed
+                val header =
+                    cell.getElementsByClass(ScombzConstant.TIMETABLE_CELL_HEADER_CSS_CLASS_NM)
+                        .first() ?: return@forEachIndexed
+                val detail =
+                    cell.getElementsByClass(ScombzConstant.TIMETABLE_CELL_DETAIL_CSS_CLASS_NM)
+                        .first() ?: return@forEachIndexed
 
                 val classId = header.id()
                 val name = header.text()
                 val room = detail.child(0).attr("title")
-                val teachers = detail.child(0).children().filter { it.tagName() == "span" }.joinToString(", ") { it.text() }
+                val teachers = detail.child(0).children().filter { it.tagName() == "span" }
+                    .joinToString(", ") { it.text() }
 
                 classCells.add(
                     ClassCell(
-                        classId = classId, period = period, dayOfWeek = dayOfWeek, isUserClassCell = false,
-                        timetableTitle = timetableTitle, year = year, term = term, name = name, teachers = teachers,
-                        room = room, customColorInt = null, url = "${ScombzConstant.SCOMBZ_DOMAIN}/lms/course?idnumber=$classId",
-                        note = null, syllabusUrl = null, numberOfCredit = null
+                        classId = classId,
+                        period = period,
+                        dayOfWeek = dayOfWeek,
+                        isUserClassCell = false,
+                        timetableTitle = timetableTitle,
+                        year = year,
+                        term = term,
+                        name = name,
+                        teachers = teachers,
+                        room = room,
+                        customColorInt = null,
+                        url = "${ScombzConstant.SCOMBZ_DOMAIN}/lms/course?idnumber=$classId",
+                        note = null,
+                        syllabusUrl = null,
+                        numberOfCredit = null
                     )
                 )
             }
@@ -87,12 +103,14 @@ class ScombzScraper {
                 val titleElement = row.child(2).child(0)
                 val title = titleElement.text()
                 val url = ScombzConstant.SCOMBZ_DOMAIN + titleElement.attr("href")
-                val deadlineText = row.getElementsByClass(ScombzConstant.TASK_LIST_DEADLINE_CULUMN_CSS_NM)
-                    .first()?.child(1)?.text() ?: ""
+                val deadlineText =
+                    row.getElementsByClass(ScombzConstant.TASK_LIST_DEADLINE_CULUMN_CSS_NM)
+                        .first()?.child(1)?.text() ?: ""
                 val deadline = DateUtils.stringToTime(deadlineText)
 
                 val uri = java.net.URI(url)
-                val queryParams = uri.query.split("&").associate { val parts = it.split("="); parts[0] to parts.getOrNull(1) }
+                val queryParams = uri.query.split("&")
+                    .associate { val parts = it.split("="); parts[0] to parts.getOrNull(1) }
                 val classId = queryParams["idnumber"] ?: ""
                 val reportId = queryParams["reportId"] ?: queryParams["examinationId"] ?: ""
 
@@ -130,7 +148,8 @@ class ScombzScraper {
 
                 val surveyId = row.child(0).attr("value")
                 val classId = row.child(1).attr("value")
-                val isDone = row.child(2).select(".portal-surveys-status").any { it.text() == "済み" }
+                val isDone =
+                    row.child(2).select(".portal-surveys-status").any { it.text() == "済み" }
                 val title = row.child(2).child(0).textNodes().firstOrNull()?.text()?.trim() ?: ""
                 val surveyDomain = row.child(5).text()
                 val deadlineText = row.child(3).child(2).text()
@@ -172,11 +191,22 @@ class ScombzScraper {
 
         return newsRows.mapNotNull { row ->
             try {
-                val titleElement = row.getElementsByClass(ScombzConstant.NEWS_LIST_ITEM_TITLE_CSS_NM).first() ?: return@mapNotNull null
+                val titleElement =
+                    row.getElementsByClass(ScombzConstant.NEWS_LIST_ITEM_TITLE_CSS_NM).first()
+                        ?: return@mapNotNull null
 
                 val newsId = titleElement.attr("data1")
                 val data2 = titleElement.attr("data2")
                 val title = titleElement.text()
-                val category = row.getElementsByClass(ScombzConstant.NEWS_CATEGORY_CSS_NM).first()?.text() ?: ""
-                val domain = row.getElementsByClass(ScombzConstant.NEWS_DOMAIN_CSS_NM).first()?.text() ?: ""
-                val publishTime = row.getElementsByClass(ScombzConstant.NEWS_PUBLISH_TIME_CSS_NM).first()?.child(0)?.text() ?:
+                val category =
+                    row.getElementsByClass(ScombzConstant.NEWS_CATEGORY_CSS_NM).first()?.text()
+                        ?: ""
+                val domain =
+                    row.getElementsByClass(ScombzConstant.NEWS_DOMAIN_CSS_NM).first()?.text() ?: ""
+                val publishTime =
+                    row.getElementsByClass(ScombzConstant.NEWS_PUBLISH_TIME_CSS_NM).first()
+                        ?.child(0)?.text() ?:
+            }
+        }
+    }
+}

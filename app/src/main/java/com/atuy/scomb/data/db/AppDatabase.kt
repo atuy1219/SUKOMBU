@@ -14,6 +14,8 @@ abstract class AppDatabase : RoomDatabase() {
 
     // このDBがどのDAOを持っているかを定義
     abstract fun taskDao(): TaskDao
+    abstract fun classCellDao(): ClassCellDao    // <- 追加
+    abstract fun newsItemDao(): NewsItemDao
     // abstract fun classCellDao(): ClassCellDao ...
 
     companion object {

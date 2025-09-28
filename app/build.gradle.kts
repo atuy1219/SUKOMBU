@@ -2,8 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.google.ksp)
-    alias(libs.plugins.google.hilt.android)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
+    id("org.jetbrains.kotlin.kapt")
 }
 
 android {
@@ -42,7 +43,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -58,15 +58,21 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // Room
     implementation(libs.androidx.room.runtime)
-    annotationProcessor(libs.androidx.room.compiler)
-    ksp(libs.androidx.room.room.compiler)
+    ksp(libs.androidx.room.room.compiler) // Kotlinなら ksp を使う（既存）
     implementation(libs.androidx.room.ktx)
+
     implementation(libs.retrofit)
-    implementation(lib.com.squareup.okhttp3:logging-interceptor)
+    // <- 修正: 未クオートのコロンを使っていた行を正しい Maven 座標に変更
+    implementation(libs.logging.interceptor)
     implementation(libs.jsoup)
+
+    // Hilt: kapt を利用するのが互換性高い（※kspでの使用は一部制限あり）
     implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
+    kapt(libs.hilt.compiler)
+
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.navigation.compose)
