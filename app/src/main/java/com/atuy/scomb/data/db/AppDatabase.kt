@@ -9,7 +9,7 @@ import androidx.room.RoomDatabase
  * アプリケーションのRoomデータベース
  * entities = { ... } には、このDBが管理する全てのエンティティクラスを列挙する
  */
-@Database(entities = [Task::class /*, ClassCell::class, ... */], version = 1, exportSchema = false)
+@Database( entities = [Task::class, ClassCell::class, NewsItem::class], version = 1, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     // このDBがどのDAOを持っているかを定義

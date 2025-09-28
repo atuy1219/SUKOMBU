@@ -191,21 +191,40 @@ class ScombzScraper {
 
         return newsRows.mapNotNull { row ->
             try {
-                val titleElement =
-                    row.getElementsByClass(ScombzConstant.NEWS_LIST_ITEM_TITLE_CSS_NM).first()
-                        ?: return@mapNotNull null
+                val titleElement = row.getElementsByClass(ScombzConstant.NEWS_LIST_ITEM_TITLE_CSS_NM).first()
+                    ?: return@mapNotNull null
 
-                val newsId = titleElement.attr("data1")
-                val data2 = titleElement.attr("data2")
-                val title = titleElement.text()
-                val category =
-                    row.getElementsByClass(ScombzConstant.NEWS_CATEGORY_CSS_NM).first()?.text()
-                        ?: ""
-                val domain =
-                    row.getElementsByClass(ScombzConstant.NEWS_DOMAIN_CSS_NM).first()?.text() ?: ""
-                val publishTime =
-                    row.getElementsByClass(ScombzConstant.NEWS_PUBLISH_TIME_CSS_NM).first()
-                        ?.child(0)?.text() ?:
+                val newsId = titleElement.attr("data1").ifBlank { "" }
+                val data2 = titleElement.attr("data2").ifBlank { "" }
+                val title = titleElement.text().trim()
+
+                val category = row.getElementsByClass(ScombzConstant.NEWS_CATEGORY_CSS_NM).first()?.text()?.trim() ?: ""
+                val domain = row.getElementsByClass(ScombzConstant.NEWS_DOMAIN_CSS_NM).first()?.text()?.trim() ?: ""
+                val publishTime = row.getElementsByClass(ScombzConstant.NEWS_PUBLISH_TIME_CSS_NM).first()
+                    ?.child(0)
+                    ?.text()
+                    ?.trim()
+                    ?: ""
+
+                // タグ抽出の例（存在しなければ空文字）
+                val tags = "" // 必要なら HTML から抽出する処理を書く
+
+                // 未読フラグの初期値（別ロジックがあれば変更）
+                val unread = true
+
+                NewsItem(
+                    newsId = newsId,
+                    data2 = data2,
+                    title = title,
+                    category = category,
+                    domain = domain,
+                    publishTime = publishTime,
+                    tags = tags,
+                    unread = unread
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
             }
         }
     }
