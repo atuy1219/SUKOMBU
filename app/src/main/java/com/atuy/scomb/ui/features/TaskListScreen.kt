@@ -24,6 +24,10 @@ import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.ui.viewmodel.TaskListUiState
 import com.atuy.scomb.ui.viewmodel.TaskListViewModel
 import com.atuy.scomb.util.DateUtils
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.material3.OutlinedTextFieldDefaults.contentPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +73,8 @@ fun TaskListScreen(
 
 @Composable
 fun TaskList(tasks: List<Task>) {
-    LazyColumn {
+    LazyColumn (
+        contentPadding = WindowInsets.navigationBars.asPaddingValues(),){
         items(tasks) { task ->
             TaskListItem(task = task)
         }

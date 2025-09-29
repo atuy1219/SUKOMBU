@@ -25,6 +25,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.ui.viewmodel.NewsUiState
 import com.atuy.scomb.ui.viewmodel.NewsViewModel
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.material3.OutlinedTextFieldDefaults.contentPadding
+import androidx.compose.material3.HorizontalDivider
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,10 +76,12 @@ fun NewsScreen(
 
 @Composable
 fun NewsList(newsItems: List<NewsItem>) {
-    LazyColumn {
+    LazyColumn(
+        contentPadding = WindowInsets.navigationBars.asPaddingValues(),
+    ) {
         items(newsItems) { news ->
             NewsListItem(newsItem = news)
-            Divider()
+            HorizontalDivider()
         }
     }
 }

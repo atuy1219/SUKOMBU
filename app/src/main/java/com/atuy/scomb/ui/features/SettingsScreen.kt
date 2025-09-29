@@ -19,6 +19,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.atuy.scomb.ui.Screen
 import com.atuy.scomb.ui.viewmodel.SettingsViewModel
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
