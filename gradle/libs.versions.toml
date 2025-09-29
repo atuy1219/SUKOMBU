@@ -17,7 +17,7 @@ hilt = "2.57.2"
 ksp = "2.0.21-1.0.26"
 androidx_hilt = "1.2.0"
 okhttpLogging = "4.11.0"
-navigation = "2.8.7"
+navigation = "2.9.5"
 lifecycle = "2.9.2"
 datastore = "1.1.7"
 
