@@ -16,7 +16,6 @@ interface ScombzApiService {
         @Header("Cookie") sessionId: String
     ): Response<ResponseBody>
 
-    // 時間割ページ（パラメータ名は適宜調整して下さい）
     @GET("lms/timetable")
     suspend fun getTimetable(
         @Header("Cookie") sessionId: String,
@@ -24,14 +23,13 @@ interface ScombzApiService {
         @Query("term") term: String
     ): Response<ResponseBody>
 
-    // アンケートページ
-    @GET("portal/surveys")
+    @GET("portal/surveys/list")
     suspend fun getSurveyList(
         @Header("Cookie") sessionId: String
     ): Response<ResponseBody>
 
     // お知らせページ
-    @GET("portal/information/list")
+    @GET("portal/home/information/list")
     suspend fun getNewsList(
         @Header("Cookie") sessionId: String
     ): Response<ResponseBody>

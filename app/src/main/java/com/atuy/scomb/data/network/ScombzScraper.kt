@@ -1,5 +1,6 @@
 package com.atuy.scomb.data.network
 
+import android.util.Log
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.Task
@@ -7,9 +8,7 @@ import com.atuy.scomb.util.DateUtils
 import com.atuy.scomb.util.ScrapingFailedException
 import com.atuy.scomb.util.SessionExpiredException
 import org.jsoup.Jsoup
-import retrofit2.Retrofit
-import java.lang.Exception
-import android.util.Log
+import javax.inject.Inject
 
 object ScombzConstant {
     const val SCOMBZ_DOMAIN = "https://scombz.shibaura-it.ac.jp"
@@ -31,19 +30,29 @@ object ScombzConstant {
     const val NEWS_PUBLISH_TIME_CSS_NM = "portal-information-list-date"
 }
 
-class ScombzScraper {
-    private val api = Retrofit.Builder()
-        .baseUrl(ScombzConstant.SCOMBZ_DOMAIN)
-        .build()
-        .create(ScombzApiService::class.java)
+class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
+
+    /**
+     * ScombZから取得したHTMLをチェックし、ログインページにリダイレクトされている場合は例外を投げる
+     * @param html HTML
+     */
+    private fun throwIfSessionExpired(html: String) {
+        val document = Jsoup.parse(html)
+        // ログインページにしか存在しないはずの要素(ユーザ名入力欄)があるかどうかで判定
+        if (document.getElementById("userNameInput") != null) {
+            throw SessionExpiredException()
+        }
+    }
 
     suspend fun fetchTimetable(sessionId: String, year: Int, term: String): List<ClassCell> {
         val response = api.getTimetable("SESSION=$sessionId", year, term)
         val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for Timetable")
+
+        // ▼▼▼ 変更点：新しい判定メソッドを使用 ▼▼▼
+        throwIfSessionExpired(html)
+        // ▲▲▲ 変更点 ▲▲▲
+
         val document = Jsoup.parse(html)
-        if (document.title() != "時間割") {
-            throw SessionExpiredException()
-        }
         val timetableRows = document.getElementsByClass(ScombzConstant.TIMETABLE_ROW_CSS_CLASS_NM)
         val timetableTitle = "$year-$term"
         val classCells = mutableListOf<ClassCell>()
@@ -92,31 +101,18 @@ class ScombzScraper {
 
     suspend fun fetchTasks(sessionId: String): List<Task> {
         Log.d("ScombzScraper", "Fetching tasks with session: $sessionId")
-
         try {
             val response = api.getTaskList("SESSION=$sessionId")
             Log.d("ScombzScraper", "Response code: ${response.code()}")
-            Log.d("ScombzScraper", "Response headers: ${response.headers()}")
 
-            if (!response.isSuccessful) {
-                Log.e(
-                    "ScombzScraper",
-                    "Failed response: ${response.code()} - ${response.message()}"
-                )
-                throw ScrapingFailedException("HTTP ${response.code()}: ${response.message()}")
-            }
-
-            val html = response.body()?.string()
-                ?: throw ScrapingFailedException("Empty response body")
-
+            val html = response.body()?.string() ?: throw ScrapingFailedException("Empty response body")
             Log.d("ScombzScraper", "HTML length: ${html.length}")
-            Log.d("ScombzScraper", "HTML preview: ${html.take(500)}")
 
-            // ログインページにリダイレクトされていないかチェック
+            // ▼▼▼ 変更点：新しい判定メソッドを使用 ▼▼▼
+            throwIfSessionExpired(html)
+            // ▲▲▲ 変更点 ▲▲▲
+
             val document = Jsoup.parse(html)
-            if (document.title() != "課題・テスト一覧") {
-                throw SessionExpiredException()
-            }
             val taskRows = document.getElementsByClass(ScombzConstant.TASK_LIST_CSS_CLASS_NM)
             Log.d("ScombzScraper", "Found ${taskRows.size} task rows")
 
@@ -124,7 +120,7 @@ class ScombzScraper {
                 try {
                     if (row.children().size < 5) return@mapNotNull null
                     val className = row.child(0).text()
-                    val titleElement = row.child(2).child(0)
+                    val titleElement = row.child(2).children().firstOrNull() ?: return@mapNotNull null
                     val title = titleElement.text()
                     val url = ScombzConstant.SCOMBZ_DOMAIN + titleElement.attr("href")
                     val deadlineText =
@@ -156,26 +152,26 @@ class ScombzScraper {
                     null
                 }
             }
+        } catch (e: Exception) {
+            Log.e("ScombzScraper", "Error fetching tasks", e)
+            throw e
         }
-            catch (e: Exception) {
-                Log.e("ScombzScraper", "Error fetching tasks", e)
-                throw e
-            }
-        }
+    }
 
     suspend fun fetchSurveys(sessionId: String): List<Task> {
         val response = api.getSurveyList("SESSION=$sessionId")
         val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for Surveys")
+
+        // ▼▼▼ 変更点：新しい判定メソッドを使用 ▼▼▼
+        throwIfSessionExpired(html)
+        // ▲▲▲ 変更点 ▲▲▲
+
         val document = Jsoup.parse(html)
-        if (document.title() != "アンケート一覧") {
-            throw SessionExpiredException()
-        }
         val surveyRows = document.getElementsByClass(ScombzConstant.SURVEY_ROW_CSS_NM)
 
         return surveyRows.mapNotNull { row ->
             try {
                 if (row.children().size < 7) return@mapNotNull null
-
                 val surveyId = row.child(0).attr("value")
                 val classId = row.child(1).attr("value")
                 val isDone =
@@ -214,21 +210,21 @@ class ScombzScraper {
     suspend fun fetchNews(sessionId: String): List<NewsItem> {
         val response = api.getNewsList("SESSION=$sessionId")
         val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for News")
+
+
+        throwIfSessionExpired(html)
+
+
         val document = Jsoup.parse(html)
-        if (document.title() != "Home") {
-            throw SessionExpiredException()
-        }
         val newsRows = document.getElementsByClass(ScombzConstant.NEWS_LIST_ITEM_CSS_NM)
 
         return newsRows.mapNotNull { row ->
             try {
                 val titleElement = row.getElementsByClass(ScombzConstant.NEWS_LIST_ITEM_TITLE_CSS_NM).firstOrNull()
                     ?: return@mapNotNull null
-
                 val newsId = titleElement.attr("data1").ifBlank { "" }
                 val data2 = titleElement.attr("data2").ifBlank { "" }
                 val title = titleElement.text().trim()
-
                 val category = row.getElementsByClass(ScombzConstant.NEWS_CATEGORY_CSS_NM).firstOrNull()?.text()?.trim() ?: ""
                 val domain = row.getElementsByClass(ScombzConstant.NEWS_DOMAIN_CSS_NM).firstOrNull()?.text()?.trim() ?: ""
                 val publishTime = row.getElementsByClass(ScombzConstant.NEWS_PUBLISH_TIME_CSS_NM).firstOrNull()
@@ -236,7 +232,6 @@ class ScombzScraper {
                     ?.text()
                     ?.trim()
                     ?: ""
-
                 val tags = ""
                 val unread = true
 

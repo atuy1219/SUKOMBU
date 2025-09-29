@@ -30,6 +30,7 @@ import com.atuy.scomb.ui.features.TaskListScreen
 import com.atuy.scomb.ui.features.TimetableScreen
 import com.atuy.scomb.ui.viewmodel.AuthState
 import com.atuy.scomb.ui.viewmodel.MainViewModel
+import androidx.navigation.NavController
 
 @Composable
 fun ScombApp(
@@ -88,7 +89,8 @@ fun ScombApp(
                             }
                         )
                     }
-                    composable(Screen.Home.route) { HomeScreen() } // ホーム画面のルートを追加
+                    composable(Screen.Home.route) { HomeScreen(navController = navController) }
+                    composable(Screen.Home.route) { HomeScreen() }
                     composable(Screen.Tasks.route) { TaskListScreen() }
                     composable(Screen.Timetable.route) { TimetableScreen() }
                     composable(Screen.News.route) { NewsScreen() }
