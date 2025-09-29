@@ -20,7 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.ui.viewmodel.NewsUiState
@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.OutlinedTextFieldDefaults.contentPadding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.graphics.Color
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
