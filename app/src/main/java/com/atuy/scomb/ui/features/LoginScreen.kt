@@ -1,7 +1,6 @@
 package com.atuy.scomb.ui.features
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.webkit.ConsoleMessage
@@ -70,6 +69,9 @@ fun LoginScreen(
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                         mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                     }
+
+                    // 必要なら実機の Chrome と同じ UA を設定する（コメント解除して試してください）
+                    // userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.7339.155 Mobile Safari/537.36"
                 }
 
                 // Cookie を受け入れる（ログイン検出に必要）
@@ -137,33 +139,19 @@ fun LoginScreen(
                     // 外部リンクは外部ブラウザで、ScombZ内はWebViewで開く
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                         val targetUri = request?.url ?: return true
-                        val targetUrl = targetUri.toString()
 
-                        return when {
+                        return if (targetUri.host == SCOMB_DOMAIN) {
                             // ScombZドメイン内のリンクはWebViewで読み込む
-                            targetUri.host == SCOMB_DOMAIN -> {
-                                false // falseを返すとWebViewがURLをロードする
+                            false // falseを返すとWebViewがURLをロードする
+                        } else {
+                            // 外部リンクは外部ブラウザで開く
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, targetUri)
+                                view?.context?.startActivity(intent)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to open external link: $targetUri", e)
                             }
-                            // tel:, mailto:, geo: などのインテントは外部アプリで開く
-                            targetUrl.startsWith("tel:") || targetUrl.startsWith("mailto:") || targetUrl.startsWith("geo:") -> {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, targetUri)
-                                    view?.context?.startActivity(intent)
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "Failed to open intent link: $targetUri", e)
-                                }
-                                true
-                            }
-                            // それ以外の外部リンクは外部ブラウザで開く
-                            else -> {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, targetUri)
-                                    view?.context?.startActivity(intent)
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "Failed to open external link: $targetUri", e)
-                                }
-                                true // trueを返すとWebViewはURLをロードしない
-                            }
+                            true // trueを返すとWebViewはURLをロードしない
                         }
                     }
                 }
