@@ -4,20 +4,18 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.provider.Settings
+import android.widget.Toast
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.receiver.NotificationReceiver
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
-import android.os.Build
-import android.provider.Settings
-import android.widget.Toast
 
 class ScheduleNotificationsUseCase @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) {
     operator fun invoke(tasks: List<Task>) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!alarmManager.canScheduleExactAlarms()) {
                 // 権限がない場合、ユーザーに設定を促す
                 Toast.makeText(context, "通知には「アラーム＆リマインダー」の権限が必要です", Toast.LENGTH_LONG).show()
@@ -28,7 +26,6 @@ class ScheduleNotificationsUseCase @Inject constructor(
                 }
                 return // 権限がないので、この先の処理は中断
             }
-        }
         tasks.forEach { task ->
             // 完了済みのタスクは通知しない
             if (task.done) return@forEach

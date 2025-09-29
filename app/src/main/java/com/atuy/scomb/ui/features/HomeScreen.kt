@@ -13,8 +13,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -95,7 +95,7 @@ fun UpcomingTasksSection(tasks: List<Task>) {
                     supportingContent = { Text(task.className) },
                     trailingContent = { Text(DateUtils.timeToString(task.deadline)) }
                 )
-                Divider()
+                HorizontalDivider()
             }
         }
     }
@@ -112,7 +112,7 @@ fun TodaysClassesSection(classes: List<ClassCell>) {
                     headlineContent = { Text("${classCell.period + 1}限: ${classCell.name}") },
                     supportingContent = { Text(classCell.room ?: "未設定") }
                 )
-                Divider()
+                HorizontalDivider()
             }
         }
     }
@@ -130,7 +130,7 @@ fun RecentNewsSection(news: List<NewsItem>) {
                     supportingContent = { Text(newsItem.domain) },
                     trailingContent = { Text(newsItem.publishTime) }
                 )
-                Divider()
+                HorizontalDivider()
             }
         }
     }
