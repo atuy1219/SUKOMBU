@@ -44,6 +44,11 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,12 +59,14 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = { Text("ホーム") },
+                windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = MaterialTheme.colorScheme.background
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent
                 ),
                 actions = {
                     IconButton(onClick = {
@@ -68,9 +75,9 @@ fun HomeScreen(
                                 saveState = true
                             }
                             launchSingleTop = true
-                            restoreState = true
-                        }
-                    }) {                        Icon(
+                            restoreState = true                    }})
+                        {
+                        Icon(
                             imageVector = Icons.Outlined.Settings,
                             contentDescription = "設定"
                         )
@@ -79,6 +86,7 @@ fun HomeScreen(
             )
         }
     ) { innerPadding ->
+        // Scaffoldから渡されるpadding（トップバーの高さ分など）をコンテンツに適用
         Box(
             modifier = Modifier
                 .padding(innerPadding)

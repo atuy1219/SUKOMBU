@@ -25,9 +25,13 @@ import com.atuy.scomb.ui.viewmodel.TaskListUiState
 import com.atuy.scomb.ui.viewmodel.TaskListViewModel
 import com.atuy.scomb.util.DateUtils
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.OutlinedTextFieldDefaults.contentPadding
+import androidx.compose.ui.graphics.Color
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,9 +44,10 @@ fun TaskListScreen(
         topBar = {
             TopAppBar(
                 title = { Text("課題・テスト一覧") },
+                windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = MaterialTheme.colorScheme.background
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent
                 ),
             )
         }
