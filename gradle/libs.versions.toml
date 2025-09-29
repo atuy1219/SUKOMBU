@@ -1,5 +1,5 @@
 [versions]
-agp = "8.13.0"
+agp = "8.12.3"
 browser = "1.9.0"
 jsoup = "1.21.2"
 kotlin = "2.2.20"
@@ -20,6 +20,7 @@ okhttpLogging = "4.11.0"
 navigation = "2.9.5"
 lifecycle = "2.9.4"
 datastore = "1.1.7"
+materialIcons = "1.7.8"
 
 
 
@@ -52,6 +53,7 @@ androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navig
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "materialIcons" }
 
 
 [plugins]
