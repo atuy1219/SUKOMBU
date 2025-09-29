@@ -78,10 +78,16 @@ fun ScombApp(
                                 scrolledContainerColor = MaterialTheme.colorScheme.background
                             ),
                             actions = {
-                                // ホーム画面でのみ設定ボタンを表示
                                 if (currentScreen == Screen.Home) {
-                                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
-                                        Icon(
+                                    IconButton(onClick = {
+                                        navController.navigate(Screen.Settings.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }) {                                        Icon(
                                             imageVector = Icons.Outlined.Settings,
                                             contentDescription = "設定"
                                         )
