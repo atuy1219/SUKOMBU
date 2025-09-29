@@ -58,8 +58,8 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("ホーム") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background
                 ),
                 actions = {
                     IconButton(onClick = {

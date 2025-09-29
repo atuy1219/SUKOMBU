@@ -44,9 +44,9 @@ fun TimetableScreen(
                 title = { Text("時間割") },
                 // TODO: 年度と学期を選択するUIをここに追加
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
-                )
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background
+                ),
             )
         }
     ) { innerPadding ->

@@ -41,9 +41,9 @@ fun TaskListScreen(
             TopAppBar(
                 title = { Text("課題・テスト一覧") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
-                )
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background
+                ),
             )
         }
     ) { innerPadding ->

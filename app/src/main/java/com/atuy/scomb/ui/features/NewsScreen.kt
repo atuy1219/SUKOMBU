@@ -44,9 +44,9 @@ fun NewsScreen(
             TopAppBar(
                 title = { Text("お知らせ") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
-                )
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background
+                ),
             )
         }
     ) { innerPadding ->
