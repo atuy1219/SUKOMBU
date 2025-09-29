@@ -43,37 +43,24 @@ fun NewsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("お知らせ") },
-                windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent
-                ),
-            )
-        }
-    ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            when (val state = uiState) {
-                is NewsUiState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (val state = uiState) {
+            is NewsUiState.Loading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
-                is NewsUiState.Success -> {
-                    NewsList(newsItems = state.news)
-                }
-                is NewsUiState.Error -> {
-                    ErrorState(
-                        message = state.message,
-                        onRetry = { viewModel.fetchNews(forceRefresh = true) }
-                    )
-                }
+            }
+            is NewsUiState.Success -> {
+                NewsList(newsItems = state.news)
+            }
+            is NewsUiState.Error -> {
+                ErrorState(
+                    message = state.message,
+                    onRetry = { viewModel.fetchNews(forceRefresh = true) }
+                )
             }
         }
     }

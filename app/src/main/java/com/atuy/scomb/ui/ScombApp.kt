@@ -1,19 +1,26 @@
-// FILE: app/src/main/java/com/atuy/scomb/ui/ScombApp.kt
 package com.atuy.scomb.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -31,12 +38,25 @@ import com.atuy.scomb.ui.features.TimetableScreen
 import com.atuy.scomb.ui.viewmodel.AuthState
 import com.atuy.scomb.ui.viewmodel.MainViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScombApp(
     mainViewModel: MainViewModel = hiltViewModel()
 ) {
     val authState by mainViewModel.authState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
+
+    // ▼▼▼ 変更点：ナビゲーションの状態に応じて表示する項目を決定 ▼▼▼
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    // 表示する画面のリスト
+    val bottomBarScreens = listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
+    // 現在のルートがボトムバーの画面リストに含まれるか
+    val shouldShowBottomBar = currentDestination?.route in bottomBarScreens.map { it.route }
+
+    // 現在のルートから画面のタイトルを取得
+    val currentScreen = bottomBarScreens.find { it.route == currentDestination?.route }
 
     when (authState) {
         is AuthState.Loading -> {
@@ -45,17 +65,38 @@ fun ScombApp(
             }
         }
         is AuthState.Authenticated, is AuthState.Unauthenticated -> {
-            // ログイン後の開始画面をホームに変更
             val startDestination = if (authState is AuthState.Authenticated) Screen.Home.route else Screen.Login.route
 
+            // ▼▼▼ 変更点：Scaffoldをアプリの唯一の親にする ▼▼▼
             Scaffold(
+                topBar = {
+                    // ログイン成功後、かつボトムバーが表示される画面でのみトップバーを表示
+                    if (shouldShowBottomBar && authState is AuthState.Authenticated) {
+                        TopAppBar(
+                            title = { Text(currentScreen?.label ?: "") },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.background,
+                                scrolledContainerColor = MaterialTheme.colorScheme.background
+                            ),
+                            actions = {
+                                // ホーム画面でのみ設定ボタンを表示
+                                if (currentScreen == Screen.Home) {
+                                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Settings,
+                                            contentDescription = "設定"
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    }
+                },
                 bottomBar = {
-                    if (authState is AuthState.Authenticated) {
-                        val items = listOf(Screen.Timetable, Screen.Tasks, Screen.Home, Screen.News, Screen.Settings)
+                    // ログイン成功後、かつボトムバーが表示される画面でのみボトムバーを表示
+                    if (shouldShowBottomBar && authState is AuthState.Authenticated) {
                         NavigationBar {
-                            val navBackStackEntry by navController.currentBackStackEntryAsState()
-                            val currentDestination = navBackStackEntry?.destination
-                            items.forEach { screen ->
+                            bottomBarScreens.forEach { screen ->
                                 NavigationBarItem(
                                     icon = { Icon(screen.icon, contentDescription = null) },
                                     label = { Text(screen.label) },
@@ -81,18 +122,19 @@ fun ScombApp(
                     composable(Screen.Login.route) {
                         LoginScreen(
                             onLoginSuccess = {
-                                // ログイン成功時はホーム画面に遷移
                                 navController.navigate(Screen.Home.route) {
                                     popUpTo(Screen.Login.route) { inclusive = true }
                                 }
                             }
                         )
                     }
-                    composable(Screen.Home.route) { HomeScreen(navController = navController) }
+                    // 各画面コンポーザブルには innerPadding を渡す
+                    composable(Screen.Home.route) { HomeScreen() }
                     composable(Screen.Tasks.route) { TaskListScreen() }
                     composable(Screen.Timetable.route) { TimetableScreen() }
                     composable(Screen.News.route) { NewsScreen() }
                     composable(Screen.Settings.route) { SettingsScreen(navController = navController) }
+
                 }
             }
         }

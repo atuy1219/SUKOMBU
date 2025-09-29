@@ -53,60 +53,28 @@ import androidx.compose.foundation.layout.only
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    navController: NavController,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = {
-            TopAppBar(
-                title = { Text("ホーム") },
-                windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent
-                ),
-                actions = {
-                    IconButton(onClick = {
-                        navController.navigate(Screen.Settings.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true                    }})
-                        {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "設定"
-                        )
-                    }
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        when (val state = uiState) {
+            is HomeUiState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-            )
-        }
-    ) { innerPadding ->
-        // Scaffoldから渡されるpadding（トップバーの高さ分など）をコンテンツに適用
-        Box(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            when (val state = uiState) {
-                is HomeUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is HomeUiState.Success -> {
-                    Dashboard(homeData = state.homeData)
-                }
-                is HomeUiState.Error -> {
-                    ErrorState(
-                        message = state.message,
-                        onRetry = { /* TODO: ViewModelに再取得メソッドを実装 */ }
-                    )
-                }
+            }
+            is HomeUiState.Success -> {
+                Dashboard(homeData = state.homeData)
+            }
+            is HomeUiState.Error -> {
+                ErrorState(
+                    message = state.message,
+                    onRetry = { /* TODO: ViewModelに再取得メソッドを実装 */ }
+                )
             }
         }
     }

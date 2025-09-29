@@ -40,19 +40,7 @@ fun TaskListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("課題・テスト一覧") },
-                windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent
-                ),
-            )
-        }
-    ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
+        Box(modifier = Modifier.fillMaxSize()) {
             when (val state = uiState) {
                 is TaskListUiState.Loading -> {
                     Box(
@@ -73,7 +61,6 @@ fun TaskListScreen(
                 }
             }
         }
-    }
 }
 
 @Composable
