@@ -1,5 +1,7 @@
 package com.atuy.scomb.ui.features
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.webkit.ConsoleMessage
@@ -27,6 +29,7 @@ private const val TAG = "LoginScreen"
 const val SCOMB_LOGIN_PAGE_URL =
     "https://scombz.shibaura-it.ac.jp/saml/login?idp=http://adfs.sic.shibaura-it.ac.jp/adfs/services/trust"
 const val SCOMB_HOME_URL = "https://scombz.shibaura-it.ac.jp/portal/home"
+private const val SCOMB_DOMAIN = "scombz.shibaura-it.ac.jp"
 
 @Composable
 fun LoginScreen(
@@ -65,11 +68,8 @@ fun LoginScreen(
                     cacheMode = WebSettings.LOAD_DEFAULT
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                     }
-
-                    // 必要なら実機の Chrome と同じ UA を設定する（コメント解除して試してください）
-                    // userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.7339.155 Mobile Safari/537.36"
                 }
 
                 // Cookie を受け入れる（ログイン検出に必要）
@@ -96,87 +96,75 @@ fun LoginScreen(
                         Log.e(TAG, "WebView error: ${error?.description ?: "unknown"}")
                     }
 
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                            super.onPageFinished(view, url)
-                            Log.d(TAG, "Finished loading: $url")
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        Log.d(TAG, "Finished loading: $url")
 
-                            // ホームページに到達したらCookieを取得
-                            if (!url.isNullOrBlank() && url.startsWith(SCOMB_HOME_URL)) {
-                                // 少し待機してからCookieを取得（非同期処理の完了を待つ）
-                                view?.postDelayed({
-                                    try {
-                                        // CookieManager.flush()を呼んで確実に保存
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                            CookieManager.getInstance().flush()
-                                        }
-
-                                        val cookies = CookieManager.getInstance().getCookie(url)
-                                        Log.d(TAG, "All cookies: $cookies")
-
-                                        if (!cookies.isNullOrBlank()) {
-                                            // SESSION cookieを探す
-                                            val sessionCookie = cookies
-                                                .split(";")
-                                                .map { it.trim() }
-                                                .firstOrNull { it.startsWith("SESSION=") }
-
-                                            if (!sessionCookie.isNullOrBlank()) {
-                                                val sessionId = sessionCookie.substringAfter("SESSION=").trim()
-                                                Log.d(TAG, "Session ID found: $sessionId")
-                                                viewModel.onLoginSuccess(sessionId)
-                                            } else {
-                                                // JavaScriptでdocument.cookieを取得（フォールバック）
-                                                tryGetCookieViaJavaScript(view, url)
-                                            }
-                                        } else {
-                                            Log.w(TAG, "No cookies found from CookieManager")
-                                            tryGetCookieViaJavaScript(view, url)
-                                        }
-                                    } catch (e: Exception) {
-                                        Log.e(TAG, "Error retrieving cookies", e)
-                                    }
-                                }, 1000) // 1秒待機
-                            }
-                        }
-
-                        private fun tryGetCookieViaJavaScript(view: WebView?, url: String) {
-                            Log.d(TAG, "Trying to get cookie via JavaScript")
-                            view?.evaluateJavascript(
-                                """
-            (function() {
-                var cookies = document.cookie;
-                console.log('Document cookies: ' + cookies);
-                return cookies;
-            })()
-            """.trimIndent()
-                            ) { result ->
-                                Log.d(TAG, "JavaScript cookie result: $result")
-                                val raw = result?.removeSurrounding("\"")
-                                    ?.replace("\\u003D", "=")
-                                    ?.replace("\\u0026", "&")
-
-                                val session = raw
-                                    ?.split(";")
-                                    ?.map { it.trim() }
-                                    ?.firstOrNull { it.startsWith("SESSION=") }
-
-                                if (!session.isNullOrBlank()) {
-                                    val sessionId = session.substringAfter("SESSION=").trim()
-                                    Log.d(TAG, "Session ID from JS: $sessionId")
-                                    viewModel.onLoginSuccess(sessionId)
-                                } else {
-                                    Log.e(TAG, "Failed to retrieve session cookie")
-                                    // エラーをUIに表示する処理を追加
+                        // ホームページに到達したらCookieを取得
+                        if (!url.isNullOrBlank() && url.startsWith(SCOMB_HOME_URL)) {
+                            try {
+                                // CookieManager.flush()を呼んで確実に保存
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                    CookieManager.getInstance().flush()
                                 }
+
+                                val cookies = CookieManager.getInstance().getCookie(SCOMB_HOME_URL)
+                                Log.d(TAG, "Cookies for domain $SCOMB_HOME_URL: $cookies")
+
+                                if (!cookies.isNullOrBlank()) {
+                                    // SESSION cookieを探す
+                                    val sessionCookie = cookies
+                                        .split(";")
+                                        .map { it.trim() }
+                                        .firstOrNull { it.startsWith("SESSION=") }
+
+                                    if (!sessionCookie.isNullOrBlank()) {
+                                        val sessionId = sessionCookie.substringAfter("SESSION=").trim()
+                                        Log.d(TAG, "Session ID found: $sessionId")
+                                        viewModel.onLoginSuccess(sessionId)
+                                    } else {
+                                        Log.e(TAG, "SESSION cookie not found. HttpOnly cookie may be the cause.")
+                                    }
+                                } else {
+                                    Log.w(TAG, "No cookies found from CookieManager for $SCOMB_HOME_URL")
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error retrieving cookies", e)
                             }
                         }
+                    }
 
-                    // 別タブや外部のリンクをアプリ内で開きたい場合に制御
+                    // 外部リンクは外部ブラウザで、ScombZ内はWebViewで開く
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                        val target = request?.url?.toString() ?: return false
-                        // 必要に応じて外部リンク判定を追加する
-                        view?.loadUrl(target)
-                        return true
+                        val targetUri = request?.url ?: return true
+                        val targetUrl = targetUri.toString()
+
+                        return when {
+                            // ScombZドメイン内のリンクはWebViewで読み込む
+                            targetUri.host == SCOMB_DOMAIN -> {
+                                false // falseを返すとWebViewがURLをロードする
+                            }
+                            // tel:, mailto:, geo: などのインテントは外部アプリで開く
+                            targetUrl.startsWith("tel:") || targetUrl.startsWith("mailto:") || targetUrl.startsWith("geo:") -> {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, targetUri)
+                                    view?.context?.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Failed to open intent link: $targetUri", e)
+                                }
+                                true
+                            }
+                            // それ以外の外部リンクは外部ブラウザで開く
+                            else -> {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, targetUri)
+                                    view?.context?.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Failed to open external link: $targetUri", e)
+                                }
+                                true // trueを返すとWebViewはURLをロードしない
+                            }
+                        }
                     }
                 }
 

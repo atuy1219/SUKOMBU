@@ -11,12 +11,15 @@ import javax.inject.Inject
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
+import com.atuy.scomb.data.db.TaskRepository
 
 class ScheduleNotificationsUseCase @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val taskRepository: TaskRepository
 ) {
+    private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
     operator fun invoke(tasks: List<Task>) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!alarmManager.canScheduleExactAlarms()) {
                 // 権限がない場合、ユーザーに設定を促す
@@ -31,30 +34,51 @@ class ScheduleNotificationsUseCase @Inject constructor(
         }
         tasks.forEach { task ->
             // 完了済みのタスクは通知しない
-            if (task.done) return@forEach
-
-            val intent = Intent(context, NotificationReceiver::class.java).apply {
-                putExtra("TASK_ID", task.id)
-                putExtra("TASK_TITLE", task.title)
-                putExtra("TASK_URL", task.url)
+            if (task.done) {
+                cancel(task)
+                return@forEach
             }
-
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                task.id.hashCode(),
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
-            // 締め切り1時間前に通知をセット
-            val triggerAtMillis = task.deadline - 3600 * 1000
-            if (triggerAtMillis > System.currentTimeMillis()) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerAtMillis,
-                    pendingIntent
-                )
-            }
+            schedule(task)
         }
+    }
+
+    private fun schedule(task: Task) {
+        val pendingIntent = createPendingIntent(task)
+
+        // 締め切り1時間前に通知をセット
+        val triggerAtMillis = task.deadline - 3600 * 1000
+        if (triggerAtMillis > System.currentTimeMillis()) {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerAtMillis,
+                pendingIntent
+            )
+        }
+    }
+
+    fun cancel(task: Task) {
+        val pendingIntent = createPendingIntent(task)
+        alarmManager.cancel(pendingIntent)
+    }
+
+    suspend fun cancelAll() {
+        val tasks = taskRepository.getAllTasks()
+        tasks.forEach { task ->
+            cancel(task)
+        }
+    }
+
+    private fun createPendingIntent(task: Task): PendingIntent {
+        val intent = Intent(context, NotificationReceiver::class.java).apply {
+            putExtra("TASK_ID", task.id)
+            putExtra("TASK_TITLE", task.title)
+            putExtra("TASK_URL", task.url)
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            task.id.hashCode(),
+            intent,
+            Pending_Intent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
     }
 }
