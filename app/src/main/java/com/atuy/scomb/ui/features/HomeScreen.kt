@@ -40,6 +40,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import com.atuy.scomb.ui.Screen
+import androidx.navigation.NavGraph.Companion.findStartDestination
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,8 +59,15 @@ fun HomeScreen(
                     titleContentColor = MaterialTheme.colorScheme.primary
                 ),
                 actions = {
-                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
-                        Icon(
+                    IconButton(onClick = {
+                        navController.navigate(Screen.Settings.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }) {                        Icon(
                             imageVector = Icons.Outlined.Settings,
                             contentDescription = "設定"
                         )
