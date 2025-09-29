@@ -2,8 +2,8 @@ package com.atuy.scomb.ui.features
 
 import android.os.Build
 import android.util.Log
-import android.webkit.CookieManager
 import android.webkit.ConsoleMessage
+import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -23,7 +23,7 @@ import com.atuy.scomb.ui.viewmodel.LoginViewModel
 
 private const val TAG = "LoginScreen"
 
-// Scomb のログイン・ホーム URL（必要に応じて正確な URL に合わせてください）
+// Scombz のログイン・ホーム URL
 const val SCOMB_LOGIN_PAGE_URL =
     "https://scombz.shibaura-it.ac.jp/saml/login?idp=http://adfs.sic.shibaura-it.ac.jp/adfs/services/trust"
 const val SCOMB_HOME_URL = "https://scombz.shibaura-it.ac.jp/portal/home"

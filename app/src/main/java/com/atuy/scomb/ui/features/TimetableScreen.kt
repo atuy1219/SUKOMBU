@@ -5,27 +5,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,27 +35,31 @@ fun TimetableScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            when (val state = uiState) {
-                is TimetableUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is TimetableUiState.Success -> {
-                    TimetableGrid(timetable = state.timetable)
-                }
-                is TimetableUiState.Error -> {
-                    ErrorState(
-                        message = state.message,
-                        onRetry = {
-                            // TODO: ViewModelに再取得用のメソッドを実装
-                        }
-                    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (val state = uiState) {
+            is TimetableUiState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
             }
+
+            is TimetableUiState.Success -> {
+                TimetableGrid(timetable = state.timetable)
+            }
+
+            is TimetableUiState.Error -> {
+                ErrorState(
+                    message = state.message,
+                    onRetry = {
+                        // TODO: ViewModelに再取得用のメソッドを実装
+                    }
+                )
+            }
+        }
     }
 }
+
+
 
 @Composable
 fun TimetableGrid(timetable: Array<Array<ClassCell?>>) {
