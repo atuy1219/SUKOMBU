@@ -60,30 +60,23 @@ fun TimetableScreen(
     val currentYear by viewModel.currentYear.collectAsStateWithLifecycle()
     val currentTerm by viewModel.currentTerm.collectAsStateWithLifecycle()
 
-    Log.d(
-        TAG,
-        "Recomposing. Current state=${uiState.javaClass.simpleName}, Year=$currentYear, Term=$currentTerm"
-    )
+    Log.d(TAG, "Recomposing. Current state=${uiState.javaClass.simpleName}, Year=$currentYear, Term=$currentTerm")
 
     Scaffold(
         topBar = {
             TimetableTopBar(
                 current = TimetableTerm(currentYear, currentTerm),
                 onTermSelected = { newTerm ->
-                    Log.d(
-                        TAG,
-                        "onTermSelected called. New selection: Year=${newTerm.year}, Term=${newTerm.term}"
-                    )
+                    Log.d(TAG, "onTermSelected called. New selection: Year=${newTerm.year}, Term=${newTerm.term}")
                     viewModel.changeYearAndTerm(newTerm.year, newTerm.term)
                 }
             )
         }
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-
-                .fillMaxSize()
-                .padding(innerPadding)
+        // innerPaddingを適切に適用
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
         ) {
             when (val state = uiState) {
                 is TimetableUiState.Loading -> {
@@ -91,11 +84,9 @@ fun TimetableScreen(
                         CircularProgressIndicator()
                     }
                 }
-
                 is TimetableUiState.Success -> {
                     TimetableGrid(timetable = state.timetable)
                 }
-
                 is TimetableUiState.Error -> {
                     ErrorState(
                         message = state.message,
