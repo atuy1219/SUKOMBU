@@ -4,11 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
@@ -38,17 +35,12 @@ import com.atuy.scomb.util.DateUtils
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    paddingValues: PaddingValues,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues) // ScombAppのScaffoldからのpaddingを適用
-    ) {
+    // paddingValuesは使わず、BoxでfillMaxSizeのみ
+    Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is HomeUiState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -72,7 +64,7 @@ fun HomeScreen(
 fun Dashboard(homeData: HomeData) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = WindowInsets.navigationBars.asPaddingValues(),
+        contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {

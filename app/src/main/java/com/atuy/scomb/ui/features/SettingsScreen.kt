@@ -1,9 +1,7 @@
 package com.atuy.scomb.ui.features
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
@@ -19,15 +17,12 @@ import com.atuy.scomb.ui.viewmodel.SettingsViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    paddingValues: PaddingValues,
     navController: NavController,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-
+    // paddingValuesは使わず、BoxでfillMaxSizeのみ
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues), // Scaffoldからのpaddingを適用
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Button(onClick = {
@@ -42,5 +37,4 @@ fun SettingsScreen(
             Text("ログアウト")
         }
     }
-
 }

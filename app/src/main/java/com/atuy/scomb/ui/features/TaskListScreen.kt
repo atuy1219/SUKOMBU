@@ -5,11 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -39,28 +36,21 @@ import com.atuy.scomb.util.DateUtils
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListScreen(
-    paddingValues: PaddingValues,
     viewModel: TaskListViewModel = hiltViewModel()
 ) {
-
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues) // Scaffoldからのpaddingを適用
-    ) {
+    // paddingValuesは使わず、BoxでfillMaxSizeのみ
+    Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is TaskListUiState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             }
-
             is TaskListUiState.Success -> {
                 TaskList(tasks = state.tasks)
             }
-
             is TaskListUiState.Error -> {
                 ErrorState(
                     message = state.message,
@@ -69,13 +59,13 @@ fun TaskListScreen(
             }
         }
     }
-
 }
 
 @Composable
 fun TaskList(tasks: List<Task>) {
     LazyColumn(
-        contentPadding = WindowInsets.navigationBars.asPaddingValues(),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         items(tasks) { task ->
             TaskListItem(task = task)
