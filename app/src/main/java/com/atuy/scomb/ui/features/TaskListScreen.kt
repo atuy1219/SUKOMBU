@@ -56,9 +56,11 @@ fun TaskListScreen(
                     CircularProgressIndicator()
                 }
             }
+
             is TaskListUiState.Success -> {
                 TaskList(tasks = state.tasks)
             }
+
             is TaskListUiState.Error -> {
                 ErrorState(
                     message = state.message,
@@ -72,8 +74,9 @@ fun TaskListScreen(
 
 @Composable
 fun TaskList(tasks: List<Task>) {
-    LazyColumn (
-        contentPadding = WindowInsets.navigationBars.asPaddingValues(),){
+    LazyColumn(
+        contentPadding = WindowInsets.navigationBars.asPaddingValues(),
+    ) {
         items(tasks) { task ->
             TaskListItem(task = task)
         }

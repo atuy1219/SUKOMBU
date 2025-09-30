@@ -83,7 +83,10 @@ fun LoginScreen(
                 // Console ログを Logcat に出す（デバッグ）
                 webChromeClient = object : WebChromeClient() {
                     override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
-                        Log.d(TAG, "JS: ${consoleMessage?.message()} -- ${consoleMessage?.sourceId()}:${consoleMessage?.lineNumber()}")
+                        Log.d(
+                            TAG,
+                            "JS: ${consoleMessage?.message()} -- ${consoleMessage?.sourceId()}:${consoleMessage?.lineNumber()}"
+                        )
                         return super.onConsoleMessage(consoleMessage)
                     }
                 }
@@ -121,14 +124,21 @@ fun LoginScreen(
                                         .firstOrNull { it.startsWith("SESSION=") }
 
                                     if (!sessionCookie.isNullOrBlank()) {
-                                        val sessionId = sessionCookie.substringAfter("SESSION=").trim()
+                                        val sessionId =
+                                            sessionCookie.substringAfter("SESSION=").trim()
                                         Log.d(TAG, "Session ID found: $sessionId")
                                         viewModel.onLoginSuccess(sessionId)
                                     } else {
-                                        Log.e(TAG, "SESSION cookie not found. HttpOnly cookie may be the cause.")
+                                        Log.e(
+                                            TAG,
+                                            "SESSION cookie not found. HttpOnly cookie may be the cause."
+                                        )
                                     }
                                 } else {
-                                    Log.w(TAG, "No cookies found from CookieManager for $SCOMB_HOME_URL")
+                                    Log.w(
+                                        TAG,
+                                        "No cookies found from CookieManager for $SCOMB_HOME_URL"
+                                    )
                                 }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Error retrieving cookies", e)
@@ -137,7 +147,10 @@ fun LoginScreen(
                     }
 
                     // 外部リンクは外部ブラウザで、ScombZ内はWebViewで開く
-                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                    override fun shouldOverrideUrlLoading(
+                        view: WebView?,
+                        request: WebResourceRequest?
+                    ): Boolean {
                         val targetUri = request?.url ?: return true
 
                         return if (targetUri.host == SCOMB_DOMAIN) {

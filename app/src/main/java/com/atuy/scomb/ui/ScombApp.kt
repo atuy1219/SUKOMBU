@@ -49,18 +49,12 @@ fun ScombApp(
     val authState by mainViewModel.authState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
 
-    // ▼▼▼ 変更点：ナビゲーションの状態に応じて表示する項目を決定 ▼▼▼
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    // 表示する画面のリスト
     val bottomBarScreens = listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
-    // 現在のルートがボトムバーの画面リストに含まれるか
     val shouldShowBottomBar = currentDestination?.route in bottomBarScreens.map { it.route }
     val shouldShowTopBar = shouldShowBottomBar && currentDestination?.route != Screen.Timetable.route
-
-    // 現在のルートから画面のタイトルを取得
-    val currentScreen = bottomBarScreens.find { it.route == currentDestination?.route }
 
     when (authState) {
         is AuthState.Loading -> {
@@ -73,19 +67,14 @@ fun ScombApp(
 
             Scaffold(
                 topBar = {
-                    // bottomBarが表示される画面でのみTopBarを表示
-                    if (shouldShowBottomBar) {
-                        // TimetableScreenは独自のTopBarを持つので、ここでは表示しない
-                        if (currentDestination?.route != Screen.Timetable.route) {
-                            AppTopBar(
-                                currentRoute = currentDestination?.route,
-                                navController = navController
-                            )
-                        }
+                    if (shouldShowTopBar) {
+                        AppTopBar(
+                            currentRoute = currentDestination?.route,
+                            navController = navController
+                        )
                     }
                 },
                 bottomBar = {
-                    // ログイン成功後、かつボトムバーが表示される画面でのみボトムバーを表示
                     if (shouldShowBottomBar && authState is AuthState.Authenticated) {
                         NavigationBar {
                             bottomBarScreens.forEach { screen ->
@@ -114,15 +103,13 @@ fun ScombApp(
                         val initialIndex = bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
                         val targetIndex = bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
 
-                        // ログイン画面からの遷移など、bottomBarScreensに含まれない画面からの遷移はフェード
                         if (initialIndex == -1 || targetIndex == -1) {
                             return@NavHost fadeIn(animationSpec = tween(300))
                         }
 
-                        // 右のタブに移動する場合は右からスライドイン
                         if (initialIndex < targetIndex) {
                             slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300))
-                        } else { // 左のタブに移動する場合は左からスライドイン
+                        } else {
                             slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300))
                         }
                     },
@@ -134,18 +121,16 @@ fun ScombApp(
                             return@NavHost fadeOut(animationSpec = tween(300))
                         }
 
-                        // 右のタブに移動する場合は左へスライドアウト
                         if (initialIndex < targetIndex) {
                             slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300))
-                        } else { // 左のタブに移動する場合は右へスライドアウト
+                        } else {
                             slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300))
                         }
                     }
                 ) {
-                    // 各画面コンポーザブルには innerPadding を渡す
                     composable(Screen.Home.route) { HomeScreen(paddingValues = innerPadding) }
                     composable(Screen.Tasks.route) { TaskListScreen(paddingValues = innerPadding) }
-                    composable(Screen.Timetable.route) { TimetableScreen() } // TimetableScreenはpaddingを内部で処理
+                    composable(Screen.Timetable.route) { TimetableScreen() }
                     composable(Screen.News.route) { NewsScreen(paddingValues = innerPadding) }
                     composable(Screen.Settings.route) { SettingsScreen(paddingValues = innerPadding, navController = navController) }
                 }
@@ -153,11 +138,10 @@ fun ScombApp(
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppTopBar(currentRoute: String?, navController: NavController) {
-    // AnimatedContentでトップバー全体をラップし、
-    // currentRoute の変更を検知してアニメーションさせる
     AnimatedContent(
         targetState = currentRoute,
         transitionSpec = {
@@ -177,29 +161,6 @@ fun AppTopBar(currentRoute: String?, navController: NavController) {
                     }
                 )
             },
-            /*actions = {
-            // ホーム画面の時だけ設定アイコンを表示
-            if (targetRoute == Screen.Home.route) {
-                IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
-                    Icon(
-                        imageVector = Icons.Outlined.Settings,
-                        contentDescription = "設定"
-                    )
-                }
-            }
-        },*/
-            /*navigationIcon = {
-            // ホーム以外の画面で戻るボタンを表示
-            if (currentRoute != Screen.Home.route) {
-                IconButton(onClick = { navController.navigateUp() }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "戻る"
-                    )
-                }
-            }
-        },*/
-
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.background
             )

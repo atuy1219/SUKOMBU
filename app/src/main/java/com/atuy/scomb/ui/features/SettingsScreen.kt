@@ -24,23 +24,23 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues), // Scaffoldからのpaddingを適用
-            contentAlignment = Alignment.Center
-        ) {
-            Button(onClick = {
-                viewModel.logout()
-                navController.navigate(Screen.Login.route) {
-                    popUpTo(navController.graph.findStartDestination().id) {
-                        inclusive = true
-                    }
-                    launchSingleTop = true
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues), // Scaffoldからのpaddingを適用
+        contentAlignment = Alignment.Center
+    ) {
+        Button(onClick = {
+            viewModel.logout()
+            navController.navigate(Screen.Login.route) {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    inclusive = true
                 }
-            }) {
-                Text("ログアウト")
+                launchSingleTop = true
             }
+        }) {
+            Text("ログアウト")
         }
+    }
 
 }

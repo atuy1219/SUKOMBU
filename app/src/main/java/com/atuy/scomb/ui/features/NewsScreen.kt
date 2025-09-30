@@ -45,9 +45,11 @@ fun NewsScreen(
                     CircularProgressIndicator()
                 }
             }
+
             is NewsUiState.Success -> {
                 NewsList(newsItems = state.news)
             }
+
             is NewsUiState.Error -> {
                 ErrorState(
                     message = state.message,
