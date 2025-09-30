@@ -34,7 +34,6 @@ fun NewsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-
         Box(
             modifier = Modifier
                 .fillMaxSize()

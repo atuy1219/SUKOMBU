@@ -16,6 +16,7 @@ class ScheduleNotificationsUseCase @Inject constructor(
 ) {
     operator fun invoke(tasks: List<Task>) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
             if (!alarmManager.canScheduleExactAlarms()) {
                 Toast.makeText(context, "通知には「アラーム＆リマインダー」の権限が必要です", Toast.LENGTH_LONG).show()
                 Intent().also { intent ->
