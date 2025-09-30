@@ -45,28 +45,28 @@ fun TaskListScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues) // Scaffoldからのpaddingを適用
-        ) {
-            when (val state = uiState) {
-                is TaskListUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is TaskListUiState.Success -> {
-                    TaskList(tasks = state.tasks)
-                }
-                is TaskListUiState.Error -> {
-                    ErrorState(
-                        message = state.message,
-                        onRetry = { viewModel.fetchTasks(forceRefresh = true) }
-                    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues) // Scaffoldからのpaddingを適用
+    ) {
+        when (val state = uiState) {
+            is TaskListUiState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
             }
+            is TaskListUiState.Success -> {
+                TaskList(tasks = state.tasks)
+            }
+            is TaskListUiState.Error -> {
+                ErrorState(
+                    message = state.message,
+                    onRetry = { viewModel.fetchTasks(forceRefresh = true) }
+                )
+            }
         }
+    }
 
 }
 

@@ -34,27 +34,27 @@ fun NewsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues) // Scaffoldからのpaddingを適用
-        ) {
-            when (val state = uiState) {
-                is NewsUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is NewsUiState.Success -> {
-                    NewsList(newsItems = state.news)
-                }
-                is NewsUiState.Error -> {
-                    ErrorState(
-                        message = state.message,
-                        onRetry = { viewModel.fetchNews(forceRefresh = true) }
-                    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues) // Scaffoldからのpaddingを適用
+    ) {
+        when (val state = uiState) {
+            is NewsUiState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
             }
+            is NewsUiState.Success -> {
+                NewsList(newsItems = state.news)
+            }
+            is NewsUiState.Error -> {
+                ErrorState(
+                    message = state.message,
+                    onRetry = { viewModel.fetchNews(forceRefresh = true) }
+                )
+            }
+        }
 
     }
 }

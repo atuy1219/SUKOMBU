@@ -67,9 +67,7 @@ fun TimetableScreen(
             TimetableTopBar(
                 current = TimetableTerm(currentYear, currentTerm),
                 onTermSelected = { newTerm ->
-                    // ▼▼▼ 修正点 ▼▼▼
                     Log.d(TAG, "onTermSelected called. New selection: Year=${newTerm.year}, Term=${newTerm.term}")
-                    // ▲▲▲ 修正点 ▲▲▲
                     viewModel.changeYearAndTerm(newTerm.year, newTerm.term)
                 }
             )
