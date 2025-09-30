@@ -20,7 +20,6 @@ fun SettingsScreen(
     navController: NavController,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    // paddingValuesは使わず、BoxでfillMaxSizeのみ
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
