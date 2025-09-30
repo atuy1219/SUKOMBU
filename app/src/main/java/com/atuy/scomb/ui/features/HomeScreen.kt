@@ -3,6 +3,7 @@ package com.atuy.scomb.ui.features
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,13 +38,16 @@ import com.atuy.scomb.util.DateUtils
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    paddingValues: PaddingValues,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
 
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues) // ScombAppのScaffoldからのpaddingを適用
     ) {
         when (val state = uiState) {
             is HomeUiState.Loading -> {
@@ -57,7 +61,7 @@ fun HomeScreen(
             is HomeUiState.Error -> {
                 ErrorState(
                     message = state.message,
-                    onRetry = { /* TODO: ViewModelに再取得メソッドを実装 */ }
+                    onRetry = { /* TODO */ }
                 )
             }
         }

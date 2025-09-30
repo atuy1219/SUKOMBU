@@ -1,58 +1,89 @@
 package com.atuy.scomb.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.repository.ScombzRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
 import java.util.Calendar
 import javax.inject.Inject
 
+
 sealed interface TimetableUiState {
     object Loading : TimetableUiState
-    // UIで扱いやすいように2次元配列でデータを保持
     data class Success(val timetable: Array<Array<ClassCell?>>) : TimetableUiState
     data class Error(val message: String) : TimetableUiState
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class TimetableViewModel @Inject constructor(
     private val repository: ScombzRepository
 ) : ViewModel() {
+    private val TAG = "ViewModel"
 
-    private val _uiState = MutableStateFlow<TimetableUiState>(TimetableUiState.Loading)
-    val uiState: StateFlow<TimetableUiState> = _uiState
 
-    init {
-        // 現在の年月から年度と学期を自動で決定
-        val calendar = Calendar.getInstance()
-        val year = if (calendar.get(Calendar.MONTH) < 3) calendar.get(Calendar.YEAR) - 1 else calendar.get(Calendar.YEAR)
-        val term = if (calendar.get(Calendar.MONTH) in 3..8) "1" else "2" // 4月-9月を前期(1), 10月-3月を後期(2)とする
+    private val _currentYear = MutableStateFlow(
+        Calendar.getInstance().let {
+            if (it.get(Calendar.MONTH) < 3) it.get(Calendar.YEAR) - 1 else it.get(Calendar.YEAR)
+        }
+    )
+    val currentYear: StateFlow<Int> = _currentYear.asStateFlow()
 
-        fetchTimetable(year, term, forceRefresh = false)
+    private val _currentTerm = MutableStateFlow(
+        Calendar.getInstance().let {
+            if (it.get(Calendar.MONTH) in 3..7) "1" else "2"
+        }
+    )
+    val currentTerm: StateFlow<String> = _currentTerm.asStateFlow()
+
+
+    private val yearAndTermFlow = _currentYear.combine(_currentTerm) { year, term ->
+        Pair(year, term)
     }
 
-    fun fetchTimetable(year: Int, term: String, forceRefresh: Boolean) {
-        viewModelScope.launch {
-            _uiState.value = TimetableUiState.Loading
-            try {
-                val classCells = repository.getTimetable(year, term, forceRefresh)
-                // 5曜日×7時限の2次元配列を作成
-                val timetableGrid: Array<Array<ClassCell?>> = Array(5) { Array(7) { null } }
-                classCells.forEach { cell ->
-                    // ScombZの曜日は 0:月, 1:火 ...
-                    if (cell.dayOfWeek in 0..4 && cell.period in 0..6) {
-                        timetableGrid[cell.dayOfWeek][cell.period] = cell
+    val uiState: StateFlow<TimetableUiState> = yearAndTermFlow
+        .flatMapLatest { (year, term) ->
+            flow {
+                Log.d(TAG, "flatMapLatest triggered with Year=$year, Term=$term")
+                if (year != 0 && term.isNotEmpty()) {
+                    emit(TimetableUiState.Loading)
+                    try {
+                        val classCells = repository.getTimetable(year, term, true)
+                        Log.d(TAG, "Successfully fetched ${classCells.size} classes for $year-$term")
+                        val timetableGrid: Array<Array<ClassCell?>> = Array(5) { Array(7) { null } }
+                        classCells.forEach { cell ->
+                            if (cell.dayOfWeek in 0..4 && cell.period in 0..6) {
+                                timetableGrid[cell.dayOfWeek][cell.period] = cell
+                            }
+                        }
+                        emit(TimetableUiState.Success(timetableGrid))
+                        Log.d(TAG, "UI state updated to Success.")
+                    } catch (e: Exception) {
+                        emit(TimetableUiState.Error(e.message ?: "An unknown error occurred"))
+                        Log.e(TAG, "Error fetching timetable", e)
                     }
                 }
-                _uiState.value = TimetableUiState.Success(timetableGrid)
-            } catch (e: Exception) {
-                _uiState.value = TimetableUiState.Error(e.message ?: "An unknown error occurred")
-                e.printStackTrace()
             }
-        }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = TimetableUiState.Loading
+        )
+
+    fun changeYearAndTerm(newYear: Int, newTerm: String) {
+        Log.d(TAG, "changeYearAndTerm called with Year=$newYear, Term=$newTerm")
+        _currentYear.value = newYear
+        _currentTerm.value = newTerm
     }
 }

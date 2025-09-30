@@ -3,6 +3,7 @@ package com.atuy.scomb.ui.features
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -38,33 +39,34 @@ import com.atuy.scomb.util.DateUtils
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListScreen(
+    paddingValues: PaddingValues,
     viewModel: TaskListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        when (val state = uiState) {
-            is TaskListUiState.Loading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues) // Scaffoldからのpaddingを適用
+        ) {
+            when (val state = uiState) {
+                is TaskListUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                is TaskListUiState.Success -> {
+                    TaskList(tasks = state.tasks)
+                }
+                is TaskListUiState.Error -> {
+                    ErrorState(
+                        message = state.message,
+                        onRetry = { viewModel.fetchTasks(forceRefresh = true) }
+                    )
                 }
             }
-
-            is TaskListUiState.Success -> {
-                TaskList(tasks = state.tasks)
-            }
-
-            is TaskListUiState.Error -> {
-                ErrorState(
-                    message = state.message,
-                    onRetry = { viewModel.fetchTasks(forceRefresh = true) }
-                )
-            }
         }
-    }
+
 }
 
 @Composable

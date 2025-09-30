@@ -17,14 +17,13 @@ class ScheduleNotificationsUseCase @Inject constructor(
     operator fun invoke(tasks: List<Task>) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             if (!alarmManager.canScheduleExactAlarms()) {
-                // 権限がない場合、ユーザーに設定を促す
                 Toast.makeText(context, "通知には「アラーム＆リマインダー」の権限が必要です", Toast.LENGTH_LONG).show()
                 Intent().also { intent ->
                     intent.action = Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     context.startActivity(intent)
                 }
-                return // 権限がないので、この先の処理は中断
+                return
             }
         tasks.forEach { task ->
             // 完了済みのタスクは通知しない

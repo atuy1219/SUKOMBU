@@ -1,8 +1,11 @@
 package com.atuy.scomb.ui.features
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -13,25 +16,31 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.atuy.scomb.ui.Screen
 import com.atuy.scomb.ui.viewmodel.SettingsViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    paddingValues: PaddingValues,
     navController: NavController,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Button(onClick = {
-            viewModel.logout()
-            navController.navigate(Screen.Login.route) {
-                popUpTo(navController.graph.findStartDestination().id) {
-                    inclusive = true
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues), // Scaffoldからのpaddingを適用
+            contentAlignment = Alignment.Center
+        ) {
+            Button(onClick = {
+                viewModel.logout()
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        inclusive = true
+                    }
+                    launchSingleTop = true
                 }
-                launchSingleTop = true
+            }) {
+                Text("ログアウト")
             }
-        }) {
-            Text("ログアウト")
         }
-    }
+
 }
