@@ -43,6 +43,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.atuy.scomb.ui.features.HomeScreen
+import com.atuy.scomb.ui.features.LoginScreen
 import com.atuy.scomb.ui.features.NewsScreen
 import com.atuy.scomb.ui.features.SettingsScreen
 import com.atuy.scomb.ui.features.TaskListScreen
@@ -139,11 +140,20 @@ fun ScombApp(
                         }
                     }
                 ) {
-                    composable(Screen.Home.route) { HomeScreen() }
-                    composable(Screen.Tasks.route) { TaskListScreen() }
+                    composable(Screen.Login.route) { 
+                        LoginScreen(
+                            onLoginSuccess = {
+                                navController.navigate(Screen.Home.route) {
+                                    popUpTo(Screen.Login.route) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+                    composable(Screen.Home.route) { HomeScreen(paddingValues = innerPadding) }
+                    composable(Screen.Tasks.route) { TaskListScreen(paddingValues = innerPadding) }
                     composable(Screen.Timetable.route) { TimetableScreen() }
-                    composable(Screen.News.route) { NewsScreen() }
-                    composable(Screen.Settings.route) { SettingsScreen(navController = navController) }
+                    composable(Screen.News.route) { NewsScreen(paddingValues = innerPadding) }
+                    composable(Screen.Settings.route) { SettingsScreen(paddingValues = innerPadding, navController = navController) }
                 }
             }
         }
@@ -196,7 +206,7 @@ fun TimetableTopBar(
     val currentYear by viewModel.currentYear.collectAsStateWithLifecycle()
     val currentTerm by viewModel.currentTerm.collectAsStateWithLifecycle()
     val current = TimetableTerm(currentYear, currentTerm)
-
+    
     var menuExpanded by remember { mutableStateOf(false) }
 
     TopAppBar(
