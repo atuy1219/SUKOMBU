@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -63,6 +64,7 @@ fun TimetableScreen(
     Log.d(TAG, "Recomposing. Current state=${uiState.javaClass.simpleName}, Year=$currentYear, Term=$currentTerm")
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),  // EdgeToEdgeを適用
         topBar = {
             TimetableTopBar(
                 current = TimetableTerm(currentYear, currentTerm),
