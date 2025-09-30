@@ -30,7 +30,6 @@ fun NewsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // paddingValuesは使わず、BoxでfillMaxSizeのみ
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is NewsUiState.Loading -> {
