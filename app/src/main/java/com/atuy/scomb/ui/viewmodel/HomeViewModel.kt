@@ -39,7 +39,8 @@ class HomeViewModel @Inject constructor(
         loadHomeData()
     }
 
-    private fun loadHomeData(forceRefresh: Boolean = false) {
+    // publicメソッドに変更して外部から呼び出し可能にする
+    fun loadHomeData(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _uiState.value = HomeUiState.Loading
             try {
@@ -84,7 +85,7 @@ class HomeViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                _uiState.value = HomeUiState.Error(e.message ?: "An unknown error occurred")
+                _uiState.value = HomeUiState.Error(e.message ?: "不明なエラーが発生しました")
                 e.printStackTrace()
             }
         }
