@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,7 +20,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -63,40 +61,24 @@ fun TimetableScreen(
 
     Log.d(TAG, "Recomposing. Current state=${uiState.javaClass.simpleName}, Year=$currentYear, Term=$currentTerm")
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),  // EdgeToEdgeを適用
-        topBar = {
-            TimetableTopBar(
-                current = TimetableTerm(currentYear, currentTerm),
-                onTermSelected = { newTerm ->
-                    Log.d(TAG, "onTermSelected called. New selection: Year=${newTerm.year}, Term=${newTerm.term}")
-                    viewModel.changeYearAndTerm(newTerm.year, newTerm.term)
+    // Scaffoldを削除し、BoxでfillMaxSizeのみ使用
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (val state = uiState) {
+            is TimetableUiState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-            )
-        }
-    ) { innerPadding ->
-        // innerPaddingを適切に適用
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)
-        ) {
-            when (val state = uiState) {
-                is TimetableUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+            }
+            is TimetableUiState.Success -> {
+                TimetableGrid(timetable = state.timetable)
+            }
+            is TimetableUiState.Error -> {
+                ErrorState(
+                    message = state.message,
+                    onRetry = {
+                        viewModel.changeYearAndTerm(currentYear, currentTerm)
                     }
-                }
-                is TimetableUiState.Success -> {
-                    TimetableGrid(timetable = state.timetable)
-                }
-                is TimetableUiState.Error -> {
-                    ErrorState(
-                        message = state.message,
-                        onRetry = {
-                            viewModel.changeYearAndTerm(currentYear, currentTerm)
-                        }
-                    )
-                }
+                )
             }
         }
     }

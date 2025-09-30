@@ -7,10 +7,16 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +28,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -38,8 +47,11 @@ import com.atuy.scomb.ui.features.NewsScreen
 import com.atuy.scomb.ui.features.SettingsScreen
 import com.atuy.scomb.ui.features.TaskListScreen
 import com.atuy.scomb.ui.features.TimetableScreen
+import com.atuy.scomb.ui.features.TimetableTerm
 import com.atuy.scomb.ui.viewmodel.AuthState
 import com.atuy.scomb.ui.viewmodel.MainViewModel
+import com.atuy.scomb.ui.viewmodel.TimetableViewModel
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,7 +66,6 @@ fun ScombApp(
 
     val bottomBarScreens = listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
     val shouldShowBottomBar = currentDestination?.route in bottomBarScreens.map { it.route }
-    val shouldShowTopBar = shouldShowBottomBar && currentDestination?.route != Screen.Timetable.route
 
     when (authState) {
         is AuthState.Loading -> {
@@ -67,7 +78,7 @@ fun ScombApp(
 
             Scaffold(
                 topBar = {
-                    if (shouldShowTopBar) {
+                    if (shouldShowBottomBar) {
                         AppTopBar(
                             currentRoute = currentDestination?.route,
                             navController = navController
@@ -149,21 +160,82 @@ fun AppTopBar(currentRoute: String?, navController: NavController) {
         },
         label = "TopBarAnimation"
     ) { targetRoute ->
-        TopAppBar(
-            title = {
-                Text(
-                    when (targetRoute) {
-                        Screen.Home.route -> "ホーム"
-                        Screen.Tasks.route -> "課題"
-                        Screen.News.route -> "お知らせ"
-                        Screen.Settings.route -> "設定"
-                        else -> ""
-                    }
+        when (targetRoute) {
+            Screen.Timetable.route -> {
+                // TimetableScreen専用のトップバー
+                TimetableTopBar()
+            }
+            else -> {
+                // 通常のトップバー
+                TopAppBar(
+                    title = {
+                        Text(
+                            when (targetRoute) {
+                                Screen.Home.route -> "ホーム"
+                                Screen.Tasks.route -> "課題"
+                                Screen.News.route -> "お知らせ"
+                                Screen.Settings.route -> "設定"
+                                else -> ""
+                            }
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    )
                 )
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background
-            )
-        )
+            }
+        }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TimetableTopBar(
+    viewModel: TimetableViewModel = hiltViewModel()
+) {
+    val currentYear by viewModel.currentYear.collectAsStateWithLifecycle()
+    val currentTerm by viewModel.currentTerm.collectAsStateWithLifecycle()
+    val current = TimetableTerm(currentYear, currentTerm)
+
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    TopAppBar(
+        title = {
+            Box {
+                Row(
+                    modifier = Modifier.clickable { menuExpanded = true },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(if (current.year != 0) current.getDisplayName() else "読み込み中...")
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = "学期選択")
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    val startYear = Calendar.getInstance().get(Calendar.YEAR)
+                    for (i in 0..5) {
+                        val displayYear = startYear - i
+                        DropdownMenuItem(
+                            text = { Text(TimetableTerm(displayYear, "2").getDisplayName()) },
+                            onClick = {
+                                viewModel.changeYearAndTerm(displayYear, "2")
+                                menuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(TimetableTerm(displayYear, "1").getDisplayName()) },
+                            onClick = {
+                                viewModel.changeYearAndTerm(displayYear, "1")
+                                menuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background
+        )
+    )
 }
