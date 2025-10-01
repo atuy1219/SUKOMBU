@@ -69,13 +69,12 @@ fun LoginScreen(
 
                     // キャッシュとストレージ
                     cacheMode = WebSettings.LOAD_DEFAULT
-                    databaseEnabled = true
 
                     // セキュリティとコンテンツ
                     mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
 
                     // ハードウェアアクセラレーションの有効化
-                    setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                    //setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
 
                     // その他の設定
                     allowFileAccess = false
