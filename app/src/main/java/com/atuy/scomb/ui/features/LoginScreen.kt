@@ -23,13 +23,10 @@ import com.atuy.scomb.ui.viewmodel.LoginViewModel
 
 private const val TAG = "LoginScreen"
 
-// Scombz のログイン・ホーム URL
 const val SCOMB_LOGIN_PAGE_URL =
     "https://scombz.shibaura-it.ac.jp/saml/login?idp=http://adfs.sic.shibaura-it.ac.jp/adfs/services/trust"
 const val SCOMB_HOME_URL = "https://scombz.shibaura-it.ac.jp/portal/home"
-private const val SCOMBZ_DOMAIN = "scombz.shibaura-it.ac.jp"
-private const val LOGIN_DOMAIN = "adfs.sic.shibaura-it.ac.jp"
-
+private const val SCOMB_DOMAIN = "scombz.shibaura-it.ac.jp"
 
 @Composable
 fun LoginScreen(
@@ -38,7 +35,6 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // ViewModel 側で Success を検出したら画面遷移等を行う
     LaunchedEffect(uiState) {
         if (uiState is LoginUiState.Success) {
             onLoginSuccess()
@@ -57,23 +53,48 @@ fun LoginScreen(
                     // レイアウト／表示関連
                     useWideViewPort = true
                     loadWithOverviewMode = true
-                    layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
-
+                    setSupportZoom(true)
                     builtInZoomControls = false
                     displayZoomControls = false
-                    cacheMode = WebSettings.LOAD_DEFAULT
 
+                    // テキスト表示の改善
+                    textZoom = 100
+                    minimumFontSize = 8
+                    minimumLogicalFontSize = 8
+                    defaultFontSize = 16
+                    defaultFixedFontSize = 13
+
+                    // レンダリング設定
+                    layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
+
+                    // キャッシュとストレージ
+                    cacheMode = WebSettings.LOAD_DEFAULT
+                    databaseEnabled = true
+
+                    // セキュリティとコンテンツ
                     mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
 
-                    // 必要なら実機の Chrome と同じ UA を設定する（コメント解除して試してください）
-                    // userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.7339.155 Mobile Safari/537.36"
+                    // ハードウェアアクセラレーションの有効化
+                    setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+
+                    // その他の設定
+                    allowFileAccess = false
+                    allowContentAccess = false
+                    javaScriptCanOpenWindowsAutomatically = false
+                    mediaPlaybackRequiresUserGesture = true
+
+                    // フォントの設定
+                    standardFontFamily = "sans-serif"
+                    serifFontFamily = "serif"
+                    sansSerifFontFamily = "sans-serif"
+                    fixedFontFamily = "monospace"
                 }
 
-                // Cookie を受け入れる（ログイン検出に必要）
+                // Cookie を受け入れる
                 CookieManager.getInstance().setAcceptCookie(true)
                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 
-                // Console ログを Logcat に出す（デバッグ）
+                // Console ログを Logcat に出す
                 webChromeClient = object : WebChromeClient() {
                     override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
                         Log.d(
@@ -98,17 +119,30 @@ fun LoginScreen(
                         super.onPageFinished(view, url)
                         Log.d(TAG, "Finished loading: $url")
 
+                        // ページ読み込み後、フォントと表示を強制的に調整するJavaScriptを実行
+                        view?.evaluateJavascript(
+                            """
+                            (function() {
+                                document.body.style.fontFamily = 'sans-serif';
+                                document.body.style.fontSize = '16px';
+                                document.body.style.webkitTextSizeAdjust = '100%';
+                                document.body.style.textSizeAdjust = '100%';
+                                var style = document.createElement('style');
+                                style.textContent = '* { -webkit-font-smoothing: antialiased; }';
+                                document.head.appendChild(style);
+                            })();
+                        """.trimIndent(), null
+                        )
+
                         // ホームページに到達したらCookieを取得
                         if (!url.isNullOrBlank() && url.startsWith(SCOMB_HOME_URL)) {
                             try {
-                                // CookieManager.flush()を呼んで確実に保存
                                 CookieManager.getInstance().flush()
 
                                 val cookies = CookieManager.getInstance().getCookie(SCOMB_HOME_URL)
                                 Log.d(TAG, "Cookies for domain $SCOMB_HOME_URL: $cookies")
 
                                 if (!cookies.isNullOrBlank()) {
-                                    // SESSION cookieを探す
                                     val sessionCookie = cookies
                                         .split(";")
                                         .map { it.trim() }
@@ -137,16 +171,18 @@ fun LoginScreen(
                         }
                     }
 
-                    // 外部リンクは外部ブラウザで、ScombZ内はWebViewで開く
                     override fun shouldOverrideUrlLoading(
                         view: WebView?,
                         request: WebResourceRequest?
                     ): Boolean {
                         val targetUri = request?.url ?: return true
 
-                        return if (targetUri.host == SCOMBZ_DOMAIN||targetUri.host == LOGIN_DOMAIN) {
-                            // ScombZドメイン内のリンクはWebViewで読み込む
-                            false // falseを返すとWebViewがURLをロードする
+                        return if (targetUri.host == SCOMB_DOMAIN ||
+                            targetUri.host?.endsWith("sic.shibaura-it.ac.jp") == true ||
+                            targetUri.host?.contains("shibaura-it.ac.jp") == true
+                        ) {
+                            // Shibaura関連のドメインはWebViewで読み込む
+                            false
                         } else {
                             // 外部リンクは外部ブラウザで開く
                             try {
@@ -155,12 +191,12 @@ fun LoginScreen(
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to open external link: $targetUri", e)
                             }
-                            true // trueを返すとWebViewはURLをロードしない
+                            true
                         }
                     }
                 }
 
-                // 初期ロード（ログインページ）
+                // 初期ロード
                 loadUrl(SCOMB_LOGIN_PAGE_URL)
             }
         },
