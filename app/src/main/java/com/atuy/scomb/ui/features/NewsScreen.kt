@@ -11,6 +11,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -37,9 +38,19 @@ fun NewsScreen(
                     CircularProgressIndicator()
                 }
             }
+
             is NewsUiState.Success -> {
-                NewsList(newsItems = state.news)
+                PullToRefreshBox(
+                    isRefreshing = false,
+                    onRefresh = {
+                        viewModel.fetchNews(forceRefresh = true)
+                    },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    NewsList(newsItems = state.news)
+                }
             }
+
             is NewsUiState.Error -> {
                 ErrorState(
                     message = state.message,

@@ -59,7 +59,8 @@ class TimetableViewModel @Inject constructor(
                 if (year != 0 && term.isNotEmpty()) {
                     emit(TimetableUiState.Loading)
                     try {
-                        val classCells = repository.getTimetable(year, term, true)
+                        // 常にforceRefresh = trueで最新データを取得
+                        val classCells = repository.getTimetable(year, term, forceRefresh = true)
                         Log.d(TAG, "Successfully fetched ${classCells.size} classes for $year-$term")
                         val timetableGrid: Array<Array<ClassCell?>> = Array(5) { Array(7) { null } }
                         classCells.forEach { cell ->
@@ -70,7 +71,7 @@ class TimetableViewModel @Inject constructor(
                         emit(TimetableUiState.Success(timetableGrid))
                         Log.d(TAG, "UI state updated to Success.")
                     } catch (e: Exception) {
-                        emit(TimetableUiState.Error(e.message ?: "An unknown error occurred"))
+                        emit(TimetableUiState.Error(e.message ?: "不明なエラーが発生しました"))
                         Log.e(TAG, "Error fetching timetable", e)
                     }
                 }

@@ -1,7 +1,6 @@
 package com.atuy.scomb.ui.features
 
 import android.content.Intent
-import android.os.Build
 import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
@@ -28,7 +27,9 @@ private const val TAG = "LoginScreen"
 const val SCOMB_LOGIN_PAGE_URL =
     "https://scombz.shibaura-it.ac.jp/saml/login?idp=http://adfs.sic.shibaura-it.ac.jp/adfs/services/trust"
 const val SCOMB_HOME_URL = "https://scombz.shibaura-it.ac.jp/portal/home"
-private const val SCOMB_DOMAIN = "scombz.shibaura-it.ac.jp"
+private const val SCOMBZ_DOMAIN = "scombz.shibaura-it.ac.jp"
+private const val LOGIN_DOMAIN = "adfs.sic.shibaura-it.ac.jp"
+
 
 @Composable
 fun LoginScreen(
@@ -56,19 +57,13 @@ fun LoginScreen(
                     // レイアウト／表示関連
                     useWideViewPort = true
                     loadWithOverviewMode = true
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                        layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
-                    } else {
-                        layoutAlgorithm = WebSettings.LayoutAlgorithm.NORMAL
-                    }
+                    layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
 
                     builtInZoomControls = false
                     displayZoomControls = false
                     cacheMode = WebSettings.LOAD_DEFAULT
 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                    }
+                    mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
 
                     // 必要なら実機の Chrome と同じ UA を設定する（コメント解除して試してください）
                     // userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.7339.155 Mobile Safari/537.36"
@@ -76,9 +71,7 @@ fun LoginScreen(
 
                 // Cookie を受け入れる（ログイン検出に必要）
                 CookieManager.getInstance().setAcceptCookie(true)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                }
+                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 
                 // Console ログを Logcat に出す（デバッグ）
                 webChromeClient = object : WebChromeClient() {
@@ -109,9 +102,7 @@ fun LoginScreen(
                         if (!url.isNullOrBlank() && url.startsWith(SCOMB_HOME_URL)) {
                             try {
                                 // CookieManager.flush()を呼んで確実に保存
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                    CookieManager.getInstance().flush()
-                                }
+                                CookieManager.getInstance().flush()
 
                                 val cookies = CookieManager.getInstance().getCookie(SCOMB_HOME_URL)
                                 Log.d(TAG, "Cookies for domain $SCOMB_HOME_URL: $cookies")
@@ -153,7 +144,7 @@ fun LoginScreen(
                     ): Boolean {
                         val targetUri = request?.url ?: return true
 
-                        return if (targetUri.host == SCOMB_DOMAIN) {
+                        return if (targetUri.host == SCOMBZ_DOMAIN||targetUri.host == LOGIN_DOMAIN) {
                             // ScombZドメイン内のリンクはWebViewで読み込む
                             false // falseを返すとWebViewがURLをロードする
                         } else {

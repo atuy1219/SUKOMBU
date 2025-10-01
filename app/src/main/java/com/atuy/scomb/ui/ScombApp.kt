@@ -140,7 +140,7 @@ fun ScombApp(
                         }
                     }
                 ) {
-                    composable(Screen.Login.route) { 
+                    composable(Screen.Login.route) {
                         LoginScreen(
                             onLoginSuccess = {
                                 navController.navigate(Screen.Home.route) {
@@ -150,7 +150,7 @@ fun ScombApp(
                         )
                     }
                     composable(Screen.Home.route) { HomeScreen(paddingValues = innerPadding) }
-                    composable(Screen.Tasks.route) { TaskListScreen(paddingValues = innerPadding) }
+                    composable(Screen.Tasks.route) { TaskListScreen() }
                     composable(Screen.Timetable.route) { TimetableScreen() }
                     composable(Screen.News.route) { NewsScreen() }
                     composable(Screen.Settings.route) { SettingsScreen(navController = navController) }
@@ -206,7 +206,7 @@ fun TimetableTopBar(
     val currentYear by viewModel.currentYear.collectAsStateWithLifecycle()
     val currentTerm by viewModel.currentTerm.collectAsStateWithLifecycle()
     val current = TimetableTerm(currentYear, currentTerm)
-    
+
     var menuExpanded by remember { mutableStateOf(false) }
 
     TopAppBar(
