@@ -134,7 +134,6 @@ fun LoginScreen(
                         """.trimIndent(), null
                         )
 
-                        // ホームページに到達したらCookieを取得
                         if (!url.isNullOrBlank() && url.startsWith(SCOMB_HOME_URL)) {
                             try {
                                 CookieManager.getInstance().flush()
