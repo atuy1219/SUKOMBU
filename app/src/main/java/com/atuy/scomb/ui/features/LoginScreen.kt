@@ -1,6 +1,7 @@
 package com.atuy.scomb.ui.features
 
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
@@ -44,6 +45,9 @@ fun LoginScreen(
     AndroidView(
         factory = { ctx ->
             WebView(ctx).apply {
+                // ハードウェアアクセラレーションを無効化（シェーダーエラー対策）
+                setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
+
                 // WebSettings
                 settings.apply {
                     javaScriptEnabled = true
@@ -65,16 +69,11 @@ fun LoginScreen(
                     defaultFixedFontSize = 13
 
                     // レンダリング設定
-                    layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
-
-                    // キャッシュとストレージ
-                    cacheMode = WebSettings.LOAD_DEFAULT
-
-                    // セキュリティとコンテンツ
-                    mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-
-                    // ハードウェアアクセラレーションの有効化
-                    //setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                        layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
+                    } else {
+                        layoutAlgorithm = WebSettings.LayoutAlgorithm.NORMAL
+                    }
 
                     // その他の設定
                     allowFileAccess = false
@@ -91,15 +90,14 @@ fun LoginScreen(
 
                 // Cookie を受け入れる
                 CookieManager.getInstance().setAcceptCookie(true)
-                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                }
 
                 // Console ログを Logcat に出す
                 webChromeClient = object : WebChromeClient() {
                     override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
-                        Log.d(
-                            TAG,
-                            "JS: ${consoleMessage?.message()} -- ${consoleMessage?.sourceId()}:${consoleMessage?.lineNumber()}"
-                        )
+                        Log.d(TAG, "JS: ${consoleMessage?.message()} -- ${consoleMessage?.sourceId()}:${consoleMessage?.lineNumber()}")
                         return super.onConsoleMessage(consoleMessage)
                     }
                 }
@@ -119,8 +117,7 @@ fun LoginScreen(
                         Log.d(TAG, "Finished loading: $url")
 
                         // ページ読み込み後、フォントと表示を強制的に調整するJavaScriptを実行
-                        view?.evaluateJavascript(
-                            """
+                        view?.evaluateJavascript("""
                             (function() {
                                 document.body.style.fontFamily = 'sans-serif';
                                 document.body.style.fontSize = '16px';
@@ -130,63 +127,55 @@ fun LoginScreen(
                                 style.textContent = '* { -webkit-font-smoothing: antialiased; }';
                                 document.head.appendChild(style);
                             })();
-                        """.trimIndent(), null
-                        )
-                        view?.evaluateJavascript(
-                            """
-                            (function() {
-                            var allText = document.body.innerText;
-                            console.log('Page text length: ' + allText.length);
-                            console.log('First 500 chars: ' + allText.substring(0, 500));
-                            })();
-                            """.trimIndent(), null)
+                        """.trimIndent(), null)
 
-                        if (!url.isNullOrBlank() && url.startsWith(SCOMB_HOME_URL)) {
+                        // ホームページまたはポータルページに到達したらCookieを取得
+                        if (!url.isNullOrBlank() &&
+                            (url.startsWith(SCOMB_HOME_URL) ||
+                                    url.contains("scombz.shibaura-it.ac.jp/portal"))) {
+
+                            Log.d(TAG, "Reached ScombZ portal, attempting to get session cookie...")
+
                             try {
-                                CookieManager.getInstance().flush()
-
-                                val cookies = CookieManager.getInstance().getCookie(SCOMB_HOME_URL)
-                                Log.d(TAG, "Cookies for domain $SCOMB_HOME_URL: $cookies")
-
-                                if (!cookies.isNullOrBlank()) {
-                                    val sessionCookie = cookies
-                                        .split(";")
-                                        .map { it.trim() }
-                                        .firstOrNull { it.startsWith("SESSION=") }
-
-                                    if (!sessionCookie.isNullOrBlank()) {
-                                        val sessionId =
-                                            sessionCookie.substringAfter("SESSION=").trim()
-                                        Log.d(TAG, "Session ID found: $sessionId")
-                                        viewModel.onLoginSuccess(sessionId)
-                                    } else {
-                                        Log.e(
-                                            TAG,
-                                            "SESSION cookie not found. HttpOnly cookie may be the cause."
-                                        )
-                                    }
-                                } else {
-                                    Log.w(
-                                        TAG,
-                                        "No cookies found from CookieManager for $SCOMB_HOME_URL"
-                                    )
+                                // Cookieをフラッシュして確実に保存
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                    CookieManager.getInstance().flush()
                                 }
+
+                                // 少し待ってからCookieを取得
+                                view?.postDelayed({
+                                    val cookies = CookieManager.getInstance().getCookie(url)
+                                    Log.d(TAG, "All cookies for $url: $cookies")
+
+                                    if (!cookies.isNullOrBlank()) {
+                                        val sessionCookie = cookies
+                                            .split(";")
+                                            .map { it.trim() }
+                                            .firstOrNull { it.startsWith("SESSION=") }
+
+                                        if (!sessionCookie.isNullOrBlank()) {
+                                            val sessionId = sessionCookie.substringAfter("SESSION=").trim()
+                                            Log.d(TAG, "Session ID found: $sessionId")
+                                            viewModel.onLoginSuccess(sessionId)
+                                        } else {
+                                            Log.w(TAG, "SESSION cookie not found in: $cookies")
+                                        }
+                                    } else {
+                                        Log.w(TAG, "No cookies found")
+                                    }
+                                }, 500) // 500ms待機
                             } catch (e: Exception) {
                                 Log.e(TAG, "Error retrieving cookies", e)
                             }
                         }
                     }
 
-                    override fun shouldOverrideUrlLoading(
-                        view: WebView?,
-                        request: WebResourceRequest?
-                    ): Boolean {
+                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                         val targetUri = request?.url ?: return true
 
                         return if (targetUri.host == SCOMB_DOMAIN ||
                             targetUri.host?.endsWith("sic.shibaura-it.ac.jp") == true ||
-                            targetUri.host?.contains("shibaura-it.ac.jp") == true
-                        ) {
+                            targetUri.host?.contains("shibaura-it.ac.jp") == true) {
                             // Shibaura関連のドメインはWebViewで読み込む
                             false
                         } else {
