@@ -27,10 +27,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atuy.scomb.ui.viewmodel.LoginUiState
@@ -50,33 +53,22 @@ fun LoginScreen(
     }
 
     when (val state = uiState) {
-        is LoginUiState.Idle, is LoginUiState.Loading -> {
+        is LoginUiState.Idle, is LoginUiState.Loading, is LoginUiState.Error -> {
             LoginForm(
                 onLogin = { username, password ->
                     viewModel.startLogin(username, password)
                 },
-                isLoading = state is LoginUiState.Loading
+                isLoading = state is LoginUiState.Loading,
+                errorMessage = if (state is LoginUiState.Error) state.message else null
             )
         }
 
         is LoginUiState.RequiresTwoFactor -> {
-            TwoFactorForm(
-                onSubmit = { code ->
-                    viewModel.submitTwoFactorCode(code)
-                },
+            TwoFactorChallengeScreen(
+                code = state.code,
                 onCancel = {
                     viewModel.cancelLogin()
                 }
-            )
-        }
-
-        is LoginUiState.Error -> {
-            LoginForm(
-                onLogin = { username, password ->
-                    viewModel.startLogin(username, password)
-                },
-                errorMessage = state.message,
-                isLoading = false
             )
         }
 
@@ -180,12 +172,10 @@ fun LoginForm(
 }
 
 @Composable
-fun TwoFactorForm(
-    onSubmit: (String) -> Unit,
+fun TwoFactorChallengeScreen(
+    code: String,
     onCancel: () -> Unit
 ) {
-    var code by remember { mutableStateOf("") }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -194,7 +184,7 @@ fun TwoFactorForm(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
@@ -203,42 +193,28 @@ fun TwoFactorForm(
             )
 
             Text(
-                text = "認証コードを入力してください",
-                style = MaterialTheme.typography.bodyMedium
+                text = "認証アプリで以下の番号が表示されていることを確認し、承認してください。",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
             )
+
+            Text(
+                text = code,
+                fontSize = 48.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 4.sp
+            )
+
+            CircularProgressIndicator()
+
+            Text(
+                text = "承認後、自動的にログインします...",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = code,
-                onValueChange = {
-                    if (it.length <= 6) code = it
-                },
-                label = { Text("認証コード") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        if (code.length >= 6) {
-                            onSubmit(code)
-                        }
-                    }
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = { onSubmit(code) },
-                enabled = code.length >= 6,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("送信")
-            }
 
             OutlinedButton(
                 onClick = onCancel,
@@ -249,3 +225,4 @@ fun TwoFactorForm(
         }
     }
 }
+

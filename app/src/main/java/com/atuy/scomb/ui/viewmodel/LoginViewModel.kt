@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atuy.scomb.data.SessionManager
+import com.atuy.scomb.util.LoginListener
 import com.atuy.scomb.util.WebViewLoginManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +15,7 @@ import javax.inject.Inject
 sealed interface LoginUiState {
     object Idle : LoginUiState
     object Loading : LoginUiState
-    object RequiresTwoFactor : LoginUiState
+    data class RequiresTwoFactor(val code: String) : LoginUiState
     data class Success(val sessionId: String) : LoginUiState
     data class Error(val message: String) : LoginUiState
 }
@@ -23,84 +24,53 @@ sealed interface LoginUiState {
 class LoginViewModel @Inject constructor(
     application: Application,
     private val sessionManager: SessionManager
-) : AndroidViewModel(application) {
+) : AndroidViewModel(application), LoginListener {
 
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState: StateFlow<LoginUiState> = _uiState
 
     private var loginManager: WebViewLoginManager? = null
 
-    init {
-        loginManager = WebViewLoginManager(application.applicationContext)
-    }
-
     fun startLogin(username: String, password: String) {
-        viewModelScope.launch {
-            _uiState.value = LoginUiState.Loading
-
-            try {
-                val result = loginManager?.login(username, password)
-
-                result?.onSuccess { sessionId ->
-                    saveSessionAndComplete(sessionId)
-                }?.onFailure { exception ->
-                    when (exception) {
-                        is WebViewLoginManager.TwoFactorRequiredException -> {
-                            _uiState.value = LoginUiState.RequiresTwoFactor
-                        }
-
-                        else -> {
-                            _uiState.value = LoginUiState.Error(
-                                exception.message ?: "ログインに失敗しました"
-                            )
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                _uiState.value = LoginUiState.Error(
-                    e.message ?: "予期しないエラーが発生しました"
-                )
-            }
+        _uiState.value = LoginUiState.Loading
+        // 既存のログイン処理があれば破棄して新しい処理を開始
+        loginManager?.cleanup()
+        loginManager = WebViewLoginManager(getApplication()).apply {
+            startLogin(username, password, this@LoginViewModel)
         }
     }
 
-    fun submitTwoFactorCode(code: String) {
+    // --- LoginListenerの実装 ---
+
+    override fun onSuccess(sessionId: String) {
         viewModelScope.launch {
-            _uiState.value = LoginUiState.Loading
-
-            try {
-                val result = loginManager?.submitTwoFactorCode(code)
-
-                result?.onSuccess { sessionId ->
-                    saveSessionAndComplete(sessionId)
-                }?.onFailure { exception ->
-                    _uiState.value = LoginUiState.Error(
-                        exception.message ?: "二段階認証に失敗しました"
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.value = LoginUiState.Error(
-                    e.message ?: "予期しないエラーが発生しました"
-                )
-            }
+            saveSessionAndComplete(sessionId)
         }
     }
+
+    override fun onTwoFactorCodeExtracted(code: String) {
+        // 2FAコードを受け取り、UIに通知
+        // WebViewLoginManagerはユーザーの承認をバックグラウンドで待ち続ける
+        _uiState.value = LoginUiState.RequiresTwoFactor(code)
+    }
+
+    override fun onError(message: String) {
+        _uiState.value = LoginUiState.Error(message)
+        loginManager = null // managerは自身でcleanupするので参照をnullにする
+    }
+
+    // --- UIからのアクション ---
 
     fun cancelLogin() {
         loginManager?.cleanup()
+        loginManager = null
         _uiState.value = LoginUiState.Idle
     }
 
     private suspend fun saveSessionAndComplete(sessionId: String) {
         sessionManager.saveSessionId(sessionId)
         _uiState.value = LoginUiState.Success(sessionId)
-    }
-
-    // 旧メソッド（互換性のため残す）
-    fun onLoginSuccess(sessionId: String) {
-        viewModelScope.launch {
-            saveSessionAndComplete(sessionId)
-        }
+        loginManager = null
     }
 
     override fun onCleared() {
@@ -108,3 +78,4 @@ class LoginViewModel @Inject constructor(
         loginManager?.cleanup()
     }
 }
+
