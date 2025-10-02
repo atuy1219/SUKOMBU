@@ -14,7 +14,6 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "WebViewLoginManager"
 
-// ログイン処理の各イベントを通知するためのリスナーインターフェース
 interface LoginListener {
     fun onSuccess(sessionId: String)
     fun onTwoFactorCodeExtracted(code: String)
@@ -25,26 +24,30 @@ class WebViewLoginManager(private val context: Context) {
 
     private var webView: WebView? = null
     private var listener: LoginListener? = null
+    private var is2faCodeExtracted = false
+    private var isSessionDetected = false
 
-    // JavaScriptからKotlinのメソッドを呼び出すためのブリッジクラス
     inner class LoginJsInterface {
         @JavascriptInterface
         fun onSessionDetected(sessionId: String) {
+            if (isSessionDetected) return // 重複呼び出し防止
+            isSessionDetected = true
+            
             Log.d(TAG, "Session detected: $sessionId")
-            // UIスレッドでリスナーを呼び出す
             GlobalScope.launch(Dispatchers.Main) {
                 listener?.onSuccess(sessionId)
+                cleanup()
             }
-            cleanup()
         }
 
         @JavascriptInterface
         fun onTwoFactorCodeExtracted(code: String) {
+            if (is2faCodeExtracted) return // 重複呼び出し防止
+            is2faCodeExtracted = true
+            
             Log.d(TAG, "Two-factor code extracted: $code")
             GlobalScope.launch(Dispatchers.Main) {
                 listener?.onTwoFactorCodeExtracted(code)
-                // 認証コード抽出後、セッションが確立されるまでポーリングを開始する
-                webView?.evaluateJavascript(startSessionPollingScript(), null)
             }
         }
 
@@ -53,44 +56,61 @@ class WebViewLoginManager(private val context: Context) {
             Log.e(TAG, "Login error: $message")
             GlobalScope.launch(Dispatchers.Main) {
                 listener?.onError(message)
+                cleanup()
             }
-            cleanup()
         }
     }
 
     /**
-     * ログイン成功（SESSIONクッキーの存在）を定期的にチェックするJavaScriptを生成します。
+     * セッションを定期的にチェックするスクリプト
+     * 2FA画面表示後に実行開始
      */
-    private fun startSessionPollingScript(): String {
+    private fun getSessionPollingScript(): String {
         return """
         (function() {
-            // 既にポーリング処理が実行中の場合は何もしない
-            if (window.sessionPollingInterval) return;
-
+            if (window.sessionPollingStarted) {
+                console.log('Session polling already started');
+                return;
+            }
+            window.sessionPollingStarted = true;
+            
             console.log('Starting session polling...');
-            window.sessionPollingInterval = setInterval(function() {
-                // SESSIONクッキーが見つかったか確認
-                if (document.cookie.includes('SESSION=')) {
-                    const sessionId = document.cookie.split(';').find(c => c.trim().startsWith('SESSION=')).split('=')[1];
-                    if (sessionId) {
-                        console.log('Session found by polling, stopping poll.');
-                        // ポーリングを停止
-                        clearInterval(window.sessionPollingInterval);
-                        delete window.sessionPollingInterval;
-                        // 成功を通知
+            
+            const checkSession = function() {
+                const cookies = document.cookie;
+                console.log('Checking cookies:', cookies);
+                
+                if (cookies.includes('SESSION=')) {
+                    const sessionMatch = cookies.match(/SESSION=([^;]+)/);
+                    if (sessionMatch && sessionMatch[1]) {
+                        const sessionId = sessionMatch[1];
+                        console.log('Session found:', sessionId);
+                        
+                        if (window.sessionPollingInterval) {
+                            clearInterval(window.sessionPollingInterval);
+                            delete window.sessionPollingInterval;
+                        }
+                        
                         AndroidLoginBridge.onSessionDetected(sessionId);
+                        return true;
                     }
                 }
-            }, 2000); // 2秒ごとにチェック
+                return false;
+            };
+            
+            // 即座に一度チェック
+            if (!checkSession()) {
+                // 見つからなければポーリング開始
+                window.sessionPollingInterval = setInterval(checkSession, 1000);
+            }
         })();
         """.trimIndent()
     }
 
-    /**
-     * ログイン処理を開始します。
-     */
     fun startLogin(username: String, password: String, listener: LoginListener) {
         this.listener = listener
+        this.is2faCodeExtracted = false
+        this.isSessionDetected = false
         initializeWebViewAndLoad(username, password)
     }
 
@@ -100,7 +120,6 @@ class WebViewLoginManager(private val context: Context) {
         }
 
         webView = WebView(context).apply webViewApply@{
-            // このWebViewはバックグラウンド処理用で画面には表示されない
             layoutParams = android.view.ViewGroup.LayoutParams(1, 1)
 
             settings.apply {
@@ -136,39 +155,44 @@ class WebViewLoginManager(private val context: Context) {
                 super.onPageFinished(view, url)
                 Log.d(TAG, "Page finished: $url")
 
-                // JavaScriptを注入し、ページの状態を判別・操作する
                 view?.evaluateJavascript(
                     """
                     (function() {
-                        // 優先度1: ログイン成功（ScombZポータルページ）
+                        console.log('Page finished, checking state...');
+                        
+                        // 優先度1: ログイン成功（セッション確認）
                         if (document.cookie.includes('SESSION=')) {
-                            const sessionId = document.cookie.split(';').find(c => c.trim().startsWith('SESSION=')).split('=')[1];
-                            if (sessionId) {
-                                AndroidLoginBridge.onSessionDetected(sessionId);
+                            const sessionMatch = document.cookie.match(/SESSION=([^;]+)/);
+                            if (sessionMatch && sessionMatch[1]) {
+                                console.log('Session detected on page load');
+                                AndroidLoginBridge.onSessionDetected(sessionMatch[1]);
                                 return 'SUCCESS';
                             }
                         }
 
-                        // ▼▼▼ 変更点: エラー検知の優先度を上げる ▼▼▼
                         // 優先度2: エラーメッセージ
                         const errorElement = document.getElementById('errorText') || document.querySelector('.error');
                         if (errorElement && errorElement.innerText.trim()) {
-                             AndroidLoginBridge.onLoginError(errorElement.innerText.trim());
-                             return 'ERROR_DETECTED';
+                            console.log('Error detected:', errorElement.innerText.trim());
+                            AndroidLoginBridge.onLoginError(errorElement.innerText.trim());
+                            return 'ERROR_DETECTED';
                         }
-                        // ▲▲▲ 変更点 ▲▲▲
 
                         // 優先度3: 二段階認証コード表示ページ
                         const codeElement = document.getElementById('validEntropyNumber');
-                        if (codeElement && codeElement.innerText && !window.is2faCodeExtracted) {
-                            window.is2faCodeExtracted = true; // 抽出済みフラグを立てる
-                            AndroidLoginBridge.onTwoFactorCodeExtracted(codeElement.innerText.trim());
-                            return '2FA_CODE_EXTRACTED';
+                        if (codeElement && codeElement.innerText) {
+                            const code = codeElement.innerText.trim();
+                            if (code) {
+                                console.log('2FA code found:', code);
+                                AndroidLoginBridge.onTwoFactorCodeExtracted(code);
+                                return '2FA_CODE_EXTRACTED';
+                            }
                         }
 
                         // 優先度4: 認証方法選択ページ
                         const mfaLink = document.getElementById('AzureMfaAuthentication');
                         if (mfaLink) {
+                            console.log('MFA link found, clicking...');
                             mfaLink.click();
                             return 'MFA_LINK_CLICKED';
                         }
@@ -176,36 +200,50 @@ class WebViewLoginManager(private val context: Context) {
                         // 優先度5: ID/パスワード入力ページ
                         const usernameInput = document.querySelector('input[name="UserName"]');
                         const passwordInput = document.querySelector('input[name="Password"]');
-                        // usernameInput.value が空の場合のみ入力（再入力防止）
                         if (usernameInput && passwordInput && !usernameInput.value) {
-                             usernameInput.value = '$username';
-                             passwordInput.value = '$password';
-                             const submitBtn = document.getElementById('submitButton') || document.getElementById('primaryButton');
-                             if(submitBtn) {
-                                 submitBtn.click();
-                                 return 'CREDENTIALS_SUBMITTED';
-                             }
+                            console.log('Login form found, filling credentials...');
+                            usernameInput.value = '$username';
+                            passwordInput.value = '$password';
+                            const submitBtn = document.getElementById('submitButton') || document.getElementById('primaryButton');
+                            if (submitBtn) {
+                                submitBtn.click();
+                                return 'CREDENTIALS_SUBMITTED';
+                            }
                         }
                         
                         return 'UNKNOWN_STATE';
                     })();
-                """.trimIndent()
+                    """.trimIndent()
                 ) { result ->
                     Log.d(TAG, "JS execution result: $result")
+                    
+                    // 2FAコードが抽出されたら、ポーリングを開始
+                    if (result?.contains("2FA_CODE_EXTRACTED") == true && !isSessionDetected) {
+                        Log.d(TAG, "Starting session polling after 2FA code extraction")
+                        view?.postDelayed({
+                            view.evaluateJavascript(getSessionPollingScript()) { pollingResult ->
+                                Log.d(TAG, "Polling script executed: $pollingResult")
+                            }
+                        }, 500) // 少し遅延を入れて確実に実行
+                    }
                 }
             }
         }
     }
 
-    /**
-     * WebViewのリソースを解放します。
-     */
     fun cleanup() {
-        // ポーリング処理を停止する
-        webView?.evaluateJavascript("if(window.sessionPollingInterval) { clearInterval(window.sessionPollingInterval); delete window.sessionPollingInterval; }", null)
+        webView?.evaluateJavascript(
+            """
+            if (window.sessionPollingInterval) { 
+                clearInterval(window.sessionPollingInterval); 
+                delete window.sessionPollingInterval;
+                delete window.sessionPollingStarted;
+            }
+            """.trimIndent(),
+            null
+        )
         webView?.destroy()
         webView = null
         listener = null
     }
 }
-
