@@ -42,8 +42,11 @@ class WebViewLoginManager(private val context: Context) {
             Log.d(TAG, "Two-factor code extracted: $code")
             GlobalScope.launch(Dispatchers.Main) {
                 listener?.onTwoFactorCodeExtracted(code)
+                // ▼▼▼ 変更点 ▼▼▼
+                // 認証コード抽出後、セッションが確立されるまでポーリングを開始する
+                webView?.evaluateJavascript(startSessionPollingScript(), null)
+                // ▲▲▲ 変更点 ▲▲▲
             }
-            // ユーザーの承認を待つため、ここではクリーンアップしない
         }
 
         @JavascriptInterface
@@ -55,6 +58,36 @@ class WebViewLoginManager(private val context: Context) {
             cleanup()
         }
     }
+
+    // ▼▼▼ 追加点 ▼▼▼
+    /**
+     * ログイン成功（SESSIONクッキーの存在）を定期的にチェックするJavaScriptを生成します。
+     */
+    private fun startSessionPollingScript(): String {
+        return """
+        (function() {
+            // 既にポーリング処理が実行中の場合は何もしない
+            if (window.sessionPollingInterval) return;
+
+            console.log('Starting session polling...');
+            window.sessionPollingInterval = setInterval(function() {
+                // SESSIONクッキーが見つかったか確認
+                if (document.cookie.includes('SESSION=')) {
+                    const sessionId = document.cookie.split(';').find(c => c.trim().startsWith('SESSION=')).split('=')[1];
+                    if (sessionId) {
+                        console.log('Session found by polling, stopping poll.');
+                        // ポーリングを停止
+                        clearInterval(window.sessionPollingInterval);
+                        delete window.sessionPollingInterval;
+                        // 成功を通知
+                        AndroidLoginBridge.onSessionDetected(sessionId);
+                    }
+                }
+            }, 2000); // 2秒ごとにチェック
+        })();
+        """.trimIndent()
+    }
+
 
     /**
      * ログイン処理を開始します。
@@ -116,21 +149,21 @@ class WebViewLoginManager(private val context: Context) {
                             }
                         }
 
-                        // 優先度2: 二段階認証コード表示ページ
+
                         const codeElement = document.getElementById('validEntropyNumber');
-                        if (codeElement && codeElement.innerText) {
+                        if (codeElement && codeElement.innerText && !window.is2faCodeExtracted) {
+                            window.is2faCodeExtracted = true; // 抽出済みフラグを立てる
                             AndroidLoginBridge.onTwoFactorCodeExtracted(codeElement.innerText.trim());
                             return '2FA_CODE_EXTRACTED';
                         }
 
-                        // 優先度3: 認証方法選択ページ
+
                         const mfaLink = document.getElementById('AzureMfaAuthentication');
                         if (mfaLink) {
                             mfaLink.click();
                             return 'MFA_LINK_CLICKED';
                         }
 
-                        // 優先度4: ID/パスワード入力ページ
                         const usernameInput = document.querySelector('input[name="UserName"]');
                         const passwordInput = document.querySelector('input[name="Password"]');
                         // usernameInput.value が空の場合のみ入力（再入力防止）
@@ -144,7 +177,6 @@ class WebViewLoginManager(private val context: Context) {
                              }
                         }
                         
-                        // 優先度5: エラーメッセージ
                         const errorElement = document.getElementById('errorText') || document.querySelector('.error');
                         if (errorElement && errorElement.innerText.trim()) {
                              AndroidLoginBridge.onLoginError(errorElement.innerText.trim());
@@ -161,8 +193,15 @@ class WebViewLoginManager(private val context: Context) {
         }
     }
 
-
+    /**
+     * WebViewのリソースを解放します。
+     */
     fun cleanup() {
+
+        webView?.evaluateJavascript(
+            "if(window.sessionPollingInterval) { clearInterval(window.sessionPollingInterval); delete window.sessionPollingInterval; }",
+            null
+        )
         webView?.destroy()
         webView = null
         listener = null
