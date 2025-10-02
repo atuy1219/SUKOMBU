@@ -1,32 +1,40 @@
 package com.atuy.scomb.ui.features
 
-import android.content.Intent
-import android.util.Log
-import android.webkit.ConsoleMessage
-import android.webkit.CookieManager
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
-import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atuy.scomb.ui.viewmodel.LoginUiState
 import com.atuy.scomb.ui.viewmodel.LoginViewModel
-
-private const val TAG = "LoginScreen"
-
-const val SCOMB_LOGIN_PAGE_URL =
-    "https://scombz.shibaura-it.ac.jp/saml/login?idp=http://adfs.sic.shibaura-it.ac.jp/adfs/services/trust"
-const val SCOMB_HOME_URL = "https://scombz.shibaura-it.ac.jp/portal/home"
-private const val SCOMB_DOMAIN = "scombz.shibaura-it.ac.jp"
 
 @Composable
 fun LoginScreen(
@@ -41,151 +49,203 @@ fun LoginScreen(
         }
     }
 
-    AndroidView(
-        factory = { ctx ->
-            WebView(ctx).apply {
-                // ハードウェアアクセラレーションを無効化（シェーダーエラー対策）
-                setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
+    when (val state = uiState) {
+        is LoginUiState.Idle, is LoginUiState.Loading -> {
+            LoginForm(
+                onLogin = { username, password ->
+                    viewModel.startLogin(username, password)
+                },
+                isLoading = state is LoginUiState.Loading
+            )
+        }
 
-                // WebSettings
-                settings.apply {
-                    javaScriptEnabled = true
-                    domStorageEnabled = true
-                    loadsImagesAutomatically = true
-
-                    // レイアウト／表示関連
-                    useWideViewPort = true
-                    loadWithOverviewMode = true
-                    setSupportZoom(true)
-                    builtInZoomControls = false
-                    displayZoomControls = false
-
-                    // テキスト表示の改善
-                    textZoom = 100
-                    minimumFontSize = 8
-                    minimumLogicalFontSize = 8
-                    defaultFontSize = 16
-                    defaultFixedFontSize = 13
-
-                    // レンダリング設定
-                    layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
-
-                    // その他の設定
-                    allowFileAccess = false
-                    allowContentAccess = false
-                    javaScriptCanOpenWindowsAutomatically = false
-                    mediaPlaybackRequiresUserGesture = true
-
-                    // フォントの設定
-                    standardFontFamily = "sans-serif"
-                    serifFontFamily = "serif"
-                    sansSerifFontFamily = "sans-serif"
-                    fixedFontFamily = "monospace"
+        is LoginUiState.RequiresTwoFactor -> {
+            TwoFactorForm(
+                onSubmit = { code ->
+                    viewModel.submitTwoFactorCode(code)
+                },
+                onCancel = {
+                    viewModel.cancelLogin()
                 }
+            )
+        }
 
-                // Cookie を受け入れる
-                CookieManager.getInstance().setAcceptCookie(true)
-                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+        is LoginUiState.Error -> {
+            LoginForm(
+                onLogin = { username, password ->
+                    viewModel.startLogin(username, password)
+                },
+                errorMessage = state.message,
+                isLoading = false
+            )
+        }
 
-                // Console ログを Logcat に出す
-                webChromeClient = object : WebChromeClient() {
-                    override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
-                        Log.d(TAG, "JS: ${consoleMessage?.message()} -- ${consoleMessage?.sourceId()}:${consoleMessage?.lineNumber()}")
-                        return super.onConsoleMessage(consoleMessage)
-                    }
-                }
+        is LoginUiState.Success -> {
+            // 遷移処理はLaunchedEffectで行う
+        }
+    }
+}
 
-                webViewClient = object : WebViewClient() {
-                    override fun onReceivedError(
-                        view: WebView?,
-                        request: WebResourceRequest?,
-                        error: WebResourceError?
-                    ) {
-                        super.onReceivedError(view, request, error)
-                        Log.e(TAG, "WebView error: ${error?.description ?: "unknown"}")
-                    }
+@Composable
+fun LoginForm(
+    onLogin: (String, String) -> Unit,
+    errorMessage: String? = null,
+    isLoading: Boolean = false
+) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
 
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        Log.d(TAG, "Finished loading: $url")
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "ScombZにログイン",
+                style = MaterialTheme.typography.headlineMedium
+            )
 
-                        // ページ読み込み後、フォントと表示を強制的に調整するJavaScriptを実行
-                        view?.evaluateJavascript("""
-                            (function() {
-                                document.body.style.fontFamily = 'sans-serif';
-                                document.body.style.fontSize = '16px';
-                                document.body.style.webkitTextSizeAdjust = '100%';
-                                document.body.style.textSizeAdjust = '100%';
-                                var style = document.createElement('style');
-                                style.textContent = '* { -webkit-font-smoothing: antialiased; }';
-                                document.head.appendChild(style);
-                            })();
-                        """.trimIndent(), null)
+            Spacer(modifier = Modifier.height(16.dp))
 
-                        // ホームページまたはポータルページに到達したらCookieを取得
-                        if (!url.isNullOrBlank() &&
-                            (url.startsWith(SCOMB_HOME_URL) ||
-                                    url.contains("scombz.shibaura-it.ac.jp/portal"))) {
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("ユーザー名") },
+                singleLine = true,
+                enabled = !isLoading,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
 
-                            Log.d(TAG, "Reached ScombZ portal, attempting to get session cookie...")
-
-                            try {
-                                // Cookieをフラッシュして確実に保存
-                                CookieManager.getInstance().flush()
-
-                                // 少し待ってからCookieを取得
-                                view?.postDelayed({
-                                    val cookies = CookieManager.getInstance().getCookie(url)
-                                    Log.d(TAG, "All cookies for $url: $cookies")
-
-                                    if (!cookies.isNullOrBlank()) {
-                                        val sessionCookie = cookies
-                                            .split(";")
-                                            .map { it.trim() }
-                                            .firstOrNull { it.startsWith("SESSION=") }
-
-                                        if (!sessionCookie.isNullOrBlank()) {
-                                            val sessionId = sessionCookie.substringAfter("SESSION=").trim()
-                                            Log.d(TAG, "Session ID found: $sessionId")
-                                            viewModel.onLoginSuccess(sessionId)
-                                        } else {
-                                            Log.w(TAG, "SESSION cookie not found in: $cookies")
-                                        }
-                                    } else {
-                                        Log.w(TAG, "No cookies found")
-                                    }
-                                }, 500) // 500ms待機
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Error retrieving cookies", e)
-                            }
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("パスワード") },
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true,
+                enabled = !isLoading,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        if (username.isNotBlank() && password.isNotBlank()) {
+                            onLogin(username, password)
                         }
                     }
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
 
-                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                        val targetUri = request?.url ?: return true
-
-                        return if (targetUri.host == SCOMB_DOMAIN ||
-                            targetUri.host?.endsWith("sic.shibaura-it.ac.jp") == true ||
-                            targetUri.host?.contains("shibaura-it.ac.jp") == true) {
-                            // Shibaura関連のドメインはWebViewで読み込む
-                            false
-                        } else {
-                            // 外部リンクは外部ブラウザで開く
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, targetUri)
-                                view?.context?.startActivity(intent)
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Failed to open external link: $targetUri", e)
-                            }
-                            true
-                        }
-                    }
-                }
-
-                // 初期ロード
-                loadUrl(SCOMB_LOGIN_PAGE_URL)
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
-        },
-        modifier = Modifier.fillMaxSize()
-    )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = { onLogin(username, password) },
+                enabled = username.isNotBlank() && password.isNotBlank() && !isLoading,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("ログイン")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TwoFactorForm(
+    onSubmit: (String) -> Unit,
+    onCancel: () -> Unit
+) {
+    var code by remember { mutableStateOf("") }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "二段階認証",
+                style = MaterialTheme.typography.headlineMedium
+            )
+
+            Text(
+                text = "認証コードを入力してください",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = code,
+                onValueChange = {
+                    if (it.length <= 6) code = it
+                },
+                label = { Text("認証コード") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        if (code.length >= 6) {
+                            onSubmit(code)
+                        }
+                    }
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = { onSubmit(code) },
+                enabled = code.length >= 6,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("送信")
+            }
+
+            OutlinedButton(
+                onClick = onCancel,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("キャンセル")
+            }
+        }
+    }
 }
