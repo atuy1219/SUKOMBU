@@ -1,6 +1,7 @@
 package com.atuy.scomb.util
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
@@ -42,10 +43,8 @@ class WebViewLoginManager(private val context: Context) {
             Log.d(TAG, "Two-factor code extracted: $code")
             GlobalScope.launch(Dispatchers.Main) {
                 listener?.onTwoFactorCodeExtracted(code)
-                // ▼▼▼ 変更点 ▼▼▼
                 // 認証コード抽出後、セッションが確立されるまでポーリングを開始する
                 webView?.evaluateJavascript(startSessionPollingScript(), null)
-                // ▲▲▲ 変更点 ▲▲▲
             }
         }
 
@@ -59,7 +58,6 @@ class WebViewLoginManager(private val context: Context) {
         }
     }
 
-    // ▼▼▼ 追加点 ▼▼▼
     /**
      * ログイン成功（SESSIONクッキーの存在）を定期的にチェックするJavaScriptを生成します。
      */
@@ -88,7 +86,6 @@ class WebViewLoginManager(private val context: Context) {
         """.trimIndent()
     }
 
-
     /**
      * ログイン処理を開始します。
      */
@@ -112,20 +109,23 @@ class WebViewLoginManager(private val context: Context) {
                 databaseEnabled = true
                 cacheMode = WebSettings.LOAD_NO_CACHE
 
-                mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                }
             }
 
             addJavascriptInterface(LoginJsInterface(), "AndroidLoginBridge")
 
             CookieManager.getInstance().apply {
                 setAcceptCookie(true)
-                setAcceptThirdPartyCookies(this@webViewApply, true)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    setAcceptThirdPartyCookies(this@webViewApply, true)
+                }
             }
 
             webViewClient = createWebViewClient(username, password)
 
-            val loginUrl =
-                "https://scombz.shibaura-it.ac.jp/saml/login?idp=http://adfs.sic.shibaura-it.ac.jp/adfs/services/trust"
+            val loginUrl = "https://scombz.shibaura-it.ac.jp/saml/login?idp=http://adfs.sic.shibaura-it.ac.jp/adfs/services/trust"
             loadUrl(loginUrl)
         }
     }
@@ -149,7 +149,16 @@ class WebViewLoginManager(private val context: Context) {
                             }
                         }
 
+                        // ▼▼▼ 変更点: エラー検知の優先度を上げる ▼▼▼
+                        // 優先度2: エラーメッセージ
+                        const errorElement = document.getElementById('errorText') || document.querySelector('.error');
+                        if (errorElement && errorElement.innerText.trim()) {
+                             AndroidLoginBridge.onLoginError(errorElement.innerText.trim());
+                             return 'ERROR_DETECTED';
+                        }
+                        // ▲▲▲ 変更点 ▲▲▲
 
+                        // 優先度3: 二段階認証コード表示ページ
                         const codeElement = document.getElementById('validEntropyNumber');
                         if (codeElement && codeElement.innerText && !window.is2faCodeExtracted) {
                             window.is2faCodeExtracted = true; // 抽出済みフラグを立てる
@@ -157,13 +166,14 @@ class WebViewLoginManager(private val context: Context) {
                             return '2FA_CODE_EXTRACTED';
                         }
 
-
+                        // 優先度4: 認証方法選択ページ
                         const mfaLink = document.getElementById('AzureMfaAuthentication');
                         if (mfaLink) {
                             mfaLink.click();
                             return 'MFA_LINK_CLICKED';
                         }
 
+                        // 優先度5: ID/パスワード入力ページ
                         const usernameInput = document.querySelector('input[name="UserName"]');
                         const passwordInput = document.querySelector('input[name="Password"]');
                         // usernameInput.value が空の場合のみ入力（再入力防止）
@@ -175,12 +185,6 @@ class WebViewLoginManager(private val context: Context) {
                                  submitBtn.click();
                                  return 'CREDENTIALS_SUBMITTED';
                              }
-                        }
-                        
-                        const errorElement = document.getElementById('errorText') || document.querySelector('.error');
-                        if (errorElement && errorElement.innerText.trim()) {
-                             AndroidLoginBridge.onLoginError(errorElement.innerText.trim());
-                             return 'ERROR_DETECTED';
                         }
                         
                         return 'UNKNOWN_STATE';
@@ -197,11 +201,8 @@ class WebViewLoginManager(private val context: Context) {
      * WebViewのリソースを解放します。
      */
     fun cleanup() {
-
-        webView?.evaluateJavascript(
-            "if(window.sessionPollingInterval) { clearInterval(window.sessionPollingInterval); delete window.sessionPollingInterval; }",
-            null
-        )
+        // ポーリング処理を停止する
+        webView?.evaluateJavascript("if(window.sessionPollingInterval) { clearInterval(window.sessionPollingInterval); delete window.sessionPollingInterval; }", null)
         webView?.destroy()
         webView = null
         listener = null
