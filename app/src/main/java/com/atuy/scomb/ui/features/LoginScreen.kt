@@ -1,7 +1,6 @@
 package com.atuy.scomb.ui.features
 
 import android.content.Intent
-import android.os.Build
 import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
@@ -69,11 +68,7 @@ fun LoginScreen(
                     defaultFixedFontSize = 13
 
                     // レンダリング設定
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                        layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
-                    } else {
-                        layoutAlgorithm = WebSettings.LayoutAlgorithm.NORMAL
-                    }
+                    layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
 
                     // その他の設定
                     allowFileAccess = false
@@ -90,9 +85,7 @@ fun LoginScreen(
 
                 // Cookie を受け入れる
                 CookieManager.getInstance().setAcceptCookie(true)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                }
+                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 
                 // Console ログを Logcat に出す
                 webChromeClient = object : WebChromeClient() {
@@ -138,9 +131,7 @@ fun LoginScreen(
 
                             try {
                                 // Cookieをフラッシュして確実に保存
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                    CookieManager.getInstance().flush()
-                                }
+                                CookieManager.getInstance().flush()
 
                                 // 少し待ってからCookieを取得
                                 view?.postDelayed({
