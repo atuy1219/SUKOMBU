@@ -132,6 +132,14 @@ fun LoginScreen(
                             })();
                         """.trimIndent(), null
                         )
+                        view?.evaluateJavascript(
+                            """
+                            (function() {
+                            var allText = document.body.innerText;
+                            console.log('Page text length: ' + allText.length);
+                            console.log('First 500 chars: ' + allText.substring(0, 500));
+                            })();
+                            """.trimIndent(), null)
 
                         if (!url.isNullOrBlank() && url.startsWith(SCOMB_HOME_URL)) {
                             try {
