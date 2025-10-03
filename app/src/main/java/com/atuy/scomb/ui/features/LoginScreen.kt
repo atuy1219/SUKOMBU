@@ -92,9 +92,7 @@ fun LoginForm(
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    // ▼▼▼ 追加点: パスワードの可視性を管理する状態 ▼▼▼
     var passwordVisible by remember { mutableStateOf(false) }
-    // ▲▲▲ 追加点 ▲▲▲
     val focusManager = LocalFocusManager.current
 
     Box(
@@ -118,13 +116,15 @@ fun LoginForm(
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("ユーザー名") },
+                label = { Text("ユーザー名 (学籍番号)") },
                 singleLine = true,
                 enabled = !isLoading,
+                // ▼▼▼ 変更点: OSの自動入力を促すためキーボードタイプを変更 ▼▼▼
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
+                    keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next
                 ),
+                // ▲▲▲ 変更点 ▲▲▲
                 keyboardActions = KeyboardActions(
                     onNext = { focusManager.moveFocus(FocusDirection.Down) }
                 ),
@@ -137,7 +137,6 @@ fun LoginForm(
                 label = { Text("パスワード") },
                 singleLine = true,
                 enabled = !isLoading,
-                // ▼▼▼ 変更点: パスワードの表示・非表示を切り替え ▼▼▼
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     val image = if (passwordVisible)
@@ -151,7 +150,6 @@ fun LoginForm(
                         Icon(imageVector = image, contentDescription = description)
                     }
                 },
-                // ▲▲▲ 変更点 ▲▲▲
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done

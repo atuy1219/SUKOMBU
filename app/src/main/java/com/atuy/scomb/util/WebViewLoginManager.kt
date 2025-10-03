@@ -1,7 +1,6 @@
 package com.atuy.scomb.util
 
 import android.content.Context
-import android.os.Build
 import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
@@ -109,23 +108,20 @@ class WebViewLoginManager(private val context: Context) {
                 databaseEnabled = true
                 cacheMode = WebSettings.LOAD_NO_CACHE
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                }
+                mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
             }
 
             addJavascriptInterface(LoginJsInterface(), "AndroidLoginBridge")
 
             CookieManager.getInstance().apply {
                 setAcceptCookie(true)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    setAcceptThirdPartyCookies(this@webViewApply, true)
-                }
+                setAcceptThirdPartyCookies(this@webViewApply, true)
             }
 
             webViewClient = createWebViewClient(username, password)
 
-            val loginUrl = "https://scombz.shibaura-it.ac.jp/saml/login?idp=http://adfs.sic.shibaura-it.ac.jp/adfs/services/trust"
+            val loginUrl =
+                "https://scombz.shibaura-it.ac.jp/saml/login?idp=http://adfs.sic.shibaura-it.ac.jp/adfs/services/trust"
             loadUrl(loginUrl)
         }
     }
@@ -136,27 +132,34 @@ class WebViewLoginManager(private val context: Context) {
                 super.onPageFinished(view, url)
                 Log.d(TAG, "Page finished: $url")
 
+                // ▼▼▼ 変更点: ホーム画面のURLを検知して成功とみなす ▼▼▼
+                if (url?.startsWith("https://scombz.shibaura-it.ac.jp/portal/home") == true) {
+                    Log.d(TAG, "Home page reached. Starting session polling to get cookie.")
+                    // ホーム画面に到達したらログイン成功とみなし、SESSIONクッキーがセットされるまで待機する
+                    view?.evaluateJavascript(startSessionPollingScript(), null)
+                    return // これ以降のJavaScript評価は不要
+                }
+                // ▲▲▲ 変更点 ▲▲▲
+
                 // JavaScriptを注入し、ページの状態を判別・操作する
                 view?.evaluateJavascript(
                     """
                     (function() {
-                        // 優先度1: ログイン成功（ScombZポータルページ）
+                        // 優先度1: ログイン成功（ScombZポータルページ）-> URLベースの判定に移行したため、Cookieのみのチェックは予備として残す
                         if (document.cookie.includes('SESSION=')) {
                             const sessionId = document.cookie.split(';').find(c => c.trim().startsWith('SESSION=')).split('=')[1];
                             if (sessionId) {
                                 AndroidLoginBridge.onSessionDetected(sessionId);
-                                return 'SUCCESS';
+                                return 'SUCCESS_BY_COOKIE';
                             }
                         }
 
-                        // ▼▼▼ 変更点: エラー検知の優先度を上げる ▼▼▼
                         // 優先度2: エラーメッセージ
                         const errorElement = document.getElementById('errorText') || document.querySelector('.error');
                         if (errorElement && errorElement.innerText.trim()) {
                              AndroidLoginBridge.onLoginError(errorElement.innerText.trim());
                              return 'ERROR_DETECTED';
                         }
-                        // ▲▲▲ 変更点 ▲▲▲
 
                         // 優先度3: 二段階認証コード表示ページ
                         const codeElement = document.getElementById('validEntropyNumber');
@@ -174,8 +177,8 @@ class WebViewLoginManager(private val context: Context) {
                         }
 
                         // 優先度5: ID/パスワード入力ページ
-                        const usernameInput = document.querySelector('input[name="UserName"]');
-                        const passwordInput = document.querySelector('input[name="Password"]');
+                        const usernameInput = document.getElementById('userNameInput') || document.querySelector('input[name="UserName"]');
+                        const passwordInput = document.getElementById('passwordInput') || document.querySelector('input[name="Password"]');
                         // usernameInput.value が空の場合のみ入力（再入力防止）
                         if (usernameInput && passwordInput && !usernameInput.value) {
                              usernameInput.value = '$username';
@@ -202,10 +205,12 @@ class WebViewLoginManager(private val context: Context) {
      */
     fun cleanup() {
         // ポーリング処理を停止する
-        webView?.evaluateJavascript("if(window.sessionPollingInterval) { clearInterval(window.sessionPollingInterval); delete window.sessionPollingInterval; }", null)
+        webView?.evaluateJavascript(
+            "if(window.sessionPollingInterval) { clearInterval(window.sessionPollingInterval); delete window.sessionPollingInterval; }",
+            null
+        )
         webView?.destroy()
         webView = null
         listener = null
     }
 }
-
