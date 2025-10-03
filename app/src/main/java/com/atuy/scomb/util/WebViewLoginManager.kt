@@ -29,12 +29,6 @@ class WebViewLoginManager(private val context: Context) {
     private var cookiePollHandler: Handler? = null
     private var cookiePollRunnable: Runnable? = null
 
-    interface LoginListener {
-        fun onSuccess(sessionId: String)
-        fun onLoginError(message: String)
-        fun onTwoFactorCodeExtracted(code: String)
-    }
-
     fun startLogin(username: String, password: String, listener: LoginListener) {
         this.listener = listener
         this.is2faCodeExtracted = false
@@ -43,7 +37,7 @@ class WebViewLoginManager(private val context: Context) {
     }
 
     private fun initializeWebViewAndLoad(username: String, password: String) {
-        cleanup() // 既存があればクリア
+        cleanup()
 
         webView = WebView(context).apply {
             settings.javaScriptEnabled = true
@@ -84,7 +78,14 @@ class WebViewLoginManager(private val context: Context) {
         fun onLoginError(message: String) {
             Log.d(TAG, "onLoginError JS -> $message")
             GlobalScope.launch(Dispatchers.Main) {
-                listener?.onLoginError(message)
+                try {
+                    listener?.onLoginError(message)
+                } catch (_: Throwable) { /* ignore */
+                }
+                try {
+                    listener?.onError(message)
+                } catch (_: Throwable) { /* ignore */
+                }
             }
         }
 
@@ -131,7 +132,6 @@ class WebViewLoginManager(private val context: Context) {
                         ) { result ->
                             Log.d(TAG, "Direct session extraction result: $result")
                             if (result?.contains("SESSION_NOT_FOUND_ON_HOME") == true) {
-                                // ページ内JSポーリング（document.cookie）とAndroid側ポーリング両方を開始
                                 view.evaluateJavascript(getSessionPollingScript(), null)
                                 startAndroidCookiePolling()
                             }
@@ -191,6 +191,7 @@ class WebViewLoginManager(private val context: Context) {
                     """.trimIndent()
                 ) { result ->
                     Log.d(TAG, "JS execution result: $result")
+                    // 2FA コードが検出されたら JS ポーリングと Android 側ポーリングを開始する
                     if (result?.contains("2FA_CODE_EXTRACTED") == true && !isSessionDetected) {
                         Log.d(TAG, "Starting session polling after 2FA code extraction")
                         view?.postDelayed({
@@ -227,6 +228,7 @@ class WebViewLoginManager(private val context: Context) {
             })();
         """.trimIndent()
     }
+
 
     private fun startAndroidCookiePolling() {
         if (cookiePollHandler != null) return

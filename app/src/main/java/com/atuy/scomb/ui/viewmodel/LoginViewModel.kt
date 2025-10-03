@@ -40,7 +40,6 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    // --- LoginListenerの実装 ---
 
     override fun onSuccess(sessionId: String) {
         viewModelScope.launch {
@@ -56,10 +55,14 @@ class LoginViewModel @Inject constructor(
 
     override fun onError(message: String) {
         _uiState.value = LoginUiState.Error(message)
-        loginManager = null // managerは自身でcleanupするので参照をnullにする
+        loginManager = null
     }
 
-    // --- UIからのアクション ---
+    override fun onLoginError(message: String) {
+
+        onError(message)
+    }
+
 
     fun cancelLogin() {
         loginManager?.cleanup()
@@ -78,4 +81,5 @@ class LoginViewModel @Inject constructor(
         loginManager?.cleanup()
     }
 }
+
 
