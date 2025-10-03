@@ -45,6 +45,7 @@ class WebViewLoginManager(private val context: Context) {
             settings.allowFileAccess = false
             settings.loadsImagesAutomatically = true
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            settings.cacheMode = WebSettings.LOAD_NO_CACHE
             addJavascriptInterface(AndroidLoginBridge(), "AndroidLoginBridge")
             webViewClient = createWebViewClient(username, password)
         }
@@ -52,6 +53,8 @@ class WebViewLoginManager(private val context: Context) {
         try {
             CookieManager.getInstance().setAcceptCookie(true)
             CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
+            CookieManager.getInstance().removeAllCookies(null)
+            CookieManager.getInstance().flush()
         } catch (e: Exception) {
             Log.w(TAG, "CookieManager setup failed", e)
         }
@@ -80,11 +83,11 @@ class WebViewLoginManager(private val context: Context) {
             GlobalScope.launch(Dispatchers.Main) {
                 try {
                     listener?.onLoginError(message)
-                } catch (_: Throwable) { /* ignore */
+                } catch (_: Throwable) {
                 }
                 try {
                     listener?.onError(message)
-                } catch (_: Throwable) { /* ignore */
+                } catch (_: Throwable) {
                 }
             }
         }
@@ -114,55 +117,59 @@ class WebViewLoginManager(private val context: Context) {
                 super.onPageFinished(view, url)
                 Log.d(TAG, "Page finished: $url")
 
+                try {
+                    CookieManager.getInstance().flush()
+                    val cookies = CookieManager.getInstance().getCookie(DOMAIN)
+                    Log.d(TAG, "Current cookies: $cookies")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error getting cookies", e)
+                }
+
                 if (url?.startsWith("$DOMAIN/portal/home") == true) {
+                    Log.d(TAG, "Homepage detected!")
                     if (!isSessionDetected) {
-                        Log.d(TAG, "Homepage detected. Attempting direct session extraction")
                         view?.evaluateJavascript(
                             """
                             (function() {
                                 const m = document.cookie.match(/SESSION=([^;]+)/);
                                 if (m && m[1]) {
                                     AndroidLoginBridge.onSessionDetected(m[1]);
-                                    return 'SESSION_EXTRACTED_ON_HOME';
+                                    return 'SESSION_FOUND';
                                 }
-                                return 'SESSION_NOT_FOUND_ON_HOME';
+                                return 'SESSION_NOT_FOUND';
                             })();
                             """.trimIndent()
                         ) { result ->
-                            Log.d(TAG, "Direct session extraction result: $result")
-                            if (result?.contains("2FA_CODE_EXTRACTED") == true && !isSessionDetected) {
-                                Log.d(TAG, "Starting session polling after 2FA code extraction")
-                                view?.postDelayed({
-                                    view.evaluateJavascript(getSessionPollingScript()) { pollingResult ->
-                                        Log.d(TAG, "Polling script executed: $pollingResult")
-                                    }
-                                    view.postDelayed({
-                                        startAndroidCookiePolling()
-                                    }, 2000)
-                                }, 1000)
+                            Log.d(TAG, "Homepage session check: $result")
+                            if (result?.contains("SESSION_NOT_FOUND") == true) {
+                                checkSessionViaCookieManager()
                             }
                         }
                     }
-
                     return
                 }
 
+                // 認証フロー処理
                 view?.evaluateJavascript(
                     """
                     (function() {
                         console.log('Page finished, checking state.');
+                        
                         const usernameInput = document.getElementById('userNameInput') || document.querySelector('input[name="UserName"]');
                         const passwordInput = document.getElementById('passwordInput') || document.querySelector('input[name="Password"]');
                         const sessionMatch = document.cookie.match(/SESSION=([^;]+)/);
+                        
                         if (sessionMatch && sessionMatch[1]) {
                             AndroidLoginBridge.onSessionDetected(sessionMatch[1]);
                             return 'SUCCESS';
                         }
+                        
                         const errorElement = document.getElementById('errorText') || document.querySelector('.error');
                         if (errorElement && errorElement.innerText.trim()) {
                             AndroidLoginBridge.onLoginError(errorElement.innerText.trim());
                             return 'ERROR_DETECTED';
                         }
+                        
                         const codeElement = document.getElementById('validEntropyNumber');
                         if (codeElement && codeElement.innerText) {
                             const code = codeElement.innerText.trim();
@@ -171,12 +178,13 @@ class WebViewLoginManager(private val context: Context) {
                                 return '2FA_CODE_EXTRACTED';
                             }
                         }
+                        
                         const mfaLink = document.getElementById('AzureMfaAuthentication');
                         if (mfaLink) {
                             mfaLink.click();
                             return 'MFA_LINK_CLICKED';
                         }
-                        // 自動入力（既に値があっても上書き）。input イベントを発火させる。
+                        
                         if (usernameInput && passwordInput) {
                             usernameInput.focus();
                             usernameInput.value = '${escapeForJs(username)}';
@@ -198,18 +206,60 @@ class WebViewLoginManager(private val context: Context) {
                     """.trimIndent()
                 ) { result ->
                     Log.d(TAG, "JS execution result: $result")
-                    // 2FA コードが検出されたら JS ポーリングと Android 側ポーリングを開始する
+
                     if (result?.contains("2FA_CODE_EXTRACTED") == true && !isSessionDetected) {
-                        Log.d(TAG, "Starting session polling after 2FA code extraction")
-                        view?.postDelayed({
-                            view.evaluateJavascript(getSessionPollingScript()) { pollingResult ->
-                                Log.d(TAG, "Polling script executed: $pollingResult")
-                            }
-                            startAndroidCookiePolling()
-                        }, 500)
+                        Log.d(TAG, "Starting aggressive session polling after 2FA")
+                        // より積極的なポーリングを開始
+                        startAggressiveSessionPolling()
                     }
                 }
             }
+        }
+    }
+
+    private fun startAggressiveSessionPolling() {
+        // 既存のポーリングを停止
+        stopPolling()
+
+        // JSポーリングを開始
+        webView?.evaluateJavascript(getSessionPollingScript()) { result ->
+            Log.d(TAG, "JS polling started: $result")
+        }
+
+        // Androidポーリングを開始（より頻繁に）
+        startAndroidCookiePolling()
+
+        // 定期的にページをリロードしてセッションを確認（バックグラウンド対策）
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (!isSessionDetected) {
+                Log.d(TAG, "Checking if redirected to home...")
+                webView?.url?.let { currentUrl ->
+                    if (currentUrl.startsWith("$DOMAIN/portal/home")) {
+                        Log.d(TAG, "Detected home page during polling, force checking session")
+                        checkSessionViaCookieManager()
+                    }
+                }
+            }
+        }, 3000)
+    }
+
+    private fun checkSessionViaCookieManager() {
+        try {
+            CookieManager.getInstance().flush()
+            val cookies = CookieManager.getInstance().getCookie(DOMAIN) ?: ""
+            Log.d(TAG, "Force checking cookies: $cookies")
+            val match = Regex("SESSION=([^;]+)").find(cookies)
+            if (match != null && !isSessionDetected) {
+                val sessionId = match.groupValues[1]
+                Log.d(TAG, "Session found via force check: $sessionId")
+                GlobalScope.launch(Dispatchers.Main) {
+                    isSessionDetected = true
+                    listener?.onSuccess(sessionId)
+                    cleanup()
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in force check", e)
         }
     }
 
@@ -218,11 +268,27 @@ class WebViewLoginManager(private val context: Context) {
             (function() {
                 if (window.sessionPollingStarted) { return 'POLLING_ALREADY_STARTED'; }
                 window.sessionPollingStarted = true;
+                
+                let pollCount = 0;
+                const maxPolls = 60;
+                
                 window.sessionPollingInterval = setInterval(function() {
+                    pollCount++;
                     try {
+                        // 現在のURLをチェック
+                        if (window.location.href.indexOf('/portal/home') !== -1) {
+                            console.log('Detected home page in JS polling');
+                        }
+                        
                         const m = document.cookie.match(/SESSION=([^;]+)/);
                         if (m && m[1]) {
+                            console.log('Session found in JS polling: ' + m[1]);
                             AndroidLoginBridge.onSessionDetected(m[1]);
+                            clearInterval(window.sessionPollingInterval);
+                            delete window.sessionPollingInterval;
+                            delete window.sessionPollingStarted;
+                        } else if (pollCount >= maxPolls) {
+                            console.log('JS polling timeout');
                             clearInterval(window.sessionPollingInterval);
                             delete window.sessionPollingInterval;
                             delete window.sessionPollingStarted;
@@ -230,28 +296,30 @@ class WebViewLoginManager(private val context: Context) {
                     } catch(e) {
                         console.log('session polling error', e);
                     }
-                }, 1000);
+                }, 500);
+                
                 return 'POLLING_STARTED';
             })();
         """.trimIndent()
     }
 
-
     private fun startAndroidCookiePolling() {
         if (cookiePollHandler != null) return
-        cookiePollHandler = Handler(Looper.getMainLooper())
 
+        cookiePollHandler = Handler(Looper.getMainLooper())
         var pollCount = 0
-        val maxPollCount = 60
+        val maxPollCount = 120 // 60秒間（500ms間隔）
 
         cookiePollRunnable = object : Runnable {
             override fun run() {
                 pollCount++
                 try {
                     CookieManager.getInstance().flush()
-
                     val cookies = CookieManager.getInstance().getCookie(DOMAIN) ?: ""
-                    Log.d(TAG, "Polling cookies ($pollCount/$maxPollCount): $cookies")
+
+                    if (pollCount % 4 == 0) { // 2秒ごとにログ出力
+                        Log.d(TAG, "Polling cookies ($pollCount/$maxPollCount)")
+                    }
 
                     val match = Regex("SESSION=([^;]+)").find(cookies)
                     if (match != null) {
@@ -267,6 +335,30 @@ class WebViewLoginManager(private val context: Context) {
                         return
                     }
 
+                    // 現在のURLもチェック
+                    webView?.url?.let { currentUrl ->
+                        if (currentUrl.startsWith("$DOMAIN/portal/home") && !isSessionDetected) {
+                            Log.d(
+                                TAG,
+                                "Home page detected during polling, attempting session extraction"
+                            )
+                            webView?.evaluateJavascript(
+                                """
+                                (function() {
+                                    const m = document.cookie.match(/SESSION=([^;]+)/);
+                                    if (m && m[1]) {
+                                        AndroidLoginBridge.onSessionDetected(m[1]);
+                                        return m[1];
+                                    }
+                                    return 'NOT_FOUND';
+                                })();
+                                """.trimIndent()
+                            ) { result ->
+                                Log.d(TAG, "URL-triggered session check: $result")
+                            }
+                        }
+                    }
+
                     if (pollCount >= maxPollCount) {
                         Log.e(TAG, "Session polling timeout after $pollCount attempts")
                         GlobalScope.launch(Dispatchers.Main) {
@@ -278,13 +370,14 @@ class WebViewLoginManager(private val context: Context) {
                 } catch (e: Exception) {
                     Log.e(TAG, "Cookie polling error", e)
                 }
-                cookiePollHandler?.postDelayed(this, 1000)
+
+                cookiePollHandler?.postDelayed(this, 500) // 500ms間隔
             }
         }
         cookiePollHandler?.post(cookiePollRunnable!!)
     }
 
-    fun cleanup() {
+    private fun stopPolling() {
         try {
             webView?.evaluateJavascript(
                 """
@@ -308,6 +401,10 @@ class WebViewLoginManager(private val context: Context) {
         } catch (e: Exception) {
             Log.w(TAG, "Error while stopping cookie polling", e)
         }
+    }
+
+    fun cleanup() {
+        stopPolling()
 
         try {
             webView?.stopLoading()
