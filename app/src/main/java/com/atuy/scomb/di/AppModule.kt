@@ -15,7 +15,8 @@ import retrofit2.Retrofit
 import javax.inject.Singleton
 
 private const val BASE_URL = "https://scombz.shibaura-it.ac.jp/"
-private const val USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.113 Mobile Safari/537.36"
+private const val USER_AGENT =
+    "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.113 Mobile Safari/537.36"
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -37,9 +38,7 @@ object AppModule {
     @Singleton
     fun provideNewsItemDao(db: AppDatabase) = db.newsItemDao()
 
-    // ▼▼▼ ここから下の通信関連のメソッドが不足していました ▼▼▼
 
-    // User-Agentヘッダーを追加するOkHttpClientの作り方を定義
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
@@ -54,7 +53,6 @@ object AppModule {
             .build()
     }
 
-    // 上記のOkHttpClientを使ったRetrofitの作り方を定義
     @Provides
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
@@ -64,14 +62,12 @@ object AppModule {
             .build()
     }
 
-    // 上記のRetrofitを使ったScombzApiServiceの作り方を定義
     @Provides
     @Singleton
     fun provideScombzApiService(retrofit: Retrofit): ScombzApiService {
         return retrofit.create(ScombzApiService::class.java)
     }
 
-    // ▲▲▲ ▲▲▲
 
     @Provides
     @Singleton

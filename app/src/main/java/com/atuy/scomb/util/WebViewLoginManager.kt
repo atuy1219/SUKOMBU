@@ -14,7 +14,6 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "WebViewLoginManager"
 
-// ログイン処理の各イベントを通知するためのリスナーインターフェース
 interface LoginListener {
     fun onSuccess(sessionId: String)
     fun onTwoFactorCodeExtracted(code: String)
@@ -157,15 +156,34 @@ class WebViewLoginManager(private val context: Context) {
                 super.onPageFinished(view, url)
                 Log.d(TAG, "Page finished: $url")
 
-                // ▼▼▼ 変更点①: ホームページURLへの到達をログイン成功とみなし、セッション取得処理を開始 ▼▼▼
-                // 2段階認証を承認するとこのURLにリダイレクトされるため、この時点で成功と判断する。
+                // ▼▼▼ 変更点①: ホームページURLへの到達をログイン成功とみなし、セッションを直接取得 ▼▼▼
                 if (url?.startsWith("https://scombz.shibaura-it.ac.jp/portal/home") == true) {
                     if (!isSessionDetected) {
-                        Log.d(TAG, "Homepage detected. Starting session polling.")
-                        view?.evaluateJavascript(getSessionPollingScript(), null)
+                        Log.d(
+                            TAG,
+                            "Homepage detected. Attempting to extract session cookie directly."
+                        )
+                        view?.evaluateJavascript(
+                            """
+                            (function() {
+                                const sessionMatch = document.cookie.match(/SESSION=([^;]+)/);
+                                if (sessionMatch && sessionMatch[1]) {
+                                    AndroidLoginBridge.onSessionDetected(sessionMatch[1]);
+                                    return 'SESSION_EXTRACTED_ON_HOME';
+                                }
+                                // Cookieがまだセットされていない場合、ポーリングを開始する
+                                return 'SESSION_NOT_FOUND_ON_HOME';
+                            })();
+                            """.trimIndent()
+                        ) { result ->
+                            Log.d(TAG, "Direct session extraction result: $result")
+                            // 直接取得に失敗した場合のフォールバックとしてポーリングを開始
+                            if (result?.contains("SESSION_NOT_FOUND_ON_HOME") == true) {
+                                view.evaluateJavascript(getSessionPollingScript(), null)
+                            }
+                        }
                     }
-                    // ホームページに到達したら、以降のスクリプト評価は不要
-                    return
+                    return // ホームページに到達したら、以降のスクリプト評価は不要
                 }
                 // ▲▲▲ 変更点① ▲▲▲
 
@@ -174,14 +192,16 @@ class WebViewLoginManager(private val context: Context) {
                     (function() {
                         console.log('Page finished, checking state...');
                         
-                        // 優先度1: ログイン成功（セッション確認）
-                        if (document.cookie.includes('SESSION=')) {
-                            const sessionMatch = document.cookie.match(/SESSION=([^;]+)/);
-                            if (sessionMatch && sessionMatch[1]) {
-                                console.log('Session detected on page load');
-                                AndroidLoginBridge.onSessionDetected(sessionMatch[1]);
-                                return 'SUCCESS';
-                            }
+                        // ID/パスワード入力フォームの要素を取得（複数のIDパターンに対応）
+                        const usernameInput = document.getElementById('userNameInput') || document.querySelector('input[name="UserName"]');
+                        const passwordInput = document.getElementById('passwordInput') || document.querySelector('input[name="Password"]');
+                        
+                        // 優先度1: ログイン成功（セッションCookie確認）
+                        const sessionMatch = document.cookie.match(/SESSION=([^;]+)/);
+                        if (sessionMatch && sessionMatch[1]) {
+                            console.log('Session detected on page load');
+                            AndroidLoginBridge.onSessionDetected(sessionMatch[1]);
+                            return 'SUCCESS';
                         }
 
                         // 優先度2: エラーメッセージ
@@ -212,8 +232,6 @@ class WebViewLoginManager(private val context: Context) {
                         }
 
                         // 優先度5: ID/パスワード入力ページ
-                        const usernameInput = document.getElementById('userNameInput') || document.querySelector('input[name="UserName"]');
-                        const passwordInput = document.getElementById('passwordInput') || document.querySelector('input[name="Password"]');
                         if (usernameInput && passwordInput && !usernameInput.value) {
                             console.log('Login form found, filling credentials...');
                             usernameInput.value = '$username';

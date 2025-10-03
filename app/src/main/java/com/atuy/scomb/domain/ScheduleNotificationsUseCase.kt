@@ -18,16 +18,19 @@ class ScheduleNotificationsUseCase @Inject constructor(
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         if (!alarmManager.canScheduleExactAlarms()) {
-                Toast.makeText(context, "通知には「アラーム＆リマインダー」の権限が必要です", Toast.LENGTH_LONG).show()
-                Intent().also { intent ->
-                    intent.action = Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    context.startActivity(intent)
-                }
-                return
+            Toast.makeText(
+                context,
+                "通知には「アラーム＆リマインダー」の権限が必要です",
+                Toast.LENGTH_LONG
+            ).show()
+            Intent().also { intent ->
+                intent.action = Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
             }
+            return
+        }
         tasks.forEach { task ->
-            // 完了済みのタスクは通知しない
             if (task.done) return@forEach
 
             val intent = Intent(context, NotificationReceiver::class.java).apply {
@@ -43,7 +46,6 @@ class ScheduleNotificationsUseCase @Inject constructor(
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            // 締め切り1時間前に通知をセット
             val triggerAtMillis = task.deadline - 3600 * 1000
             if (triggerAtMillis > System.currentTimeMillis()) {
                 alarmManager.setExactAndAllowWhileIdle(

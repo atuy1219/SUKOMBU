@@ -79,7 +79,6 @@ fun LoginScreen(
         }
 
         is LoginUiState.Success -> {
-            // 遷移処理はLaunchedEffectで行う
         }
     }
 }
@@ -116,15 +115,13 @@ fun LoginForm(
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("ユーザー名 (学籍番号)") },
+                label = { Text("学籍番号 (scombz@sic)") },
                 singleLine = true,
                 enabled = !isLoading,
-                // ▼▼▼ 変更点: OSの自動入力を促すためキーボードタイプを変更 ▼▼▼
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next
                 ),
-                // ▲▲▲ 変更点 ▲▲▲
                 keyboardActions = KeyboardActions(
                     onNext = { focusManager.moveFocus(FocusDirection.Down) }
                 ),
