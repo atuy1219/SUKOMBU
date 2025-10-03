@@ -20,7 +20,7 @@ class NotificationReceiver : BroadcastReceiver() {
         val notificationId = taskId.hashCode()
 
         val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // 適切なアイコンへ変更
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("締め切りが近い課題")
             .setContentText(taskTitle)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

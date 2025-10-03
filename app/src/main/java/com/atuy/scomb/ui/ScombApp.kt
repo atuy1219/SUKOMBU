@@ -172,11 +172,9 @@ fun AppTopBar(currentRoute: String?, navController: NavController) {
     ) { targetRoute ->
         when (targetRoute) {
             Screen.Timetable.route -> {
-                // TimetableScreen専用のトップバー
                 TimetableTopBar()
             }
             else -> {
-                // 通常のトップバー
                 TopAppBar(
                     title = {
                         Text(

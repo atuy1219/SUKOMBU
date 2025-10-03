@@ -42,6 +42,7 @@ fun TaskListScreen(
                     CircularProgressIndicator()
                 }
             }
+
             is TaskListUiState.Success -> {
                 PullToRefreshBox(
                     isRefreshing = false,
@@ -53,6 +54,7 @@ fun TaskListScreen(
                     TaskList(tasks = state.tasks)
                 }
             }
+
             is TaskListUiState.Error -> {
                 ErrorState(
                     message = state.message,

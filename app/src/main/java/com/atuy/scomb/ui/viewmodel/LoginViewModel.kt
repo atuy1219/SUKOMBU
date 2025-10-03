@@ -48,8 +48,6 @@ class LoginViewModel @Inject constructor(
     }
 
     override fun onTwoFactorCodeExtracted(code: String) {
-        // 2FAコードを受け取り、UIに通知
-        // WebViewLoginManagerはユーザーの承認をバックグラウンドで待ち続ける
         _uiState.value = LoginUiState.RequiresTwoFactor(code)
     }
 

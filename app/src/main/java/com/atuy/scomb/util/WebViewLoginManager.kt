@@ -107,7 +107,6 @@ class WebViewLoginManager(private val context: Context) {
                 view: WebView?,
                 request: WebResourceRequest?
             ): Boolean {
-                // 外部リンクなど必要に応じて制御（今は WebView 内で処理）
                 return false
             }
 
@@ -131,12 +130,20 @@ class WebViewLoginManager(private val context: Context) {
                             """.trimIndent()
                         ) { result ->
                             Log.d(TAG, "Direct session extraction result: $result")
-                            if (result?.contains("SESSION_NOT_FOUND_ON_HOME") == true) {
-                                view.evaluateJavascript(getSessionPollingScript(), null)
-                                startAndroidCookiePolling()
+                            if (result?.contains("2FA_CODE_EXTRACTED") == true && !isSessionDetected) {
+                                Log.d(TAG, "Starting session polling after 2FA code extraction")
+                                view?.postDelayed({
+                                    view.evaluateJavascript(getSessionPollingScript()) { pollingResult ->
+                                        Log.d(TAG, "Polling script executed: $pollingResult")
+                                    }
+                                    view.postDelayed({
+                                        startAndroidCookiePolling()
+                                    }, 2000)
+                                }, 1000)
                             }
                         }
                     }
+
                     return
                 }
 
@@ -233,10 +240,19 @@ class WebViewLoginManager(private val context: Context) {
     private fun startAndroidCookiePolling() {
         if (cookiePollHandler != null) return
         cookiePollHandler = Handler(Looper.getMainLooper())
+
+        var pollCount = 0
+        val maxPollCount = 60
+
         cookiePollRunnable = object : Runnable {
             override fun run() {
+                pollCount++
                 try {
+                    CookieManager.getInstance().flush()
+
                     val cookies = CookieManager.getInstance().getCookie(DOMAIN) ?: ""
+                    Log.d(TAG, "Polling cookies ($pollCount/$maxPollCount): $cookies")
+
                     val match = Regex("SESSION=([^;]+)").find(cookies)
                     if (match != null) {
                         val sessionId = match.groupValues[1]
@@ -247,6 +263,15 @@ class WebViewLoginManager(private val context: Context) {
                                 listener?.onSuccess(sessionId)
                                 cleanup()
                             }
+                        }
+                        return
+                    }
+
+                    if (pollCount >= maxPollCount) {
+                        Log.e(TAG, "Session polling timeout after $pollCount attempts")
+                        GlobalScope.launch(Dispatchers.Main) {
+                            listener?.onError("認証タイムアウト: セッションが取得できませんでした")
+                            cleanup()
                         }
                         return
                     }

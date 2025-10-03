@@ -13,10 +13,10 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class TaskFilter(
-    val showAssignments: Boolean = true,  // 課題
-    val showTests: Boolean = true,        // テスト
-    val showSurveys: Boolean = true,      // アンケート
-    val showCompleted: Boolean = true     // 完了済み
+    val showAssignments: Boolean = true,
+    val showTests: Boolean = true,
+    val showSurveys: Boolean = true,
+    val showCompleted: Boolean = true
 )
 
 sealed interface TaskListUiState {
@@ -37,7 +37,6 @@ class TaskListViewModel @Inject constructor(
     val uiState: StateFlow<TaskListUiState> = _uiState
 
     init {
-        // フィルターと課題リストを組み合わせて監視
         viewModelScope.launch {
             combine(_allTasks, _filter) { tasks, filter ->
                 Pair(tasks, filter)
@@ -69,9 +68,9 @@ class TaskListViewModel @Inject constructor(
     private fun filterTasks(tasks: List<Task>, filter: TaskFilter): List<Task> {
         return tasks.filter { task ->
             val typeMatch = when (task.taskType) {
-                0 -> filter.showAssignments  // 課題
-                1 -> filter.showTests         // テスト
-                2 -> filter.showSurveys       // アンケート
+                0 -> filter.showAssignments
+                1 -> filter.showTests
+                2 -> filter.showSurveys
                 else -> true
             }
             val completionMatch = if (filter.showCompleted) {

@@ -39,41 +39,38 @@ class HomeViewModel @Inject constructor(
         loadHomeData()
     }
 
-    // publicメソッドに変更して外部から呼び出し可能にする
     fun loadHomeData(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _uiState.value = HomeUiState.Loading
             try {
-                // 課題、時間割、お知らせを並行して取得
                 coroutineScope {
                     val tasksDeferred = async { repository.getTasksAndSurveys(forceRefresh) }
 
                     val calendar = Calendar.getInstance()
-                    val year = if (calendar.get(Calendar.MONTH) < 3) calendar.get(Calendar.YEAR) - 1 else calendar.get(Calendar.YEAR)
+                    val year =
+                        if (calendar.get(Calendar.MONTH) < 3) calendar.get(Calendar.YEAR) - 1 else calendar.get(
+                            Calendar.YEAR
+                        )
                     val term = if (calendar.get(Calendar.MONTH) in 3..8) "1" else "2"
-                    val timetableDeferred = async { repository.getTimetable(year, term, forceRefresh) }
+                    val timetableDeferred =
+                        async { repository.getTimetable(year, term, forceRefresh) }
 
                     val newsDeferred = async { repository.getNews(forceRefresh) }
 
-                    // 全てのデータ取得を待つ
                     val tasks = tasksDeferred.await()
                     val timetable = timetableDeferred.await()
                     val news = newsDeferred.await()
 
-                    // --- 取得したデータを画面表示用に加工 ---
 
-                    // 締め切りが未来の課題を5件まで取得
                     val upcomingTasks = tasks
                         .filter { it.deadline > System.currentTimeMillis() && !it.done }
                         .take(5)
 
-                    // 今日の曜日（日:1, 月:2 ... 土:7）を取得し、ScombZの形式 (月:0...) に変換
                     val todayOfWeek = (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7
                     val todaysClasses = timetable
                         .filter { it.dayOfWeek == todayOfWeek }
                         .sortedBy { it.period }
 
-                    // 最新のお知らせを5件まで取得
                     val recentNews = news.take(5)
 
                     _uiState.value = HomeUiState.Success(

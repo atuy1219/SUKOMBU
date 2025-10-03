@@ -10,7 +10,7 @@ interface NewsItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateNewsItem(newsItem: NewsItem)
 
-    @Query("SELECT * FROM news_table ORDER BY publishTime DESC") // 公開時間が新しい順で取得
+    @Query("SELECT * FROM news_table ORDER BY publishTime DESC")
     suspend fun getAllNews(): List<NewsItem>
 
     @Query("SELECT * FROM news_table WHERE newsId = :newsId")

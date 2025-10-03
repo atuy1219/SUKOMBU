@@ -47,7 +47,10 @@ fun TimetableScreen(
     val currentYear by viewModel.currentYear.collectAsStateWithLifecycle()
     val currentTerm by viewModel.currentTerm.collectAsStateWithLifecycle()
 
-    Log.d(TAG, "Recomposing. Current state=${uiState.javaClass.simpleName}, Year=$currentYear, Term=$currentTerm")
+    Log.d(
+        TAG,
+        "Recomposing. Current state=${uiState.javaClass.simpleName}, Year=$currentYear, Term=$currentTerm"
+    )
 
     // Scaffoldを削除し、BoxでfillMaxSizeのみ使用
     Box(modifier = Modifier.fillMaxSize()) {
@@ -57,9 +60,11 @@ fun TimetableScreen(
                     CircularProgressIndicator()
                 }
             }
+
             is TimetableUiState.Success -> {
                 TimetableGrid(timetable = state.timetable)
             }
+
             is TimetableUiState.Error -> {
                 ErrorState(
                     message = state.message,
@@ -89,9 +94,7 @@ fun TimetableGrid(timetable: Array<Array<ClassCell?>>) {
             }
         }
 
-        // 時間割本体
         Row(Modifier.fillMaxWidth()) {
-            // 時限表示
             Column {
                 (1..7).forEach { period ->
                     Box(

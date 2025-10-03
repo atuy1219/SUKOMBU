@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-// DataStoreのインスタンスをContextの拡張として定義
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "session")
 
 @Singleton
@@ -22,14 +21,12 @@ class SessionManager @Inject constructor(@ApplicationContext private val context
         private val SESSION_ID_KEY = stringPreferencesKey("session_id")
     }
 
-    // セッションIDを保存する
     suspend fun saveSessionId(sessionId: String) {
         context.dataStore.edit { preferences ->
             preferences[SESSION_ID_KEY] = sessionId
         }
     }
 
-    // 保存されたセッションIDをFlowとして取得する
     val sessionIdFlow: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[SESSION_ID_KEY]
     }
