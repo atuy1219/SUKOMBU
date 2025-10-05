@@ -2,8 +2,11 @@ package com.atuy.scomb.ui
 
 import android.util.Log
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -62,25 +65,40 @@ fun ScombApp(
     val navController = rememberNavController()
 
     LaunchedEffect(authState, navController) {
-        Log.d("ScombApp_Debug", "LaunchedEffect triggered. AuthState is: ${authState::class.java.simpleName}")
+        Log.d(
+            "ScombApp_Debug",
+            "LaunchedEffect triggered. AuthState is: ${authState::class.java.simpleName}"
+        )
 
         if (authState is AuthState.Authenticated) {
             if (navController.currentDestination?.route == Screen.Login.route) {
-                Log.d("ScombApp_Debug", "Authenticated! Current route is Login. Navigating to Home.")
+                Log.d(
+                    "ScombApp_Debug",
+                    "Authenticated! Current route is Login. Navigating to Home."
+                )
                 navController.navigate(Screen.Home.route) {
                     popUpTo(Screen.Login.route) { inclusive = true }
                 }
             } else {
-                Log.d("ScombApp_Debug", "Authenticated! Current route is not Login (${navController.currentDestination?.route}), no navigation needed.")
+                Log.d(
+                    "ScombApp_Debug",
+                    "Authenticated! Current route is not Login (${navController.currentDestination?.route}), no navigation needed."
+                )
             }
         } else if (authState is AuthState.Unauthenticated) {
             if (navController.currentDestination?.route != Screen.Login.route) {
-                Log.d("ScombApp_Debug", "Unauthenticated! Current route is not Login. Navigating to Login and clearing back stack.")
+                Log.d(
+                    "ScombApp_Debug",
+                    "Unauthenticated! Current route is not Login. Navigating to Login and clearing back stack."
+                )
                 navController.navigate(Screen.Login.route) {
                     popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
                 }
             } else {
-                Log.d("ScombApp_Debug", "Unauthenticated! Already on Login screen, no navigation needed.")
+                Log.d(
+                    "ScombApp_Debug",
+                    "Unauthenticated! Already on Login screen, no navigation needed."
+                )
             }
         }
     }
@@ -88,7 +106,8 @@ fun ScombApp(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    val bottomBarScreens = listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
+    val bottomBarScreens =
+        listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
     val shouldShowBottomBar = currentDestination?.route in bottomBarScreens.map { it.route }
 
     Scaffold(
@@ -110,7 +129,9 @@ fun ScombApp(
                             selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                             onClick = {
                                 navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
                                     launchSingleTop = true
                                     restoreState = true
                                 }
@@ -126,11 +147,40 @@ fun ScombApp(
                 CircularProgressIndicator()
             }
         } else {
-            val startDestination = if (authState is AuthState.Authenticated) Screen.Home.route else Screen.Login.route
+            val startDestination =
+                if (authState is AuthState.Authenticated) Screen.Home.route else Screen.Login.route
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier.padding(innerPadding),
+                enterTransition = {
+                    val initialIndex =
+                        bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
+                    val targetIndex =
+                        bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
+
+                    if (initialIndex == -1 || targetIndex == -1) {
+                        fadeIn(animationSpec = tween(300))
+                    } else if (initialIndex < targetIndex) {
+                        slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300))
+                    } else {
+                        slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300))
+                    }
+                },
+                exitTransition = {
+                    val initialIndex =
+                        bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
+                    val targetIndex =
+                        bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
+
+                    if (initialIndex == -1 || targetIndex == -1) {
+                        fadeOut(animationSpec = tween(300))
+                    } else if (initialIndex < targetIndex) {
+                        slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300))
+                    } else {
+                        slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300))
+                    }
+                }
             ) {
                 composable(Screen.Login.route) {
                     LoginScreen() // onLoginSuccessは不要
@@ -159,6 +209,7 @@ fun AppTopBar(currentRoute: String?, navController: NavController) {
             Screen.Timetable.route -> {
                 TimetableTopBar()
             }
+
             else -> {
                 TopAppBar(
                     title = {
