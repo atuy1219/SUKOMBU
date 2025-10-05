@@ -1,6 +1,8 @@
 package com.atuy.scomb.ui.viewmodel
 
 import android.app.Application
+import android.util.Log
+import android.webkit.WebView
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atuy.scomb.data.SessionManager
@@ -30,54 +32,81 @@ class LoginViewModel @Inject constructor(
     val uiState: StateFlow<LoginUiState> = _uiState
 
     private var loginManager: WebViewLoginManager? = null
+    private var credentials: Pair<String, String>? = null
 
-    fun startLogin(username: String, password: String) {
+    // 1. ユーザー名とパスワードを保持する
+    fun setCredentials(username: String, password: String) {
+        credentials = username to password
         _uiState.value = LoginUiState.Loading
-        // 既存のログイン処理があれば破棄して新しい処理を開始
-        loginManager?.cleanup()
+    }
+
+    // 2. ComposableからWebViewインスタンスを受け取ってログインを開始
+    fun startLogin(webView: WebView) {
+        val (username, password) = credentials ?: run {
+            onError("Username and password are not set.")
+            return
+        }
+
         loginManager = WebViewLoginManager(getApplication()).apply {
-            startLogin(username, password, this@LoginViewModel)
+            startLogin(webView, username, password, this@LoginViewModel)
         }
     }
 
-
     override fun onSuccess(sessionId: String) {
+        Log.d("LoginViewModel_Debug", "onSuccess called with session ID.")
+        if (_uiState.value is LoginUiState.Success) return
         viewModelScope.launch {
-            saveSessionAndComplete(sessionId)
+            sessionManager.saveSessionId(sessionId)
+            _uiState.value = LoginUiState.Success(sessionId)
+            cleanup()
         }
     }
 
     override fun onTwoFactorCodeExtracted(code: String) {
-        _uiState.value = LoginUiState.RequiresTwoFactor(code)
+        Log.d("LoginViewModel_Debug", "onTwoFactorCodeExtracted called with code: $code")
+        // 成功状態になっていなければ2FA画面を表示
+        if (_uiState.value !is LoginUiState.Success) {
+            _uiState.value = LoginUiState.RequiresTwoFactor(code)
+        }
     }
 
     override fun onError(message: String) {
+        Log.e("LoginViewModel_Debug", "onError called with message: $message")
+        if (_uiState.value is LoginUiState.Success) return
         _uiState.value = LoginUiState.Error(message)
-        loginManager = null
+        cleanup()
     }
 
     override fun onLoginError(message: String) {
-
         onError(message)
     }
 
-
     fun cancelLogin() {
-        loginManager?.cleanup()
-        loginManager = null
+        Log.d("LoginViewModel_Debug", "cancelLogin called.")
+        cleanup()
         _uiState.value = LoginUiState.Idle
     }
 
-    private suspend fun saveSessionAndComplete(sessionId: String) {
-        sessionManager.saveSessionId(sessionId)
-        _uiState.value = LoginUiState.Success(sessionId)
+    // LoginScreenが破棄されたときに呼ばれる
+    fun onWebViewDisposed() {
+        Log.d("LoginViewModel_Debug", "onWebViewDisposed called.")
+        // ログイン処理が完了していない場合のみ、状態をリセット
+        if (_uiState.value !is LoginUiState.Success) {
+            _uiState.value = LoginUiState.Idle
+        }
+        loginManager = null // WebViewはLoginScreen側で破棄されるため、参照をクリアするだけ
+    }
+
+
+    private fun cleanup() {
+        loginManager?.cleanup()
         loginManager = null
     }
 
     override fun onCleared() {
         super.onCleared()
-        loginManager?.cleanup()
+        Log.d("LoginViewModel_Debug", "onCleared called.")
+        cleanup()
     }
 }
-
 

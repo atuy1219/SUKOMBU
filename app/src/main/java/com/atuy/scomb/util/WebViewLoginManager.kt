@@ -1,5 +1,6 @@
 package com.atuy.scomb.util
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -10,11 +11,17 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.annotation.Keep
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class WebViewLoginManager(private val context: Context) {
+
+    private val coroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     companion object {
         private const val TAG = "WebViewLoginManager"
@@ -34,7 +41,8 @@ class WebViewLoginManager(private val context: Context) {
     private var pollRunnable: Runnable? = null
     private var pollCount = 0
 
-    fun startLogin(username: String, password: String, listener: LoginListener) {
+    fun startLogin(webView: WebView, username: String, password: String, listener: LoginListener) {
+        this.webView = webView
         this.listener = listener
         this.isSessionDetected = false
         this.is2faCodeExtracted = false
@@ -44,17 +52,15 @@ class WebViewLoginManager(private val context: Context) {
         startTimeout()
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     private fun initializeWebView(username: String, password: String) {
-        cleanup()
 
-        webView = WebView(context).apply {
+        webView?.apply {
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 allowFileAccess = false
                 cacheMode = WebSettings.LOAD_NO_CACHE
-                setSavePassword(true)
-                saveFormData = true
             }
             addJavascriptInterface(LoginBridge(), "AndroidLoginBridge")
             webViewClient = createWebViewClient(username, password)
@@ -72,26 +78,31 @@ class WebViewLoginManager(private val context: Context) {
     }
 
     private inner class LoginBridge {
+        @Keep
+        @Suppress("unused")
         @JavascriptInterface
         fun onSessionDetected(session: String) {
-            GlobalScope.launch(Dispatchers.Main) {
+            coroutineScope.launch {
                 handleSessionDetected(session)
             }
         }
 
+        @Keep
+        @Suppress("unused")
         @JavascriptInterface
         fun onLoginError(message: String) {
-            GlobalScope.launch(Dispatchers.Main) {
+            coroutineScope.launch {
                 Log.e(TAG, "✗ Login error: $message")
                 listener?.onLoginError(message)
-                listener?.onError(message)
             }
         }
 
+        @Keep
+        @Suppress("unused")
         @JavascriptInterface
         fun onTwoFactorCodeExtracted(code: String) {
-            GlobalScope.launch(Dispatchers.Main) {
-                if (!is2faCodeExtracted) {
+            coroutineScope.launch {
+                if (!is2faCodeExtracted && !isSessionDetected) {
                     is2faCodeExtracted = true
                     Log.d(TAG, "✓ 2FA code extracted: $code")
                     listener?.onTwoFactorCodeExtracted(code)
@@ -100,6 +111,8 @@ class WebViewLoginManager(private val context: Context) {
             }
         }
 
+        @Keep
+        @Suppress("unused")
         @JavascriptInterface
         fun log(message: String) {
             Log.d(TAG, "[JS] $message")
@@ -112,27 +125,12 @@ class WebViewLoginManager(private val context: Context) {
         isSessionDetected = true
         Log.d(TAG, "✓ Session detected successfully")
 
-        // CRITICAL: WebViewを即座に停止・破棄してレンダラークラッシュを防ぐ
-        try {
-            webView?.apply {
-                stopLoading()
-                loadUrl("about:blank")
-                webViewClient = object : WebViewClient() {}
-                removeJavascriptInterface("AndroidLoginBridge")
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Error stopping webview", e)
-        }
+        stopPolling()
+        timeoutHandler.removeCallbacksAndMessages(null)
 
-        // リスナーに通知（これが画面遷移をトリガーする）
-        val savedListener = listener
-
-        // クリーンアップを即座に実行
-        cleanup()
-
-        // 通知は最後に行う（cleanupでlistenerがnullになるため）
-        savedListener?.onSuccess(session)
+        listener?.onSuccess(session)
     }
+
 
     private fun createWebViewClient(username: String, password: String): WebViewClient {
         return object : WebViewClient() {
@@ -151,14 +149,12 @@ class WebViewLoginManager(private val context: Context) {
 
                 Log.d(TAG, "⊙ Page loaded: $url")
 
-                // ホームページ検出
                 if (url?.contains("/portal/home") == true) {
                     Log.d(TAG, "⊙ Home page detected - checking session")
                     checkSessionInPage(view)
                     return
                 }
 
-                // 認証フロー実行
                 view?.evaluateJavascript(getAuthFlowScript(username, password)) { result ->
                     if (isSessionDetected) return@evaluateJavascript
                     val cleanResult = result?.trim('"') ?: "null"
@@ -170,7 +166,6 @@ class WebViewLoginManager(private val context: Context) {
                 super.onPageStarted(view, url, favicon)
                 if (isSessionDetected) return
 
-                // ホームページへの遷移を検出
                 if (url?.contains("/portal/home") == true) {
                     Log.d(TAG, "⊙ Home page navigation started - checking session early")
                     checkSessionViaCookieManager()
@@ -293,10 +288,8 @@ class WebViewLoginManager(private val context: Context) {
                     Log.d(TAG, "⊙ Polling... ($pollCount/$MAX_POLL_COUNT)")
                 }
 
-                // CookieManager確認
                 checkSessionViaCookieManager()
 
-                // URL確認
                 webView?.url?.let { url ->
                     if (url.contains("/portal/home") && !isSessionDetected) {
                         Log.d(TAG, "⊙ Home page detected in polling")
@@ -306,9 +299,8 @@ class WebViewLoginManager(private val context: Context) {
 
                 if (pollCount >= MAX_POLL_COUNT) {
                     Log.e(TAG, "✗ Session polling timeout")
-                    GlobalScope.launch(Dispatchers.Main) {
+                    coroutineScope.launch {
                         listener?.onError("認証タイムアウト: セッションが取得できませんでした")
-                        cleanup()
                     }
                     return
                 }
@@ -330,7 +322,7 @@ class WebViewLoginManager(private val context: Context) {
             if (match != null) {
                 val sessionId = match.groupValues[1]
                 Log.d(TAG, "✓ Session found via CookieManager")
-                GlobalScope.launch(Dispatchers.Main) {
+                coroutineScope.launch {
                     handleSessionDetected(sessionId)
                 }
             }
@@ -354,31 +346,25 @@ class WebViewLoginManager(private val context: Context) {
         pollRunnable = null
     }
 
-    fun cancelLogin() {
-        if (!isSessionDetected) {
-            listener?.onError("ログインがキャンセルされました")
-        }
-        cleanup()
-    }
-
     fun cleanup() {
+        Log.d(TAG, "Cleanup called")
         stopPolling()
         timeoutHandler.removeCallbacksAndMessages(null)
 
         try {
             webView?.apply {
                 stopLoading()
-                loadUrl("about:blank")
-                webViewClient = object : WebViewClient() {}
-                removeJavascriptInterface("AndroidLoginBridge")
-                removeAllViews()
+                (parent as? android.view.ViewGroup)?.removeView(this)
                 destroy()
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Error during cleanup", e)
+            Log.w(TAG, "Error during webview cleanup", e)
         } finally {
             webView = null
             listener = null
+            if (coroutineScope.isActive) {
+                coroutineScope.cancel()
+            }
         }
     }
 
@@ -391,3 +377,4 @@ class WebViewLoginManager(private val context: Context) {
             .replace("\r", "\\r")
     }
 }
+

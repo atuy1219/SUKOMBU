@@ -1,5 +1,8 @@
 package com.atuy.scomb.ui.features
 
+import android.annotation.SuppressLint
+import android.util.Log
+import android.webkit.WebView
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +26,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -40,45 +44,75 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atuy.scomb.ui.viewmodel.LoginUiState
 import com.atuy.scomb.ui.viewmodel.LoginViewModel
 
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun LoginScreen(
-    viewModel: LoginViewModel = hiltViewModel(),
-    onLoginSuccess: () -> Unit
+    viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
-    LaunchedEffect(uiState) {
-        if (uiState is LoginUiState.Success) {
-            onLoginSuccess()
+    var webView by remember { mutableStateOf<WebView?>(null) }
+
+    if (uiState is LoginUiState.Loading && webView == null) {
+        AndroidView(
+            modifier = Modifier.size(0.dp), // 画面には表示しない
+            factory = {
+                WebView(it).apply {
+                    viewModel.startLogin(this)
+                    webView = this
+                }
+            }
+        )
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            Log.d("LoginScreen_Debug", "DisposableEffect onDispose, cleaning up WebView.")
+            webView?.destroy()
+            webView = null
+            viewModel.onWebViewDisposed()
         }
     }
 
+
     when (val state = uiState) {
-        is LoginUiState.Idle, is LoginUiState.Loading, is LoginUiState.Error -> {
+        is LoginUiState.Idle, is LoginUiState.Error -> {
             LoginForm(
                 onLogin = { username, password ->
-                    viewModel.startLogin(username, password)
+                    viewModel.setCredentials(username, password)
                 },
-                isLoading = state is LoginUiState.Loading,
+                isLoading = false,
                 errorMessage = if (state is LoginUiState.Error) state.message else null
+            )
+        }
+
+        is LoginUiState.Loading -> {
+            LoginForm(
+                onLogin = { _, _ -> },
+                onCancel = { viewModel.cancelLogin() },
+                isLoading = true,
+                errorMessage = null
             )
         }
 
         is LoginUiState.RequiresTwoFactor -> {
             TwoFactorChallengeScreen(
                 code = state.code,
-                onCancel = {
-                    viewModel.cancelLogin()
-                }
+                onCancel = { viewModel.cancelLogin() }
             )
         }
 
         is LoginUiState.Success -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         }
     }
 }
@@ -86,6 +120,7 @@ fun LoginScreen(
 @Composable
 fun LoginForm(
     onLogin: (String, String) -> Unit,
+    onCancel: () -> Unit = {},
     errorMessage: String? = null,
     isLoading: Boolean = false
 ) {
@@ -136,13 +171,8 @@ fun LoginForm(
                 enabled = !isLoading,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
-                    val image = if (passwordVisible)
-                        Icons.Filled.Visibility
-                    else
-                        Icons.Filled.VisibilityOff
-                    val description =
-                        if (passwordVisible) "パスワードを隠す" else "パスワードを表示する"
-
+                    val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                    val description = if (passwordVisible) "パスワードを隠す" else "パスワードを表示する"
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(imageVector = image, contentDescription = description)
                     }
@@ -183,6 +213,14 @@ fun LoginForm(
                     )
                 } else {
                     Text("ログイン")
+                }
+            }
+            if (isLoading) {
+                OutlinedButton(
+                    onClick = onCancel,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("キャンセル")
                 }
             }
         }
@@ -230,7 +268,6 @@ fun TwoFactorChallengeScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-
 
             Spacer(modifier = Modifier.height(16.dp))
 

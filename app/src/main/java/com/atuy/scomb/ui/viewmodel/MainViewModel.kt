@@ -1,5 +1,6 @@
 package com.atuy.scomb.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.atuy.scomb.data.SessionManager
@@ -20,11 +21,18 @@ sealed interface AuthState {
 class MainViewModel @Inject constructor(sessionManager: SessionManager) : ViewModel() {
     val authState: StateFlow<AuthState> = sessionManager.sessionIdFlow
         .map { sessionId ->
-            if (sessionId != null) AuthState.Authenticated else AuthState.Unauthenticated
+            if (sessionId != null) {
+                Log.d("MainViewModel_Debug", "Session ID found. Emitting Authenticated.")
+                AuthState.Authenticated
+            } else {
+                Log.d("MainViewModel_Debug", "Session ID is null. Emitting Unauthenticated.")
+                AuthState.Unauthenticated
+            }
         }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
+            started = SharingStarted.Eagerly,
             initialValue = AuthState.Loading
         )
 }
+
