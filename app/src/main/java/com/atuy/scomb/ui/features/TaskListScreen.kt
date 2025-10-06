@@ -1,14 +1,24 @@
 package com.atuy.scomb.ui.features
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atuy.scomb.data.db.Task
+import com.atuy.scomb.ui.viewmodel.TaskFilter
 import com.atuy.scomb.ui.viewmodel.TaskListUiState
 import com.atuy.scomb.ui.viewmodel.TaskListViewModel
 import com.atuy.scomb.util.DateUtils
@@ -35,7 +46,7 @@ fun TaskListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is TaskListUiState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -44,6 +55,10 @@ fun TaskListScreen(
             }
 
             is TaskListUiState.Success -> {
+                FilterBar(
+                    filter = state.filter,
+                    onFilterChanged = { newFilter -> viewModel.updateFilter(newFilter) }
+                )
                 PullToRefreshBox(
                     isRefreshing = false,
                     onRefresh = {
@@ -62,6 +77,47 @@ fun TaskListScreen(
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterBar(
+    filter: TaskFilter,
+    onFilterChanged: (TaskFilter) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FilterChip(
+            selected = filter.showAssignments,
+            onClick = { onFilterChanged(filter.copy(showAssignments = !filter.showAssignments)) },
+            label = { Text("課題") }
+        )
+        FilterChip(
+            selected = filter.showTests,
+            onClick = { onFilterChanged(filter.copy(showTests = !filter.showTests)) },
+            label = { Text("テスト") }
+        )
+        FilterChip(
+            selected = filter.showSurveys,
+            onClick = { onFilterChanged(filter.copy(showSurveys = !filter.showSurveys)) },
+            label = { Text("アンケート") }
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        FilterChip(
+            selected = filter.showCompleted,
+            onClick = { onFilterChanged(filter.copy(showCompleted = !filter.showCompleted)) },
+            label = { Text("完了済み") },
+            leadingIcon = {
+                if (filter.showCompleted) {
+                    Icon(Icons.Default.Check, contentDescription = "完了済み")
+                }
+            }
+        )
     }
 }
 
@@ -92,12 +148,17 @@ fun TaskListItem(task: Task) {
             supportingContent = {
                 Column {
                     Text(task.className)
+                    val remainingTime = DateUtils.formatRemainingTime(task.deadline)
                     Text(
-                        text = DateUtils.timeToString(task.deadline),
-                        color = if (task.deadline < System.currentTimeMillis() + 24 * 60 * 60 * 1000)
+                        text = "${DateUtils.timeToString(task.deadline)} ($remainingTime)",
+                        color = if (task.deadline < System.currentTimeMillis() && !task.done) {
                             MaterialTheme.colorScheme.error
-                        else
+                        } else if (task.deadline < System.currentTimeMillis() + 24 * 60 * 60 * 1000 && !task.done) {
+                            MaterialTheme.colorScheme.error // 24時間未満もエラーカラー
+                        } else {
                             LocalContentColor.current
+                        },
+                        fontSize = 12.sp
                     )
                 }
             }
@@ -108,17 +169,17 @@ fun TaskListItem(task: Task) {
 
 @Composable
 fun TaskTypeIcon(taskType: Int) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        val iconText = when (taskType) {
-            0 -> "課題"
-            1 -> "テスト"
-            2 -> "アンケート"
-            else -> "他"
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(56.dp)) {
+        val (iconText, color) = when (taskType) {
+            0 -> "課題" to MaterialTheme.colorScheme.primary
+            1 -> "テスト" to MaterialTheme.colorScheme.error
+            2 -> "アンケート" to MaterialTheme.colorScheme.secondary
+            else -> "他" to MaterialTheme.colorScheme.onSurface
         }
         Text(
             text = iconText,
             fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.primary
+            color = color
         )
     }
 }

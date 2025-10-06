@@ -16,7 +16,7 @@ data class TaskFilter(
     val showAssignments: Boolean = true,
     val showTests: Boolean = true,
     val showSurveys: Boolean = true,
-    val showCompleted: Boolean = true
+    val showCompleted: Boolean = false
 )
 
 sealed interface TaskListUiState {
@@ -39,13 +39,11 @@ class TaskListViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             combine(_allTasks, _filter) { tasks, filter ->
-                Pair(tasks, filter)
-            }.collect { (tasks, filter) ->
-                if (tasks.isNotEmpty()) {
+                if (_uiState.value !is TaskListUiState.Loading) {
                     val filteredTasks = filterTasks(tasks, filter)
                     _uiState.value = TaskListUiState.Success(filteredTasks, filter)
                 }
-            }
+            }.collect{}
         }
         fetchTasks(forceRefresh = false)
     }
@@ -56,12 +54,18 @@ class TaskListViewModel @Inject constructor(
             try {
                 val tasks = repository.getTasksAndSurveys(forceRefresh)
                 _allTasks.value = tasks
+                val filteredTasks = filterTasks(tasks, _filter.value)
+                _uiState.value = TaskListUiState.Success(filteredTasks, _filter.value)
                 scheduleNotificationsUseCase(tasks)
             } catch (e: Exception) {
                 _uiState.value = TaskListUiState.Error(e.message ?: "不明なエラーが発生しました")
                 e.printStackTrace()
             }
         }
+    }
+
+    fun updateFilter(newFilter: TaskFilter) {
+        _filter.value = newFilter
     }
 
 
@@ -79,6 +83,11 @@ class TaskListViewModel @Inject constructor(
                 !task.done
             }
             typeMatch && completionMatch
-        }
+        }.sortedBy { it.deadline }
     }
 }
+
+
+
+
+
