@@ -30,7 +30,7 @@ sealed interface TimetableUiState {
 class TimetableViewModel @Inject constructor(
     private val repository: ScombzRepository
 ) : ViewModel() {
-    private val TAG = "ViewModel"
+    private val TAG = "TimetableViewModel"
 
 
     private val _currentYear = MutableStateFlow(
@@ -57,18 +57,21 @@ class TimetableViewModel @Inject constructor(
         yearAndTermFlow,
         _refreshTrigger
     ) { yearAndTerm, refreshCount ->
-        Triple(yearAndTerm.first, yearAndTerm.second, refreshCount)
+        Triple(yearAndTerm.first, yearAndTerm.second, refreshCount > 0)
     }
-        .flatMapLatest { (year, term, refreshCount) ->
+        .flatMapLatest { (year, term, shouldRefresh) ->
             flow {
                 Log.d(
                     TAG,
-                    "flatMapLatest triggered with Year=$year, Term=$term, RefreshCount=$refreshCount"
+                    "flatMapLatest triggered with Year=$year, Term=$term, ShouldRefresh=$shouldRefresh"
                 )
                 if (year != 0 && term.isNotEmpty()) {
                     emit(TimetableUiState.Loading)
                     try {
-                        val classCells = repository.getTimetable(year, term, forceRefresh = true)
+                        val classCells =
+                            repository.getTimetable(year, term, forceRefresh = shouldRefresh)
+                        if (shouldRefresh) _refreshTrigger.value = 0
+
                         Log.d(
                             TAG,
                             "Successfully fetched ${classCells.size} classes for $year-$term"
@@ -97,6 +100,7 @@ class TimetableViewModel @Inject constructor(
         Log.d(TAG, "changeYearAndTerm called with Year=$newYear, Term=$newTerm")
         _currentYear.value = newYear
         _currentTerm.value = newTerm
+        _refreshTrigger.value = 0
     }
 
     fun refresh() {
@@ -104,4 +108,3 @@ class TimetableViewModel @Inject constructor(
         _refreshTrigger.value++
     }
 }
-

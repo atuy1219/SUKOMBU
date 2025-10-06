@@ -1,7 +1,6 @@
-// FILE: app/src/main/java/com/atuy/scomb/data/repository/ScombzRepository.kt
-
 package com.atuy.scomb.data.repository
 
+import android.util.Log
 import com.atuy.scomb.data.SessionManager
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.ClassCellDao
@@ -24,6 +23,9 @@ class ScombzRepository @Inject constructor(
         val sessionId = sessionManager.sessionIdFlow.firstOrNull()
             ?: throw IllegalStateException("Not logged in")
 
+        if (forceRefresh) {
+        }
+
         val cachedTasks = taskDao.getAllTasks()
         if (cachedTasks.isNotEmpty() && !forceRefresh) {
             return cachedTasks
@@ -43,22 +45,39 @@ class ScombzRepository @Inject constructor(
         val sessionId = sessionManager.sessionIdFlow.firstOrNull()
             ?: throw IllegalStateException("Not logged in")
         val timetableTitle = "$year-$term"
+        Log.d("Repository", "getTimetable called for $timetableTitle, forceRefresh=$forceRefresh")
+
+
+        if (forceRefresh) {
+            Log.d("Repository", "Forcing refresh, removing old timetable for $timetableTitle")
+            classCellDao.removeTimetable(timetableTitle)
+        }
 
         val cachedTimetable = classCellDao.getCells(timetableTitle)
-        if (cachedTimetable.isNotEmpty() && !forceRefresh) {
+        if (cachedTimetable.isNotEmpty()) {
+            Log.d(
+                "Repository",
+                "Returning ${cachedTimetable.size} cached cells for $timetableTitle"
+            )
             return cachedTimetable
         }
 
+        Log.d("Repository", "No cache found, fetching new timetable for $timetableTitle")
         val newTimetable = scraper.fetchTimetable(sessionId, year, term)
         for (cell in newTimetable) {
             classCellDao.insertClassCell(cell)
         }
+        Log.d("Repository", "Fetched and cached ${newTimetable.size} new cells for $timetableTitle")
         return newTimetable
     }
 
     suspend fun getNews(forceRefresh: Boolean): List<NewsItem> {
         val sessionId = sessionManager.sessionIdFlow.firstOrNull()
             ?: throw IllegalStateException("Not logged in")
+
+        if (forceRefresh) {
+            newsItemDao.clearAll()
+        }
 
         val cachedNews = newsItemDao.getAllNews()
         if (cachedNews.isNotEmpty() && !forceRefresh) {
