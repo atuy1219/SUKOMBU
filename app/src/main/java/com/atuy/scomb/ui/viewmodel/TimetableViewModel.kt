@@ -47,21 +47,32 @@ class TimetableViewModel @Inject constructor(
     )
     val currentTerm: StateFlow<String> = _currentTerm.asStateFlow()
 
+    private val _refreshTrigger = MutableStateFlow(0)
 
     private val yearAndTermFlow = _currentYear.combine(_currentTerm) { year, term ->
         Pair(year, term)
     }
 
-    val uiState: StateFlow<TimetableUiState> = yearAndTermFlow
-        .flatMapLatest { (year, term) ->
+    val uiState: StateFlow<TimetableUiState> = combine(
+        yearAndTermFlow,
+        _refreshTrigger
+    ) { yearAndTerm, refreshCount ->
+        Triple(yearAndTerm.first, yearAndTerm.second, refreshCount)
+    }
+        .flatMapLatest { (year, term, refreshCount) ->
             flow {
-                Log.d(TAG, "flatMapLatest triggered with Year=$year, Term=$term")
+                Log.d(
+                    TAG,
+                    "flatMapLatest triggered with Year=$year, Term=$term, RefreshCount=$refreshCount"
+                )
                 if (year != 0 && term.isNotEmpty()) {
                     emit(TimetableUiState.Loading)
                     try {
-                        // 常にforceRefresh = trueで最新データを取得
                         val classCells = repository.getTimetable(year, term, forceRefresh = true)
-                        Log.d(TAG, "Successfully fetched ${classCells.size} classes for $year-$term")
+                        Log.d(
+                            TAG,
+                            "Successfully fetched ${classCells.size} classes for $year-$term"
+                        )
                         val timetableGrid: Array<Array<ClassCell?>> = Array(5) { Array(7) { null } }
                         classCells.forEach { cell ->
                             if (cell.dayOfWeek in 0..4 && cell.period in 0..6) {
@@ -78,7 +89,7 @@ class TimetableViewModel @Inject constructor(
             }
         }.stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,
             initialValue = TimetableUiState.Loading
         )
 
@@ -87,4 +98,10 @@ class TimetableViewModel @Inject constructor(
         _currentYear.value = newYear
         _currentTerm.value = newTerm
     }
+
+    fun refresh() {
+        Log.d(TAG, "Refresh triggered")
+        _refreshTrigger.value++
+    }
 }
+

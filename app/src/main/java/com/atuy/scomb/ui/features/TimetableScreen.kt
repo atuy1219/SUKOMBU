@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,21 +37,17 @@ data class TimetableTerm(val year: Int, val term: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimetableScreen(
     viewModel: TimetableViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val currentYear by viewModel.currentYear.collectAsStateWithLifecycle()
-    val currentTerm by viewModel.currentTerm.collectAsStateWithLifecycle()
 
     Log.d(
         TAG,
-        "Recomposing. Current state=${uiState.javaClass.simpleName}, Year=$currentYear, Term=$currentTerm"
+        "Recomposing. Current state=${uiState.javaClass.simpleName}"
     )
 
-    // Scaffoldを削除し、BoxでfillMaxSizeのみ使用
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is TimetableUiState.Loading -> {
@@ -60,28 +55,24 @@ fun TimetableScreen(
                     CircularProgressIndicator()
                 }
             }
-
             is TimetableUiState.Success -> {
                 TimetableGrid(timetable = state.timetable)
             }
-
             is TimetableUiState.Error -> {
                 ErrorState(
                     message = state.message,
-                    onRetry = {
-                        viewModel.changeYearAndTerm(currentYear, currentTerm)
-                    }
+                    onRetry = { viewModel.refresh() }
                 )
             }
         }
     }
 }
 
+
 @Composable
 fun TimetableGrid(timetable: Array<Array<ClassCell?>>) {
     val days = listOf("月", "火", "水", "木", "金")
     Column(Modifier.fillMaxSize()) {
-        // 曜日ヘッダー
         Row(Modifier.fillMaxWidth()) {
             Spacer(modifier = Modifier.width(24.dp))
             days.forEach { day ->
@@ -110,7 +101,6 @@ fun TimetableGrid(timetable: Array<Array<ClassCell?>>) {
                     }
                 }
             }
-            // 授業セル表示
             Row(Modifier.weight(1f)) {
                 timetable.forEach { dayColumn ->
                     Column(modifier = Modifier.weight(1f)) {
@@ -159,3 +149,4 @@ fun ClassCellView(classCell: ClassCell?) {
         }
     }
 }
+

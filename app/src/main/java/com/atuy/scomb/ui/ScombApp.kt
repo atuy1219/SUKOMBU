@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -37,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -113,9 +114,10 @@ fun ScombApp(
     Scaffold(
         topBar = {
             if (shouldShowBottomBar) {
+                val timetableViewModel: TimetableViewModel = hiltViewModel()
                 AppTopBar(
                     currentRoute = currentDestination?.route,
-                    navController = navController
+                    timetableViewModel = timetableViewModel
                 )
             }
         },
@@ -183,7 +185,7 @@ fun ScombApp(
                 }
             ) {
                 composable(Screen.Login.route) {
-                    LoginScreen() // onLoginSuccessは不要
+                    LoginScreen()
                 }
                 composable(Screen.Home.route) { HomeScreen(paddingValues = innerPadding) }
                 composable(Screen.Tasks.route) { TaskListScreen() }
@@ -197,7 +199,7 @@ fun ScombApp(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppTopBar(currentRoute: String?, navController: NavController) {
+fun AppTopBar(currentRoute: String?,timetableViewModel: TimetableViewModel) {
     AnimatedContent(
         targetState = currentRoute,
         transitionSpec = {
@@ -207,7 +209,7 @@ fun AppTopBar(currentRoute: String?, navController: NavController) {
     ) { targetRoute ->
         when (targetRoute) {
             Screen.Timetable.route -> {
-                TimetableTopBar()
+                TimetableTopBar(viewModel = timetableViewModel)
             }
 
             else -> {
@@ -276,6 +278,14 @@ fun TimetableTopBar(
                         )
                     }
                 }
+            }
+        },
+        actions = {
+            IconButton(onClick = { viewModel.refresh() }) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "更新"
+                )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
