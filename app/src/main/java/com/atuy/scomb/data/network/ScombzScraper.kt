@@ -32,13 +32,8 @@ object ScombzConstant {
 
 class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
 
-    /**
-     * ScombZから取得したHTMLをチェックし、ログインページにリダイレクトされている場合は例外を投げる
-     * @param html HTML
-     */
     private fun throwIfSessionExpired(html: String) {
         val document = Jsoup.parse(html)
-        // ログインページにしか存在しないはずの要素(ユーザ名入力欄)があるかどうかで判定
         if (document.getElementById("userNameInput") != null) {
             throw SessionExpiredException()
         }
@@ -48,9 +43,7 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
         val response = api.getTimetable("SESSION=$sessionId", year, term)
         val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for Timetable")
 
-        // ▼▼▼ 変更点：新しい判定メソッドを使用 ▼▼▼
         throwIfSessionExpired(html)
-        // ▲▲▲ 変更点 ▲▲▲
 
         val document = Jsoup.parse(html)
         val timetableRows = document.getElementsByClass(ScombzConstant.TIMETABLE_ROW_CSS_CLASS_NM)
@@ -108,9 +101,7 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
             val html = response.body()?.string() ?: throw ScrapingFailedException("Empty response body")
             Log.d("ScombzScraper", "HTML length: ${html.length}")
 
-            // ▼▼▼ 変更点：新しい判定メソッドを使用 ▼▼▼
             throwIfSessionExpired(html)
-            // ▲▲▲ 変更点 ▲▲▲
 
             val document = Jsoup.parse(html)
             val taskRows = document.getElementsByClass(ScombzConstant.TASK_LIST_CSS_CLASS_NM)
@@ -162,9 +153,7 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
         val response = api.getSurveyList("SESSION=$sessionId")
         val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for Surveys")
 
-        // ▼▼▼ 変更点：新しい判定メソッドを使用 ▼▼▼
         throwIfSessionExpired(html)
-        // ▲▲▲ 変更点 ▲▲▲
 
         val document = Jsoup.parse(html)
         val surveyRows = document.getElementsByClass(ScombzConstant.SURVEY_ROW_CSS_NM)

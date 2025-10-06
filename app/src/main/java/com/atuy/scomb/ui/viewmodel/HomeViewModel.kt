@@ -7,10 +7,13 @@ import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.data.repository.ScombzRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
@@ -23,8 +26,8 @@ data class HomeData(
 
 sealed interface HomeUiState {
     object Loading : HomeUiState
-    data class Success(val homeData: HomeData) : HomeUiState
-    data class Error(val message: String) : HomeUiState
+    data class Success(val homeData: HomeData, val isRefreshing: Boolean = false) : HomeUiState
+    data class Error(val message: String, val isRefreshing: Boolean = false) : HomeUiState
 }
 
 @HiltViewModel
@@ -33,15 +36,24 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
-    val uiState: StateFlow<HomeUiState> = _uiState
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private var loadJob: Job? = null
 
     init {
-        loadHomeData()
+        loadHomeData(forceRefresh = false)
     }
 
-    fun loadHomeData(forceRefresh: Boolean = false) {
-        viewModelScope.launch {
-            _uiState.value = HomeUiState.Loading
+    fun loadHomeData(forceRefresh: Boolean) {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            val currentState = _uiState.value
+            if (forceRefresh && currentState is HomeUiState.Success) {
+                _uiState.value = currentState.copy(isRefreshing = true)
+            } else {
+                _uiState.value = HomeUiState.Loading
+            }
+
             try {
                 coroutineScope {
                     val tasksDeferred = async { repository.getTasksAndSurveys(forceRefresh) }
@@ -61,7 +73,6 @@ class HomeViewModel @Inject constructor(
                     val timetable = timetableDeferred.await()
                     val news = newsDeferred.await()
 
-
                     val upcomingTasks = tasks
                         .filter { it.deadline > System.currentTimeMillis() && !it.done }
                         .take(5)
@@ -78,11 +89,13 @@ class HomeViewModel @Inject constructor(
                             upcomingTasks = upcomingTasks,
                             todaysClasses = todaysClasses,
                             recentNews = recentNews
-                        )
+                        ),
+                        isRefreshing = false
                     )
                 }
             } catch (e: Exception) {
-                _uiState.value = HomeUiState.Error(e.message ?: "不明なエラーが発生しました")
+                if (e is CancellationException) throw e
+                _uiState.value = HomeUiState.Error(e.message ?: "不明なエラーが発生しました", isRefreshing = false)
                 e.printStackTrace()
             }
         }

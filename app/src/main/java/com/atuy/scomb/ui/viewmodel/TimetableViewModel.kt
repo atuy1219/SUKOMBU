@@ -6,32 +6,34 @@ import androidx.lifecycle.viewModelScope
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.repository.ScombzRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
 
 
 sealed interface TimetableUiState {
     object Loading : TimetableUiState
-    data class Success(val timetable: Array<Array<ClassCell?>>) : TimetableUiState
-    data class Error(val message: String) : TimetableUiState
+    data class Success(
+        val timetable: List<List<ClassCell?>>,
+        val isRefreshing: Boolean = false
+    ) : TimetableUiState
+
+    data class Error(val message: String, val isRefreshing: Boolean = false) : TimetableUiState
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class TimetableViewModel @Inject constructor(
     private val repository: ScombzRepository
 ) : ViewModel() {
     private val TAG = "TimetableViewModel"
 
+    private val _uiState = MutableStateFlow<TimetableUiState>(TimetableUiState.Loading)
+    val uiState: StateFlow<TimetableUiState> = _uiState.asStateFlow()
 
     private val _currentYear = MutableStateFlow(
         Calendar.getInstance().let {
@@ -47,64 +49,58 @@ class TimetableViewModel @Inject constructor(
     )
     val currentTerm: StateFlow<String> = _currentTerm.asStateFlow()
 
-    private val _refreshTrigger = MutableStateFlow(0)
+    private var loadJob: Job? = null
 
-    private val yearAndTermFlow = _currentYear.combine(_currentTerm) { year, term ->
-        Pair(year, term)
+    init {
+        loadData(forceRefresh = false)
     }
-
-    val uiState: StateFlow<TimetableUiState> = combine(
-        yearAndTermFlow,
-        _refreshTrigger
-    ) { yearAndTerm, refreshCount ->
-        Triple(yearAndTerm.first, yearAndTerm.second, refreshCount > 0)
-    }
-        .flatMapLatest { (year, term, shouldRefresh) ->
-            flow {
-                Log.d(
-                    TAG,
-                    "flatMapLatest triggered with Year=$year, Term=$term, ShouldRefresh=$shouldRefresh"
-                )
-                if (year != 0 && term.isNotEmpty()) {
-                    emit(TimetableUiState.Loading)
-                    try {
-                        val classCells =
-                            repository.getTimetable(year, term, forceRefresh = shouldRefresh)
-                        if (shouldRefresh) _refreshTrigger.value = 0
-
-                        Log.d(
-                            TAG,
-                            "Successfully fetched ${classCells.size} classes for $year-$term"
-                        )
-                        val timetableGrid: Array<Array<ClassCell?>> = Array(5) { Array(7) { null } }
-                        classCells.forEach { cell ->
-                            if (cell.dayOfWeek in 0..4 && cell.period in 0..6) {
-                                timetableGrid[cell.dayOfWeek][cell.period] = cell
-                            }
-                        }
-                        emit(TimetableUiState.Success(timetableGrid))
-                        Log.d(TAG, "UI state updated to Success.")
-                    } catch (e: Exception) {
-                        emit(TimetableUiState.Error(e.message ?: "不明なエラーが発生しました"))
-                        Log.e(TAG, "Error fetching timetable", e)
-                    }
-                }
-            }
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Eagerly,
-            initialValue = TimetableUiState.Loading
-        )
 
     fun changeYearAndTerm(newYear: Int, newTerm: String) {
-        Log.d(TAG, "changeYearAndTerm called with Year=$newYear, Term=$newTerm")
         _currentYear.value = newYear
         _currentTerm.value = newTerm
-        _refreshTrigger.value = 0
+        loadData(forceRefresh = false)
     }
 
     fun refresh() {
-        Log.d(TAG, "Refresh triggered")
-        _refreshTrigger.value++
+        loadData(forceRefresh = true)
+    }
+
+    private fun loadData(forceRefresh: Boolean) {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            val year = _currentYear.value
+            val term = _currentTerm.value
+            Log.d(TAG, "loadData called for $year-$term, forceRefresh=$forceRefresh")
+
+            val currentState = _uiState.value
+            if (forceRefresh && currentState is TimetableUiState.Success) {
+                _uiState.value = currentState.copy(isRefreshing = true)
+            } else {
+                _uiState.value = TimetableUiState.Loading
+            }
+
+            try {
+                val classCells = repository.getTimetable(year, term, forceRefresh)
+                Log.d(TAG, "Successfully fetched ${classCells.size} classes for $year-$term")
+
+                val timetableGrid = List(5) { day ->
+                    List(7) { period ->
+                        classCells.find { it.dayOfWeek == day && it.period == period }
+                    }
+                }
+
+                _uiState.value = TimetableUiState.Success(timetableGrid, isRefreshing = false)
+                Log.d(TAG, "UI state updated to Success.")
+            } catch (e: Exception) {
+                if (e is CancellationException) {
+                    Log.d(TAG, "loadData Job was cancelled.")
+                    throw e
+                }
+                val message = e.message ?: "不明なエラーが発生しました"
+                _uiState.value = TimetableUiState.Error(message, isRefreshing = false)
+                Log.e(TAG, "Error fetching timetable: $message", e)
+            }
+        }
     }
 }
+

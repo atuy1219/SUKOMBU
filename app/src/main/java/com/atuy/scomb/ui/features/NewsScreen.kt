@@ -41,7 +41,7 @@ fun NewsScreen(
 
             is NewsUiState.Success -> {
                 PullToRefreshBox(
-                    isRefreshing = false,
+                    isRefreshing = state.isRefreshing,
                     onRefresh = {
                         viewModel.fetchNews(forceRefresh = true)
                     },

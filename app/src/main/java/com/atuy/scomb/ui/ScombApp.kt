@@ -64,6 +64,7 @@ fun ScombApp(
 ) {
     val authState by mainViewModel.authState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
+    val timetableViewModel: TimetableViewModel = hiltViewModel()
 
     LaunchedEffect(authState, navController) {
         Log.d(
@@ -114,7 +115,6 @@ fun ScombApp(
     Scaffold(
         topBar = {
             if (shouldShowBottomBar) {
-                val timetableViewModel: TimetableViewModel = hiltViewModel()
                 AppTopBar(
                     currentRoute = currentDestination?.route,
                     timetableViewModel = timetableViewModel
@@ -237,7 +237,7 @@ fun AppTopBar(currentRoute: String?,timetableViewModel: TimetableViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimetableTopBar(
-    viewModel: TimetableViewModel = hiltViewModel()
+    viewModel: TimetableViewModel
 ) {
     val currentYear by viewModel.currentYear.collectAsStateWithLifecycle()
     val currentTerm by viewModel.currentTerm.collectAsStateWithLifecycle()
@@ -293,4 +293,3 @@ fun TimetableTopBar(
         )
     )
 }
-

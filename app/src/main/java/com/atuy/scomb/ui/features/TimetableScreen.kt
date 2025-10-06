@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -37,6 +39,7 @@ data class TimetableTerm(val year: Int, val term: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimetableScreen(
     viewModel: TimetableViewModel = hiltViewModel()
@@ -56,7 +59,13 @@ fun TimetableScreen(
                 }
             }
             is TimetableUiState.Success -> {
-                TimetableGrid(timetable = state.timetable)
+                PullToRefreshBox(
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = { viewModel.refresh() },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    TimetableGrid(timetable = state.timetable)
+                }
             }
             is TimetableUiState.Error -> {
                 ErrorState(
@@ -70,7 +79,7 @@ fun TimetableScreen(
 
 
 @Composable
-fun TimetableGrid(timetable: Array<Array<ClassCell?>>) {
+fun TimetableGrid(timetable: List<List<ClassCell?>>) {
     val days = listOf("月", "火", "水", "木", "金")
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth()) {

@@ -60,7 +60,7 @@ fun TaskListScreen(
                     onFilterChanged = { newFilter -> viewModel.updateFilter(newFilter) }
                 )
                 PullToRefreshBox(
-                    isRefreshing = false,
+                    isRefreshing = state.isRefreshing,
                     onRefresh = {
                         viewModel.fetchTasks(forceRefresh = true)
                     },

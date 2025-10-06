@@ -51,7 +51,7 @@ fun HomeScreen(
 
             is HomeUiState.Success -> {
                 PullToRefreshBox(
-                    isRefreshing = false,
+                    isRefreshing = state.isRefreshing,
                     onRefresh = {
                         viewModel.loadHomeData(forceRefresh = true)
                     },

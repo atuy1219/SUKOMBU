@@ -6,9 +6,11 @@ import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.data.repository.ScombzRepository
 import com.atuy.scomb.domain.ScheduleNotificationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -21,8 +23,13 @@ data class TaskFilter(
 
 sealed interface TaskListUiState {
     object Loading : TaskListUiState
-    data class Success(val tasks: List<Task>, val filter: TaskFilter) : TaskListUiState
-    data class Error(val message: String) : TaskListUiState
+    data class Success(
+        val tasks: List<Task>,
+        val filter: TaskFilter,
+        val isRefreshing: Boolean = false
+    ) : TaskListUiState
+
+    data class Error(val message: String, val isRefreshing: Boolean = false) : TaskListUiState
 }
 
 @HiltViewModel
@@ -31,41 +38,54 @@ class TaskListViewModel @Inject constructor(
     private val scheduleNotificationsUseCase: ScheduleNotificationsUseCase
 ) : ViewModel() {
 
-    private val _allTasks = MutableStateFlow<List<Task>>(emptyList())
-    private val _filter = MutableStateFlow(TaskFilter())
     private val _uiState = MutableStateFlow<TaskListUiState>(TaskListUiState.Loading)
-    val uiState: StateFlow<TaskListUiState> = _uiState
+    val uiState: StateFlow<TaskListUiState> = _uiState.asStateFlow()
+
+    private var allTasks: List<Task> = emptyList()
+    private var loadJob: Job? = null
 
     init {
-        viewModelScope.launch {
-            combine(_allTasks, _filter) { tasks, filter ->
-                if (_uiState.value !is TaskListUiState.Loading) {
-                    val filteredTasks = filterTasks(tasks, filter)
-                    _uiState.value = TaskListUiState.Success(filteredTasks, filter)
-                }
-            }.collect{}
-        }
         fetchTasks(forceRefresh = false)
     }
 
     fun fetchTasks(forceRefresh: Boolean) {
-        viewModelScope.launch {
-            _uiState.value = TaskListUiState.Loading
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            val currentState = _uiState.value
+            val currentFilter =
+                if (currentState is TaskListUiState.Success) currentState.filter else TaskFilter()
+
+            if (forceRefresh && currentState is TaskListUiState.Success) {
+                _uiState.value = currentState.copy(isRefreshing = true)
+            } else {
+                _uiState.value = TaskListUiState.Loading
+            }
+
             try {
-                val tasks = repository.getTasksAndSurveys(forceRefresh)
-                _allTasks.value = tasks
-                val filteredTasks = filterTasks(tasks, _filter.value)
-                _uiState.value = TaskListUiState.Success(filteredTasks, _filter.value)
-                scheduleNotificationsUseCase(tasks)
+                allTasks = repository.getTasksAndSurveys(forceRefresh)
+                _uiState.value = TaskListUiState.Success(
+                    tasks = filterTasks(allTasks, currentFilter),
+                    filter = currentFilter,
+                    isRefreshing = false
+                )
+                scheduleNotificationsUseCase(allTasks)
             } catch (e: Exception) {
-                _uiState.value = TaskListUiState.Error(e.message ?: "不明なエラーが発生しました")
+                if (e is CancellationException) throw e
+                _uiState.value =
+                    TaskListUiState.Error(e.message ?: "不明なエラーが発生しました", isRefreshing = false)
                 e.printStackTrace()
             }
         }
     }
 
     fun updateFilter(newFilter: TaskFilter) {
-        _filter.value = newFilter
+        val currentState = _uiState.value
+        if (currentState is TaskListUiState.Success) {
+            _uiState.value = currentState.copy(
+                tasks = filterTasks(allTasks, newFilter),
+                filter = newFilter
+            )
+        }
     }
 
 
@@ -86,8 +106,3 @@ class TaskListViewModel @Inject constructor(
         }.sortedBy { it.deadline }
     }
 }
-
-
-
-
-
