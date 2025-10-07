@@ -1,83 +1,126 @@
 package com.atuy.scomb.data.repository
 
-import com.atuy.scomb.data.SessionManager
+import android.util.Log
+import com.atuy.scomb.data.AuthManager
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.ClassCellDao
 import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.NewsItemDao
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.data.db.TaskDao
-import com.atuy.scomb.data.network.ScombzScraper
-import kotlinx.coroutines.flow.firstOrNull
+import com.atuy.scomb.data.network.ScombzApiService
+import com.atuy.scomb.util.SessionExpiredException
+import kotlinx.coroutines.flow.first
+import java.util.Calendar
 import javax.inject.Inject
 
 class ScombzRepository @Inject constructor(
     private val taskDao: TaskDao,
     private val classCellDao: ClassCellDao,
     private val newsItemDao: NewsItemDao,
-    private val scraper: ScombzScraper,
-    private val sessionManager: SessionManager
+    private val apiService: ScombzApiService,
+    private val authManager: AuthManager
 ) {
-    suspend fun getTasksAndSurveys(forceRefresh: Boolean): List<Task> {
-        val sessionId = sessionManager.sessionIdFlow.firstOrNull()
-            ?: throw IllegalStateException("Not logged in")
+    suspend fun login(userId: String, userPw: String): Result<Unit> {
+        return try {
+            val response = apiService.login(com.atuy.scomb.data.network.LoginRequest(userId, userPw))
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                if (body.status == "OK" && body.token != null) {
+                    authManager.saveAuthToken(body.token)
+                    Result.success(Unit)
+                } else {
+                    val errorMessage = if (body.status != "OK") body.status else "ログインに失敗しました: トークンがありません"
+                    Result.failure(Exception(errorMessage))
+                }
+            } else {
+                Result.failure(Exception("ログインに失敗しました: ${response.message()} (Code: ${response.code()})"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
+    private suspend fun ensureAuthenticated() {
+        if (authManager.authTokenFlow.first() == null) {
+            throw SessionExpiredException()
+        }
+    }
+
+    suspend fun getTasksAndSurveys(forceRefresh: Boolean): List<Task> {
         if (!forceRefresh) {
             val cachedTasks = taskDao.getAllTasks()
-            if (cachedTasks.isNotEmpty()) {
-                return cachedTasks
-            }
+            if (cachedTasks.isNotEmpty()) return cachedTasks
         }
 
-        val newTasks = scraper.fetchTasks(sessionId)
-        val newSurveys = scraper.fetchSurveys(sessionId)
-        val allTasks = (newTasks + newSurveys).distinctBy { it.id }
+        ensureAuthenticated()
+        val calendar = Calendar.getInstance()
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH) + 1
+        val yearMonth = String.format("%d%02d", year, month)
 
-        for (task in allTasks) {
-            taskDao.insertOrUpdateTask(task)
+        val response = apiService.getTasks(yearMonth)
+        if (!response.isSuccessful) {
+            if (response.code() == 401) throw SessionExpiredException()
+            val errorBody = response.errorBody()?.string()
+            Log.e("ScombzRepository", "Task fetch failed: ${response.code()} - $errorBody")
+            throw Exception("課題の取得に失敗しました: ${response.code()}")
         }
-        return allTasks
+
+        val apiTasks = response.body() ?: emptyList()
+        val dbTasks = apiTasks.mapNotNull { it.toDbTask() }
+
+        dbTasks.forEach { taskDao.insertOrUpdateTask(it) }
+        return dbTasks
     }
 
     suspend fun getTimetable(year: Int, term: String, forceRefresh: Boolean): List<ClassCell> {
-        val sessionId = sessionManager.sessionIdFlow.firstOrNull()
-            ?: throw IllegalStateException("Not logged in")
         val timetableTitle = "$year-$term"
-
         if (!forceRefresh) {
             val cachedTimetable = classCellDao.getCells(timetableTitle)
-            if (cachedTimetable.isNotEmpty()) {
-                return cachedTimetable
-            }
+            if (cachedTimetable.isNotEmpty()) return cachedTimetable
         }
 
-        val newTimetable = scraper.fetchTimetable(sessionId, year, term)
-        if (forceRefresh) {
-            classCellDao.removeTimetable(timetableTitle)
+        ensureAuthenticated()
+        // APIの `yearMonth` は前期が "04", 後期が "10" 始まりと仮定
+        val yearMonth = if(term == "1") "${year}04" else "${year}10"
+
+        val response = apiService.getTimetable(yearMonth)
+        if (!response.isSuccessful) {
+            if (response.code() == 401) throw SessionExpiredException()
+            val errorBody = response.errorBody()?.string()
+            Log.e("ScombzRepository", "Timetable fetch failed: ${response.code()} - $errorBody")
+            throw Exception("時間割の取得に失敗しました: ${response.code()}")
         }
-        for (cell in newTimetable) {
-            classCellDao.insertClassCell(cell)
-        }
-        return newTimetable
+
+        val apiClassCells = response.body() ?: emptyList()
+        val dbClassCells = apiClassCells.map { it.toDbClassCell(year, term, timetableTitle) }
+
+        classCellDao.removeTimetable(timetableTitle)
+        dbClassCells.forEach { classCellDao.insertClassCell(it) }
+        return dbClassCells
     }
 
     suspend fun getNews(forceRefresh: Boolean): List<NewsItem> {
-        val sessionId = sessionManager.sessionIdFlow.firstOrNull() ?: throw IllegalStateException("Not logged in")
-
         if (!forceRefresh) {
             val cachedNews = newsItemDao.getAllNews()
-            if (cachedNews.isNotEmpty()) {
-                return cachedNews
-            }
+            if (cachedNews.isNotEmpty()) return cachedNews
         }
 
-        val newNews = scraper.fetchNews(sessionId)
-        if (forceRefresh) {
-            newsItemDao.clearAll()
+        ensureAuthenticated()
+        val response = apiService.getNews()
+        if (!response.isSuccessful) {
+            if (response.code() == 401) throw SessionExpiredException()
+            val errorBody = response.errorBody()?.string()
+            Log.e("ScombzRepository", "News fetch failed: ${response.code()} - $errorBody")
+            throw Exception("お知らせの取得に失敗しました: ${response.code()}")
         }
-        for (newsItem in newNews) {
-            newsItemDao.insertOrUpdateNewsItem(newsItem)
-        }
+
+        val apiNews = response.body() ?: emptyList()
+        val dbNews = apiNews.map { it.toDbNewsItem() }
+
+        newsItemDao.clearAll()
+        dbNews.forEach { newsItemDao.insertOrUpdateNewsItem(it) }
         return newsItemDao.getAllNews()
     }
 

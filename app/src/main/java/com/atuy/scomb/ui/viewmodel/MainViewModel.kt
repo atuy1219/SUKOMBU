@@ -3,7 +3,7 @@ package com.atuy.scomb.ui.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.atuy.scomb.data.SessionManager
+import com.atuy.scomb.data.AuthManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,14 +18,14 @@ sealed interface AuthState {
 }
 
 @HiltViewModel
-class MainViewModel @Inject constructor(sessionManager: SessionManager) : ViewModel() {
-    val authState: StateFlow<AuthState> = sessionManager.sessionIdFlow
-        .map { sessionId ->
-            if (sessionId != null) {
-                Log.d("MainViewModel_Debug", "Session ID found. Emitting Authenticated.")
+class MainViewModel @Inject constructor(authManager: AuthManager) : ViewModel() {
+    val authState: StateFlow<AuthState> = authManager.authTokenFlow
+        .map { authToken ->
+            if (authToken != null) {
+                Log.d("MainViewModel_Debug", "Auth token found. Emitting Authenticated.")
                 AuthState.Authenticated
             } else {
-                Log.d("MainViewModel_Debug", "Session ID is null. Emitting Unauthenticated.")
+                Log.d("MainViewModel_Debug", "Auth token is null. Emitting Unauthenticated.")
                 AuthState.Unauthenticated
             }
         }
@@ -35,4 +35,3 @@ class MainViewModel @Inject constructor(sessionManager: SessionManager) : ViewMo
             initialValue = AuthState.Loading
         )
 }
-

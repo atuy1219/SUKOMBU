@@ -2,7 +2,7 @@ package com.atuy.scomb.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.atuy.scomb.data.SessionManager
+import com.atuy.scomb.data.AuthManager
 import com.atuy.scomb.data.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,7 +18,7 @@ data class SettingsUiState(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val sessionManager: SessionManager,
+    private val authManager: AuthManager,
     private val settingsManager: SettingsManager
 ) : ViewModel() {
 
@@ -40,7 +40,7 @@ class SettingsViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
-            sessionManager.clearSessionId()
+            authManager.clearAuthToken()
         }
     }
 }
