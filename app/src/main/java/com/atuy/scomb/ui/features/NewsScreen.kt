@@ -1,5 +1,8 @@
 package com.atuy.scomb.ui.features
 
+import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -76,7 +80,13 @@ fun NewsList(newsItems: List<NewsItem>) {
 
 @Composable
 fun NewsListItem(newsItem: NewsItem) {
+    val context = LocalContext.current
     ListItem(
+        modifier = Modifier.clickable {
+            val builder = CustomTabsIntent.Builder()
+            val customTabsIntent = builder.build()
+            customTabsIntent.launchUrl(context, Uri.parse(newsItem.url))
+        },
         headlineContent = {
             Text(
                 text = newsItem.title,

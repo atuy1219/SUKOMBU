@@ -21,7 +21,6 @@ class ScombzRepository @Inject constructor(
 ) {
     private val TAG = "ScombzRepository"
     suspend fun getTasksAndSurveys(forceRefresh: Boolean): List<Task> {
-// ... existing code ...
         val sessionId = sessionManager.sessionIdFlow.firstOrNull()
             ?: throw IllegalStateException("Not logged in")
 
@@ -36,8 +35,6 @@ class ScombzRepository @Inject constructor(
         val newSurveys = scraper.fetchSurveys(sessionId)
         val allTasks = (newTasks + newSurveys).distinctBy { it.id }
 
-        // Note: This doesn't clear old tasks, it just updates/inserts new ones.
-        // Consider a clearing strategy if tasks can be removed from the source.
         for (task in allTasks) {
             taskDao.insertOrUpdateTask(task)
         }
@@ -45,7 +42,6 @@ class ScombzRepository @Inject constructor(
     }
 
     suspend fun getTimetable(year: Int, term: String, forceRefresh: Boolean): List<ClassCell> {
-// ... existing code ...
         val sessionId = sessionManager.sessionIdFlow.firstOrNull()
             ?: throw IllegalStateException("Not logged in")
         val timetableTitle = "$year-$term"
@@ -72,15 +68,11 @@ class ScombzRepository @Inject constructor(
     }
 
     suspend fun getNews(forceRefresh: Boolean): List<NewsItem> {
-        Log.d(TAG, "getNews called with forceRefresh: $forceRefresh")
         val sessionId = sessionManager.sessionIdFlow.firstOrNull()
             ?: throw IllegalStateException("Not logged in")
-        Log.d(TAG, "Using SessionId: $sessionId")
+        Log.d(TAG, "getNews called with forceRefresh: $forceRefresh")
 
-        if (forceRefresh) {
-            Log.d(TAG, "Forcing refresh, clearing all news from DB.")
-            newsItemDao.clearAll()
-        } else {
+        if (!forceRefresh) {
             val cachedNews = newsItemDao.getAllNews()
             if (cachedNews.isNotEmpty()) {
                 Log.d(TAG, "Returning ${cachedNews.size} cached news items.")
@@ -88,12 +80,16 @@ class ScombzRepository @Inject constructor(
             }
         }
 
-        Log.d(TAG, "No cache or refresh forced, fetching news from scraper.")
         val newNews = scraper.fetchNews(sessionId)
         Log.d(TAG, "Scraper returned ${newNews.size} news items.")
+
+        newsItemDao.clearAll()
         for (newsItem in newNews) {
             newsItemDao.insertOrUpdateNewsItem(newsItem)
         }
+        Log.d(TAG, "DB cleared and updated with ${newNews.size} items.")
+
         return newNews
     }
 }
+

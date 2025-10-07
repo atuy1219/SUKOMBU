@@ -13,5 +13,6 @@ data class NewsItem(
     val domain: String,
     val publishTime: String,
     val tags: String,
-    var unread: Boolean
+    var unread: Boolean,
+    val url: String
 )

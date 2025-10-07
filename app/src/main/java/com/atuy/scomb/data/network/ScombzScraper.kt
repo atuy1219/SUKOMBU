@@ -7,7 +7,10 @@ import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.util.DateUtils
 import com.atuy.scomb.util.ScrapingFailedException
 import com.atuy.scomb.util.SessionExpiredException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.jsoup.Jsoup
+import java.util.Calendar
 import javax.inject.Inject
 
 object ScombzConstant {
@@ -23,11 +26,13 @@ object ScombzConstant {
     // Survey
     const val SURVEY_ROW_CSS_NM = "result-list"
     // News
-    const val NEWS_LIST_ITEM_CSS_NM = "portal-information-list-title"
+    const val NEWS_LIST_ITEM_CSS_NM = "result-list"
     const val NEWS_LIST_ITEM_TITLE_CSS_NM = "link-txt"
     const val NEWS_CATEGORY_CSS_NM = "portal-information-list-type"
     const val NEWS_DOMAIN_CSS_NM = "portal-information-list-division"
     const val NEWS_PUBLISH_TIME_CSS_NM = "portal-information-list-date"
+    // Community
+    const val COMMUNITY_NAME_LINK_CSS_NM = "a.linkToCommunitytop" // 修正: より正確なセレクタに変更
 }
 
 class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
@@ -41,8 +46,13 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
 
     suspend fun fetchTimetable(sessionId: String, year: Int, term: String): List<ClassCell> {
         val response = api.getTimetable("SESSION=$sessionId", year, term)
-        val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for Timetable")
 
+        if (!response.isSuccessful || response.body() == null) {
+            Log.w(TAG, "Failed to fetch timetable. Code: ${response.code()}")
+            throw ScrapingFailedException("Failed to get HTML for Timetable (Code: ${response.code()})")
+        }
+
+        val html = response.body()!!.string()
         throwIfSessionExpired(html)
 
         val document = Jsoup.parse(html)
@@ -93,19 +103,15 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
     }
 
     suspend fun fetchTasks(sessionId: String): List<Task> {
-        Log.d("ScombzScraper", "Fetching tasks with session: $sessionId")
         try {
             val response = api.getTaskList("SESSION=$sessionId")
-            Log.d("ScombzScraper", "Response code: ${response.code()}")
 
             val html = response.body()?.string() ?: throw ScrapingFailedException("Empty response body")
-            Log.d("ScombzScraper", "HTML length: ${html.length}")
 
             throwIfSessionExpired(html)
 
             val document = Jsoup.parse(html)
             val taskRows = document.getElementsByClass(ScombzConstant.TASK_LIST_CSS_CLASS_NM)
-            Log.d("ScombzScraper", "Found ${taskRows.size} task rows")
 
             return taskRows.mapNotNull { row ->
                 try {
@@ -139,7 +145,6 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
                         reportId = reportId, customColor = null, addManually = false, done = false
                     )
                 } catch (e: Exception) {
-                    e.printStackTrace()
                     null
                 }
             }
@@ -190,46 +195,82 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
                     done = isDone
                 )
             } catch (e: Exception) {
-                e.printStackTrace()
                 null
             }
         }
     }
 
-    suspend fun fetchNews(sessionId: String): List<NewsItem> {
-        Log.d(TAG, "Fetching news with session: $sessionId")
+    private suspend fun fetchLmsIdMap(sessionId: String): Map<String, String> {
+        return try {
+            val calendar = Calendar.getInstance()
+            val year = if (calendar.get(Calendar.MONTH) < 3) calendar.get(Calendar.YEAR) - 1 else calendar.get(Calendar.YEAR)
+            val term = if (calendar.get(Calendar.MONTH) in 3..8) "1" else "2"
+            fetchTimetable(sessionId, year, term)
+                .filter { it.name != null }
+                .associate { it.name!! to it.classId }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not fetch LMS ID map, proceeding without it.", e)
+            emptyMap()
+        }
+    }
 
-        // 手順1: お知らせ一覧ページにアクセスしてCSRFトークンを取得
-        val initialResponse = api.getNewsListPage("SESSION=$sessionId")
-        Log.d(TAG, "Initial news list page response code: ${initialResponse.code()}")
-        val initialHtml = initialResponse.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for initial News page")
+    private suspend fun fetchCommunityIdMap(sessionId: String): Map<String, String> {
+        return try {
+            val response = api.getCommunityList("SESSION=$sessionId")
+
+            if (!response.isSuccessful || response.body() == null) {
+                Log.w(TAG, "Failed to fetch community list. Code: ${response.code()}")
+                return emptyMap()
+            }
+            val html = response.body()!!.string()
+
+            throwIfSessionExpired(html)
+            val document = Jsoup.parse(html)
+            // 修正: <a>タグを直接選択し、そのid属性からIDを取得する
+            val communityElements = document.select(ScombzConstant.COMMUNITY_NAME_LINK_CSS_NM)
+            communityElements.mapNotNull { element ->
+                val name = element.text()
+                val id = element.attr("id").ifEmpty { null }
+                if (name.isNotEmpty() && id != null) {
+                    name to id
+                } else {
+                    null
+                }
+            }.toMap()
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not fetch Community ID map, proceeding without it.", e)
+            emptyMap()
+        }
+    }
+
+    suspend fun fetchNews(sessionId: String): List<NewsItem> = coroutineScope {
+        val lmsIdMapDeferred = async { fetchLmsIdMap(sessionId) }
+        val communityIdMapDeferred = async { fetchCommunityIdMap(sessionId) }
+
+        val cookie = "SESSION=$sessionId"
+        val initialResponse = api.getNewsListPage(cookie)
+        val initialHtml = initialResponse.body()?.string()
+            ?: throw ScrapingFailedException("Failed to get initial news page HTML")
         throwIfSessionExpired(initialHtml)
-
-        val initialDocument = Jsoup.parse(initialHtml)
-        val csrfToken = initialDocument.select("input[name=_csrf]").attr("value")
+        val initialDoc = Jsoup.parse(initialHtml)
+        val csrfToken = initialDoc.select("input[name=_csrf]").attr("value")
 
         if (csrfToken.isEmpty()) {
-            Log.e(TAG, "CSRF token not found on the news page.")
             throw ScrapingFailedException("CSRF token not found")
         }
-        Log.d(TAG, "Found CSRF token: $csrfToken")
 
-        // 手順2: CSRFトークンを使って検索結果ページにPOSTリクエスト
-        val response = api.searchNewsList("SESSION=$sessionId", csrfToken)
-        Log.d(TAG, "News list search response code: ${response.code()}")
-        val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for News")
-        Log.d(TAG, "News list HTML length: ${html.length}")
-
+        val response = api.searchNewsList(cookie, csrfToken)
+        val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get searched news page HTML")
         throwIfSessionExpired(html)
 
         val document = Jsoup.parse(html)
         val newsRows = document.getElementsByClass(ScombzConstant.NEWS_LIST_ITEM_CSS_NM)
-        Log.d(TAG, "Found ${newsRows.size} news rows using CSS selector '${ScombzConstant.NEWS_LIST_ITEM_CSS_NM}'")
 
+        val lmsIdMap = lmsIdMapDeferred.await()
+        val communityIdMap = communityIdMapDeferred.await()
 
-        return newsRows.mapNotNull { row ->
+        return@coroutineScope newsRows.mapNotNull { row ->
             try {
-                Log.d(TAG, "Parsing news row: ${row.html()}")
                 val titleElement = row.getElementsByClass(ScombzConstant.NEWS_LIST_ITEM_TITLE_CSS_NM).firstOrNull()
                     ?: return@mapNotNull null
                 val newsId = titleElement.attr("data1").ifBlank { "" }
@@ -242,8 +283,15 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
                     ?.text()
                     ?.trim()
                     ?: ""
-                val tags = ""
-                val unread = true
+
+                var idnumber = ""
+                if (category == "LMS") {
+                    idnumber = lmsIdMap[domain] ?: ""
+                } else if (category == "COMMUNITY") {
+                    idnumber = communityIdMap[domain] ?: ""
+                }
+
+                val url = "${ScombzConstant.SCOMBZ_DOMAIN}/portal/home/information/detail_direct?informationId=$newsId&selectCategoryCd=$data2&idnumber=$idnumber"
 
                 NewsItem(
                     newsId = newsId,
@@ -252,12 +300,12 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
                     category = category,
                     domain = domain,
                     publishTime = publishTime,
-                    tags = tags,
-                    unread = unread
+                    tags = "",
+                    unread = true,
+                    url = url
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse a news row.", e)
-                e.printStackTrace()
                 null
             }
         }
