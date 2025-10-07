@@ -12,28 +12,28 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "session")
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth")
 
 @Singleton
-class SessionManager @Inject constructor(@ApplicationContext private val context: Context) {
+class AuthManager @Inject constructor(@ApplicationContext private val context: Context) {
 
     companion object {
-        private val SESSION_ID_KEY = stringPreferencesKey("session_id")
+        private val AUTH_TOKEN_KEY = stringPreferencesKey("auth_token")
     }
 
-    suspend fun saveSessionId(sessionId: String) {
+    suspend fun saveAuthToken(token: String) {
         context.dataStore.edit { preferences ->
-            preferences[SESSION_ID_KEY] = sessionId
+            preferences[AUTH_TOKEN_KEY] = token
         }
     }
 
-    val sessionIdFlow: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[SESSION_ID_KEY]
+    val authTokenFlow: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[AUTH_TOKEN_KEY]
     }
 
-    suspend fun clearSessionId() {
+    suspend fun clearAuthToken() {
         context.dataStore.edit { preferences ->
-            preferences.remove(SESSION_ID_KEY)
+            preferences.remove(AUTH_TOKEN_KEY)
         }
     }
 }

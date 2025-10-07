@@ -2,48 +2,49 @@ package com.atuy.scomb.data.network
 
 import okhttp3.ResponseBody
 import retrofit2.Response
-import retrofit2.http.Field
-import retrofit2.http.FormUrlEncoded
+import retrofit2.http.Body
 import retrofit2.http.GET
-import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Path
 import retrofit2.http.Query
 
-
 interface ScombzApiService {
-    @GET("lms/task")
-    suspend fun getTaskList(
-        @Header("Cookie") sessionId: String
-    ): Response<ResponseBody>
 
-    @GET("lms/timetable")
+    @POST("login")
+    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
+
+    @POST("reg_fcm")
+    suspend fun registerFcm(
+        @Query("token") apiToken: String,
+        @Body fcmToken: Map<String, String>
+    ): Response<StatusResponse>
+
+    @POST("sessionid")
+    suspend fun sendSessionId(
+        @Query("token") apiToken: String,
+        @Body sessionId: SessionIdRequest
+    ): Response<StatusResponse>
+
+    @GET("timetable/{yearMonth}")
     suspend fun getTimetable(
-        @Header("Cookie") sessionId: String,
-        @Query("year") year: Int,
-        @Query("term") term: String
-    ): Response<ResponseBody>
+        @Query("token") apiToken: String,
+        @Path("yearMonth") yearMonth: String
+    ): Response<List<ApiClassCell>>
 
-    @GET("portal/surveys/list")
-    suspend fun getSurveyList(
-        @Header("Cookie") sessionId: String
-    ): Response<ResponseBody>
+    @GET("home/{yearMonth}")
+    suspend fun getHome(
+        @Query("token") apiToken: String,
+        @Path("yearMonth") yearMonth: String
+    ): Response<ResponseBody> // Response type is unknown
 
-    @GET("portal/home/information/list")
-    suspend fun getNewsListPage(
-        @Header("Cookie") sessionId: String
-    ): Response<ResponseBody>
+    @GET("task/{yearMonth}")
+    suspend fun getTasks(
+        @Query("token") apiToken: String,
+        @Path("yearMonth") yearMonth: String
+    ): Response<List<ApiTask>>
 
-    @FormUrlEncoded
-    @POST("portal/home/information/list/search")
-    suspend fun searchNewsList(
-        @Header("Cookie") sessionId: String,
-        @Field("_csrf") csrfToken: String,
-        @Field("viewPage") viewPage: String = "0"
-    ): Response<ResponseBody>
-
-    @GET("community/search")
-    suspend fun getCommunityList(
-        @Header("Cookie") sessionId: String
-    ): Response<ResponseBody>
+    @GET("news")
+    suspend fun getNews(
+        @Query("token") apiToken: String
+    ): Response<List<ApiNewsItem>>
 }
-

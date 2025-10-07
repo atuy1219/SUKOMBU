@@ -1,23 +1,24 @@
 package com.atuy.scomb.di
 
 import android.content.Context
-import com.atuy.scomb.data.SettingsManager
+import com.atuy.scomb.data.AuthManager
 import com.atuy.scomb.data.db.AppDatabase
 import com.atuy.scomb.data.network.ScombzApiService
-import com.atuy.scomb.data.network.ScombzScraper
 import com.atuy.scomb.data.repository.ScombzRepository
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 
-private const val BASE_URL = "https://scombz.shibaura-it.ac.jp/"
-private const val USER_AGENT =
-    "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.113 Mobile Safari/537.36"
+private const val BASE_URL = "https://smob.sic.shibaura-it.ac.jp/smob/api/"
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -39,27 +40,31 @@ object AppModule {
     @Singleton
     fun provideNewsItemDao(db: AppDatabase) = db.newsItemDao()
 
-
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
-        return OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                val original = chain.request()
-                val requestBuilder = original.newBuilder()
-                    .header("User-Agent", USER_AGENT)
-                val request = requestBuilder.build()
-                chain.proceed(request)
-            }
+    fun provideMoshi(): Moshi {
+        return Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
             .build()
     }
 
     @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+    fun provideOkHttpClient(): OkHttpClient {
+        val loggingInterceptor = HttpLoggingInterceptor()
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
+        return OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
     }
 
@@ -69,34 +74,21 @@ object AppModule {
         return retrofit.create(ScombzApiService::class.java)
     }
 
-
-    @Provides
-    @Singleton
-    fun provideScombzScraper(apiService: ScombzApiService): ScombzScraper {
-        return ScombzScraper(apiService)
-    }
-
     @Provides
     @Singleton
     fun provideScombzRepository(
         taskDao: com.atuy.scomb.data.db.TaskDao,
         classCellDao: com.atuy.scomb.data.db.ClassCellDao,
         newsItemDao: com.atuy.scomb.data.db.NewsItemDao,
-        scraper: ScombzScraper,
-        sessionManager: com.atuy.scomb.data.SessionManager
+        apiService: ScombzApiService,
+        authManager: AuthManager
     ): ScombzRepository {
         return ScombzRepository(
             taskDao,
             classCellDao,
             newsItemDao,
-            scraper,
-            sessionManager
+            apiService,
+            authManager
         )
-    }
-
-    @Provides
-    @Singleton
-    fun provideSettingsManager(@ApplicationContext context: Context): SettingsManager {
-        return SettingsManager(context)
     }
 }
