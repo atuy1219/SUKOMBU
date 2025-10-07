@@ -2,13 +2,15 @@ package com.atuy.scomb.data.network
 
 import okhttp3.ResponseBody
 import retrofit2.Response
+import retrofit2.http.Field
+import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.POST
 import retrofit2.http.Query
 
 
 interface ScombzApiService {
-    // 課題一覧ページ
     @GET("lms/task")
     suspend fun getTaskList(
         @Header("Cookie") sessionId: String
@@ -27,7 +29,15 @@ interface ScombzApiService {
     ): Response<ResponseBody>
 
     @GET("portal/home/information/list")
-    suspend fun getNewsList(
+    suspend fun getNewsListPage(
         @Header("Cookie") sessionId: String
+    ): Response<ResponseBody>
+
+    @FormUrlEncoded
+    @POST("portal/home/information/list/search")
+    suspend fun searchNewsList(
+        @Header("Cookie") sessionId: String,
+        @Field("_csrf") csrfToken: String,
+        @Field("viewPage") viewPage: String = "0"
     ): Response<ResponseBody>
 }

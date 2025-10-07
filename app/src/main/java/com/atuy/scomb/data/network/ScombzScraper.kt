@@ -23,7 +23,7 @@ object ScombzConstant {
     // Survey
     const val SURVEY_ROW_CSS_NM = "result-list"
     // News
-    const val NEWS_LIST_ITEM_CSS_NM = "contents-display-flex"
+    const val NEWS_LIST_ITEM_CSS_NM = "portal-information-list-title"
     const val NEWS_LIST_ITEM_TITLE_CSS_NM = "link-txt"
     const val NEWS_CATEGORY_CSS_NM = "portal-information-list-type"
     const val NEWS_DOMAIN_CSS_NM = "portal-information-list-division"
@@ -31,7 +31,7 @@ object ScombzConstant {
 }
 
 class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
-
+    private val TAG = "ScombzScraper"
     private fun throwIfSessionExpired(html: String) {
         val document = Jsoup.parse(html)
         if (document.getElementById("userNameInput") != null) {
@@ -197,18 +197,39 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
     }
 
     suspend fun fetchNews(sessionId: String): List<NewsItem> {
-        val response = api.getNewsList("SESSION=$sessionId")
-        val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for News")
+        Log.d(TAG, "Fetching news with session: $sessionId")
 
+        // 手順1: お知らせ一覧ページにアクセスしてCSRFトークンを取得
+        val initialResponse = api.getNewsListPage("SESSION=$sessionId")
+        Log.d(TAG, "Initial news list page response code: ${initialResponse.code()}")
+        val initialHtml = initialResponse.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for initial News page")
+        throwIfSessionExpired(initialHtml)
+
+        val initialDocument = Jsoup.parse(initialHtml)
+        val csrfToken = initialDocument.select("input[name=_csrf]").attr("value")
+
+        if (csrfToken.isEmpty()) {
+            Log.e(TAG, "CSRF token not found on the news page.")
+            throw ScrapingFailedException("CSRF token not found")
+        }
+        Log.d(TAG, "Found CSRF token: $csrfToken")
+
+        // 手順2: CSRFトークンを使って検索結果ページにPOSTリクエスト
+        val response = api.searchNewsList("SESSION=$sessionId", csrfToken)
+        Log.d(TAG, "News list search response code: ${response.code()}")
+        val html = response.body()?.string() ?: throw ScrapingFailedException("Failed to get HTML for News")
+        Log.d(TAG, "News list HTML length: ${html.length}")
 
         throwIfSessionExpired(html)
 
-
         val document = Jsoup.parse(html)
         val newsRows = document.getElementsByClass(ScombzConstant.NEWS_LIST_ITEM_CSS_NM)
+        Log.d(TAG, "Found ${newsRows.size} news rows using CSS selector '${ScombzConstant.NEWS_LIST_ITEM_CSS_NM}'")
+
 
         return newsRows.mapNotNull { row ->
             try {
+                Log.d(TAG, "Parsing news row: ${row.html()}")
                 val titleElement = row.getElementsByClass(ScombzConstant.NEWS_LIST_ITEM_TITLE_CSS_NM).firstOrNull()
                     ?: return@mapNotNull null
                 val newsId = titleElement.attr("data1").ifBlank { "" }
@@ -235,9 +256,11 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
                     unread = unread
                 )
             } catch (e: Exception) {
+                Log.e(TAG, "Failed to parse a news row.", e)
                 e.printStackTrace()
                 null
             }
         }
     }
 }
+

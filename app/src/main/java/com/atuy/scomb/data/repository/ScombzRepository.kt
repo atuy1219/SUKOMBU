@@ -19,7 +19,9 @@ class ScombzRepository @Inject constructor(
     private val scraper: ScombzScraper,
     private val sessionManager: SessionManager
 ) {
+    private val TAG = "ScombzRepository"
     suspend fun getTasksAndSurveys(forceRefresh: Boolean): List<Task> {
+// ... existing code ...
         val sessionId = sessionManager.sessionIdFlow.firstOrNull()
             ?: throw IllegalStateException("Not logged in")
 
@@ -43,6 +45,7 @@ class ScombzRepository @Inject constructor(
     }
 
     suspend fun getTimetable(year: Int, term: String, forceRefresh: Boolean): List<ClassCell> {
+// ... existing code ...
         val sessionId = sessionManager.sessionIdFlow.firstOrNull()
             ?: throw IllegalStateException("Not logged in")
         val timetableTitle = "$year-$term"
@@ -69,23 +72,28 @@ class ScombzRepository @Inject constructor(
     }
 
     suspend fun getNews(forceRefresh: Boolean): List<NewsItem> {
+        Log.d(TAG, "getNews called with forceRefresh: $forceRefresh")
         val sessionId = sessionManager.sessionIdFlow.firstOrNull()
             ?: throw IllegalStateException("Not logged in")
+        Log.d(TAG, "Using SessionId: $sessionId")
 
         if (forceRefresh) {
+            Log.d(TAG, "Forcing refresh, clearing all news from DB.")
             newsItemDao.clearAll()
         } else {
             val cachedNews = newsItemDao.getAllNews()
             if (cachedNews.isNotEmpty()) {
+                Log.d(TAG, "Returning ${cachedNews.size} cached news items.")
                 return cachedNews
             }
         }
 
+        Log.d(TAG, "No cache or refresh forced, fetching news from scraper.")
         val newNews = scraper.fetchNews(sessionId)
+        Log.d(TAG, "Scraper returned ${newNews.size} news items.")
         for (newsItem in newNews) {
             newsItemDao.insertOrUpdateNewsItem(newsItem)
         }
         return newNews
     }
 }
-
