@@ -1,6 +1,5 @@
 package com.atuy.scomb.data.repository
 
-import android.util.Log
 import com.atuy.scomb.data.SessionManager
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.ClassCellDao
@@ -19,7 +18,6 @@ class ScombzRepository @Inject constructor(
     private val scraper: ScombzScraper,
     private val sessionManager: SessionManager
 ) {
-    private val TAG = "ScombzRepository"
     suspend fun getTasksAndSurveys(forceRefresh: Boolean): List<Task> {
         val sessionId = sessionManager.sessionIdFlow.firstOrNull()
             ?: throw IllegalStateException("Not logged in")
@@ -38,7 +36,7 @@ class ScombzRepository @Inject constructor(
         for (task in allTasks) {
             taskDao.insertOrUpdateTask(task)
         }
-        return taskDao.getAllTasks()
+        return allTasks
     }
 
     suspend fun getTimetable(year: Int, term: String, forceRefresh: Boolean): List<ClassCell> {
@@ -54,7 +52,9 @@ class ScombzRepository @Inject constructor(
         }
 
         val newTimetable = scraper.fetchTimetable(sessionId, year, term)
-        classCellDao.removeTimetable(timetableTitle)
+        if (forceRefresh) {
+            classCellDao.removeTimetable(timetableTitle)
+        }
         for (cell in newTimetable) {
             classCellDao.insertClassCell(cell)
         }
@@ -62,39 +62,27 @@ class ScombzRepository @Inject constructor(
     }
 
     suspend fun getNews(forceRefresh: Boolean): List<NewsItem> {
-        val sessionId = sessionManager.sessionIdFlow.firstOrNull()
-            ?: throw IllegalStateException("Not logged in")
-        Log.d(TAG, "getNews called with forceRefresh: $forceRefresh")
+        val sessionId = sessionManager.sessionIdFlow.firstOrNull() ?: throw IllegalStateException("Not logged in")
 
         if (!forceRefresh) {
             val cachedNews = newsItemDao.getAllNews()
             if (cachedNews.isNotEmpty()) {
-                Log.d(TAG, "Returning ${cachedNews.size} cached news items.")
                 return cachedNews
             }
         }
 
-        Log.d(TAG, "No cache or refresh forced, fetching news from scraper.")
         val newNews = scraper.fetchNews(sessionId)
-        Log.d(TAG, "Scraper returned ${newNews.size} news items.")
-
         if (forceRefresh) {
-            Log.d(TAG, "Forcing refresh, clearing all news from DB.")
             newsItemDao.clearAll()
         }
-
         for (newsItem in newNews) {
             newsItemDao.insertOrUpdateNewsItem(newsItem)
         }
-
-        val finalNews = newsItemDao.getAllNews()
-        Log.d(TAG, "Returning ${finalNews.size} final news items from DB.")
-        return finalNews
+        return newsItemDao.getAllNews()
     }
 
-    suspend fun markNewsAsRead(newsItem: NewsItem) {
-        val updatedItem = newsItem.copy(unread = false)
-        newsItemDao.insertOrUpdateNewsItem(updatedItem)
+    suspend fun markAsRead(newsItem: NewsItem) {
+        newsItemDao.insertOrUpdateNewsItem(newsItem.copy(unread = false))
     }
 }
 

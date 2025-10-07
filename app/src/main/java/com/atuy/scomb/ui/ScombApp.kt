@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -54,6 +55,7 @@ import com.atuy.scomb.ui.features.TimetableScreen
 import com.atuy.scomb.ui.features.TimetableTerm
 import com.atuy.scomb.ui.viewmodel.AuthState
 import com.atuy.scomb.ui.viewmodel.MainViewModel
+import com.atuy.scomb.ui.viewmodel.NewsViewModel
 import com.atuy.scomb.ui.viewmodel.TimetableViewModel
 import java.util.Calendar
 
@@ -65,6 +67,7 @@ fun ScombApp(
     val authState by mainViewModel.authState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val timetableViewModel: TimetableViewModel = hiltViewModel()
+    val newsViewModel: NewsViewModel = hiltViewModel()
 
     LaunchedEffect(authState, navController) {
         Log.d(
@@ -117,7 +120,8 @@ fun ScombApp(
             if (shouldShowBottomBar) {
                 AppTopBar(
                     currentRoute = currentDestination?.route,
-                    timetableViewModel = timetableViewModel
+                    timetableViewModel = timetableViewModel,
+                    newsViewModel = newsViewModel
                 )
             }
         },
@@ -189,8 +193,8 @@ fun ScombApp(
                 }
                 composable(Screen.Home.route) { HomeScreen(paddingValues = innerPadding) }
                 composable(Screen.Tasks.route) { TaskListScreen() }
-                composable(Screen.Timetable.route) { TimetableScreen() }
-                composable(Screen.News.route) { NewsScreen() }
+                composable(Screen.Timetable.route) { TimetableScreen(timetableViewModel) }
+                composable(Screen.News.route) { NewsScreen(newsViewModel) }
                 composable(Screen.Settings.route) { SettingsScreen(navController = navController) }
             }
         }
@@ -199,7 +203,11 @@ fun ScombApp(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppTopBar(currentRoute: String?,timetableViewModel: TimetableViewModel) {
+fun AppTopBar(
+    currentRoute: String?,
+    timetableViewModel: TimetableViewModel,
+    newsViewModel: NewsViewModel
+) {
     AnimatedContent(
         targetState = currentRoute,
         transitionSpec = {
@@ -211,7 +219,9 @@ fun AppTopBar(currentRoute: String?,timetableViewModel: TimetableViewModel) {
             Screen.Timetable.route -> {
                 TimetableTopBar(viewModel = timetableViewModel)
             }
-
+            Screen.News.route -> {
+                NewsTopBar(viewModel = newsViewModel)
+            }
             else -> {
                 TopAppBar(
                     title = {
@@ -219,7 +229,6 @@ fun AppTopBar(currentRoute: String?,timetableViewModel: TimetableViewModel) {
                             when (targetRoute) {
                                 Screen.Home.route -> "ホーム"
                                 Screen.Tasks.route -> "課題"
-                                Screen.News.route -> "お知らせ"
                                 Screen.Settings.route -> "設定"
                                 else -> ""
                             }
@@ -233,6 +242,26 @@ fun AppTopBar(currentRoute: String?,timetableViewModel: TimetableViewModel) {
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NewsTopBar(viewModel: NewsViewModel) {
+    TopAppBar(
+        title = { Text("お知らせ") },
+        actions = {
+            IconButton(onClick = { viewModel.toggleSearchActive() }) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "検索"
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background
+        )
+    )
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -293,3 +322,4 @@ fun TimetableTopBar(
         )
     )
 }
+
