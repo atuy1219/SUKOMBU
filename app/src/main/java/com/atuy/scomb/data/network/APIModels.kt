@@ -117,7 +117,8 @@ data class ApiTask(
 // For GET /api/news
 @JsonClass(generateAdapter = true)
 data class ApiNewsItem(
-    @Json(name = "newsId") val newsId: String,
+    @param:Json(name = "newsId") val newsId: String,
+    @param:Json(name = "classId") val classId: String?,
     val title: String?,
     val author: String?,
     @Json(name = "publishTime") val publishTime: String?,
@@ -127,7 +128,7 @@ data class ApiNewsItem(
     fun toDbNewsItem(): NewsItem {
         val category = tags?.split(",")?.getOrNull(0) ?: "その他"
         val unread = readTime.isNullOrEmpty()
-        val url = "https://scombz.shibaura-it.ac.jp/portal/home/information/detail?informationId=$newsId"
+        val url = "https://mobile.scombz.shibaura-it.ac.jp/$title/news/"
 
         return NewsItem(
             newsId = this.newsId,
