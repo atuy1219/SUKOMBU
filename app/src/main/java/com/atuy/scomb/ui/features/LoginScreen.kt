@@ -62,7 +62,7 @@ fun LoginScreen(
 
     if (uiState is LoginUiState.Loading && webView == null) {
         AndroidView(
-            modifier = Modifier.size(0.dp), // 画面には表示しない
+            modifier = Modifier.size(0.dp),
             factory = {
                 WebView(it).apply {
                     viewModel.startLogin(this)

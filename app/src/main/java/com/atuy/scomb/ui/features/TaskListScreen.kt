@@ -166,7 +166,7 @@ fun TaskListItem(task: Task, onTaskClick: (Task) -> Unit) {
                         color = if (task.deadline < System.currentTimeMillis() && !task.done) {
                             MaterialTheme.colorScheme.error
                         } else if (task.deadline < System.currentTimeMillis() + 24 * 60 * 60 * 1000 && !task.done) {
-                            MaterialTheme.colorScheme.error // 24時間未満もエラーカラー
+                            MaterialTheme.colorScheme.error
                         } else {
                             LocalContentColor.current
                         },

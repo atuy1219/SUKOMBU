@@ -31,8 +31,9 @@ object ScombzConstant {
     const val NEWS_CATEGORY_CSS_NM = "portal-information-list-type"
     const val NEWS_DOMAIN_CSS_NM = "portal-information-list-division"
     const val NEWS_PUBLISH_TIME_CSS_NM = "portal-information-list-date"
+    const val NEWS_UNREAD_ICON_CSS_NM = "portal-information-unread"
     // Community
-    const val COMMUNITY_NAME_LINK_CSS_NM = "a.linkToCommunitytop" // 修正: より正確なセレクタに変更
+    const val COMMUNITY_NAME_LINK_CSS_NM = "a.linkToCommunitytop"
 }
 
 class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
@@ -182,7 +183,7 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
                 }
 
                 Task(
-                    id = "2-$classId-$surveyId", // 2: アンケート
+                    id = "2-$classId-$surveyId",
                     title = title,
                     className = surveyDomain,
                     taskType = 2,
@@ -226,7 +227,6 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
 
             throwIfSessionExpired(html)
             val document = Jsoup.parse(html)
-            // 修正: <a>タグを直接選択し、そのid属性からIDを取得する
             val communityElements = document.select(ScombzConstant.COMMUNITY_NAME_LINK_CSS_NM)
             communityElements.mapNotNull { element ->
                 val name = element.text()
@@ -284,6 +284,8 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
                     ?.trim()
                     ?: ""
 
+                val unread = row.getElementsByClass(ScombzConstant.NEWS_UNREAD_ICON_CSS_NM).isNotEmpty()
+
                 var idnumber = ""
                 if (category == "LMS") {
                     idnumber = lmsIdMap[domain] ?: ""
@@ -301,7 +303,7 @@ class ScombzScraper @Inject constructor(private val api: ScombzApiService) {
                     domain = domain,
                     publishTime = publishTime,
                     tags = "",
-                    unread = true,
+                    unread = unread,
                     url = url
                 )
             } catch (e: Exception) {

@@ -34,13 +34,11 @@ class LoginViewModel @Inject constructor(
     private var loginManager: WebViewLoginManager? = null
     private var credentials: Pair<String, String>? = null
 
-    // 1. ユーザー名とパスワードを保持する
     fun setCredentials(username: String, password: String) {
         credentials = username to password
         _uiState.value = LoginUiState.Loading
     }
 
-    // 2. ComposableからWebViewインスタンスを受け取ってログインを開始
     fun startLogin(webView: WebView) {
         val (username, password) = credentials ?: run {
             onError("Username and password are not set.")
@@ -64,7 +62,6 @@ class LoginViewModel @Inject constructor(
 
     override fun onTwoFactorCodeExtracted(code: String) {
         Log.d("LoginViewModel_Debug", "onTwoFactorCodeExtracted called with code: $code")
-        // 成功状態になっていなければ2FA画面を表示
         if (_uiState.value !is LoginUiState.Success) {
             _uiState.value = LoginUiState.RequiresTwoFactor(code)
         }
@@ -87,14 +84,12 @@ class LoginViewModel @Inject constructor(
         _uiState.value = LoginUiState.Idle
     }
 
-    // LoginScreenが破棄されたときに呼ばれる
     fun onWebViewDisposed() {
         Log.d("LoginViewModel_Debug", "onWebViewDisposed called.")
-        // ログイン処理が完了していない場合のみ、状態をリセット
         if (_uiState.value !is LoginUiState.Success) {
             _uiState.value = LoginUiState.Idle
         }
-        loginManager = null // WebViewはLoginScreen側で破棄されるため、参照をクリアするだけ
+        loginManager = null
     }
 
 
