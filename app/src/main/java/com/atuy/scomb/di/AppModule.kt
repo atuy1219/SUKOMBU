@@ -1,6 +1,7 @@
 package com.atuy.scomb.di
 
 import android.content.Context
+import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.data.db.AppDatabase
 import com.atuy.scomb.data.network.ScombzApiService
 import com.atuy.scomb.data.network.ScombzScraper
@@ -91,5 +92,11 @@ object AppModule {
             scraper,
             sessionManager
         )
+    }
+
+    @Provides
+    @Singleton
+    fun provideSettingsManager(@ApplicationContext context: Context): SettingsManager {
+        return SettingsManager(context)
     }
 }
