@@ -2,6 +2,7 @@ package com.atuy.scomb.di
 
 import android.content.Context
 import com.atuy.scomb.data.AuthManager
+import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.data.db.AppDatabase
 import com.atuy.scomb.data.network.ScombzApiService
 import com.atuy.scomb.data.repository.ScombzRepository
@@ -12,6 +13,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -50,10 +53,29 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
-        val loggingInterceptor = HttpLoggingInterceptor()
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
+    fun provideOkHttpClient(authManager: AuthManager): OkHttpClient {
+        val loggingInterceptor = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+
+        val authInterceptor = okhttp3.Interceptor { chain ->
+            val originalRequest = chain.request()
+
+            // /login 以外のリクエストにヘッダーを付与
+            if (originalRequest.url.encodedPath.endsWith("/login")) {
+                return@Interceptor chain.proceed(originalRequest)
+            }
+
+            val token = runBlocking { authManager.authTokenFlow.first() }
+            val requestBuilder = originalRequest.newBuilder()
+            if (token != null) {
+                requestBuilder.addHeader("Authorization", "Bearer $token")
+            }
+            chain.proceed(requestBuilder.build())
+        }
+
         return OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
             .build()
     }
@@ -91,4 +113,11 @@ object AppModule {
             authManager
         )
     }
+
+    @Provides
+    @Singleton
+    fun provideSettingsManager(@ApplicationContext context: Context): SettingsManager {
+        return SettingsManager(context)
+    }
 }
+

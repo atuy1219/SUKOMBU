@@ -1,5 +1,6 @@
 package com.atuy.scomb.data.repository
 
+import android.util.Log
 import com.atuy.scomb.data.AuthManager
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.ClassCellDao
@@ -23,24 +24,27 @@ class ScombzRepository @Inject constructor(
     suspend fun login(userId: String, userPw: String): Result<Unit> {
         return try {
             val response = apiService.login(com.atuy.scomb.data.network.LoginRequest(userId, userPw))
-            if (response.isSuccessful && response.body()?.status == "OK") {
-                val token = response.body()?.token
-                if (token != null) {
-                    authManager.saveAuthToken(token)
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                if (body.status == "OK" && body.token != null) {
+                    authManager.saveAuthToken(body.token)
                     Result.success(Unit)
                 } else {
-                    Result.failure(Exception("Login successful but no token received."))
+                    val errorMessage = if (body.status != "OK") body.status else "ログインに失敗しました: トークンがありません"
+                    Result.failure(Exception(errorMessage))
                 }
             } else {
-                Result.failure(Exception("Login failed: ${response.message()}"))
+                Result.failure(Exception("ログインに失敗しました: ${response.message()} (Code: ${response.code()})"))
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    private suspend fun getToken(): String {
-        return authManager.authTokenFlow.first() ?: throw SessionExpiredException()
+    private suspend fun ensureAuthenticated() {
+        if (authManager.authTokenFlow.first() == null) {
+            throw SessionExpiredException()
+        }
     }
 
     suspend fun getTasksAndSurveys(forceRefresh: Boolean): List<Task> {
@@ -49,19 +53,22 @@ class ScombzRepository @Inject constructor(
             if (cachedTasks.isNotEmpty()) return cachedTasks
         }
 
-        val token = getToken()
+        ensureAuthenticated()
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR)
         val month = calendar.get(Calendar.MONTH) + 1
         val yearMonth = String.format("%d%02d", year, month)
 
-        val response = apiService.getTasks(token, yearMonth)
+        val response = apiService.getTasks(yearMonth)
         if (!response.isSuccessful) {
-            throw Exception("Failed to fetch tasks: ${response.code()}")
+            if (response.code() == 401) throw SessionExpiredException()
+            val errorBody = response.errorBody()?.string()
+            Log.e("ScombzRepository", "Task fetch failed: ${response.code()} - $errorBody")
+            throw Exception("課題の取得に失敗しました: ${response.code()}")
         }
 
         val apiTasks = response.body() ?: emptyList()
-        val dbTasks = apiTasks.map { it.toDbTask() }
+        val dbTasks = apiTasks.mapNotNull { it.toDbTask() }
 
         dbTasks.forEach { taskDao.insertOrUpdateTask(it) }
         return dbTasks
@@ -74,12 +81,16 @@ class ScombzRepository @Inject constructor(
             if (cachedTimetable.isNotEmpty()) return cachedTimetable
         }
 
-        val token = getToken()
+        ensureAuthenticated()
+        // APIの `yearMonth` は前期が "04", 後期が "10" 始まりと仮定
         val yearMonth = if(term == "1") "${year}04" else "${year}10"
 
-        val response = apiService.getTimetable(token, yearMonth)
+        val response = apiService.getTimetable(yearMonth)
         if (!response.isSuccessful) {
-            throw Exception("Failed to fetch timetable: ${response.code()}")
+            if (response.code() == 401) throw SessionExpiredException()
+            val errorBody = response.errorBody()?.string()
+            Log.e("ScombzRepository", "Timetable fetch failed: ${response.code()} - $errorBody")
+            throw Exception("時間割の取得に失敗しました: ${response.code()}")
         }
 
         val apiClassCells = response.body() ?: emptyList()
@@ -96,10 +107,13 @@ class ScombzRepository @Inject constructor(
             if (cachedNews.isNotEmpty()) return cachedNews
         }
 
-        val token = getToken()
-        val response = apiService.getNews(token)
+        ensureAuthenticated()
+        val response = apiService.getNews()
         if (!response.isSuccessful) {
-            throw Exception("Failed to fetch news: ${response.code()}")
+            if (response.code() == 401) throw SessionExpiredException()
+            val errorBody = response.errorBody()?.string()
+            Log.e("ScombzRepository", "News fetch failed: ${response.code()} - $errorBody")
+            throw Exception("お知らせの取得に失敗しました: ${response.code()}")
         }
 
         val apiNews = response.body() ?: emptyList()
@@ -114,3 +128,4 @@ class ScombzRepository @Inject constructor(
         newsItemDao.insertOrUpdateNewsItem(newsItem.copy(unread = false))
     }
 }
+
