@@ -75,14 +75,14 @@ class HomeViewModel @Inject constructor(
 
                     val upcomingTasks = tasks
                         .filter { it.deadline > System.currentTimeMillis() && !it.done }
-                        .take(5)
+                        .take(3)
 
                     val todayOfWeek = (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7
                     val todaysClasses = timetable
                         .filter { it.dayOfWeek == todayOfWeek }
                         .sortedBy { it.period }
 
-                    val recentNews = news.take(5)
+                    val recentNews = news.take(3)
 
                     _uiState.value = HomeUiState.Success(
                         HomeData(

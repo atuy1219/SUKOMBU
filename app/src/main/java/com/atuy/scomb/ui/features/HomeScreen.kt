@@ -79,13 +79,31 @@ fun Dashboard(homeData: HomeData) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            UpcomingTasksSection(tasks = homeData.upcomingTasks)
-        }
-        item {
             TodaysClassesSection(classes = homeData.todaysClasses)
         }
         item {
+            UpcomingTasksSection(tasks = homeData.upcomingTasks)
+        }
+
+        item {
             RecentNewsSection(news = homeData.recentNews)
+        }
+    }
+}
+
+@Composable
+fun TodaysClassesSection(classes: List<ClassCell>) {
+    DashboardSection(title = "今日の授業") {
+        if (classes.isEmpty()) {
+            Text("今日の授業はありません。", modifier = Modifier.padding(16.dp))
+        } else {
+            classes.forEach { classCell ->
+                ListItem(
+                    headlineContent = { Text("${classCell.period + 1}限: ${classCell.name}") },
+                    supportingContent = { Text(classCell.room ?: "未設定") }
+                )
+                HorizontalDivider()
+            }
         }
     }
 }
@@ -108,22 +126,6 @@ fun UpcomingTasksSection(tasks: List<Task>) {
     }
 }
 
-@Composable
-fun TodaysClassesSection(classes: List<ClassCell>) {
-    DashboardSection(title = "今日の授業") {
-        if (classes.isEmpty()) {
-            Text("今日の授業はありません。", modifier = Modifier.padding(16.dp))
-        } else {
-            classes.forEach { classCell ->
-                ListItem(
-                    headlineContent = { Text("${classCell.period + 1}限: ${classCell.name}") },
-                    supportingContent = { Text(classCell.room ?: "未設定") }
-                )
-                HorizontalDivider()
-            }
-        }
-    }
-}
 
 @Composable
 fun RecentNewsSection(news: List<NewsItem>) {
