@@ -1,5 +1,8 @@
 package com.atuy.scomb.ui.features
 
+import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,8 +29,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,6 +50,8 @@ fun TaskListScreen(
     viewModel: TaskListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val customTabsIntent = remember { CustomTabsIntent.Builder().build() }
 
     Column(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
@@ -66,7 +73,12 @@ fun TaskListScreen(
                     },
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    TaskList(tasks = state.tasks)
+                    TaskList(
+                        tasks = state.tasks,
+                        onTaskClick = { task ->
+                            customTabsIntent.launchUrl(context, Uri.parse(task.url))
+                        }
+                    )
                 }
             }
 
@@ -122,20 +134,20 @@ fun FilterBar(
 }
 
 @Composable
-fun TaskList(tasks: List<Task>) {
+fun TaskList(tasks: List<Task>, onTaskClick: (Task) -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         items(tasks) { task ->
-            TaskListItem(task = task)
+            TaskListItem(task = task, onTaskClick = onTaskClick)
         }
     }
 }
 
 @Composable
-fun TaskListItem(task: Task) {
-    Column {
+fun TaskListItem(task: Task, onTaskClick: (Task) -> Unit) {
+    Column(modifier = Modifier.clickable { onTaskClick(task) }) {
         ListItem(
             leadingContent = { TaskTypeIcon(task.taskType) },
             headlineContent = {
