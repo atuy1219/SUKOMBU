@@ -1,6 +1,5 @@
 package com.atuy.scomb.ui.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.atuy.scomb.data.db.NewsItem
@@ -29,14 +28,12 @@ class NewsViewModel @Inject constructor(
     val uiState: StateFlow<NewsUiState> = _uiState.asStateFlow()
 
     private var loadJob: Job? = null
-    private val TAG = "NewsViewModel"
 
     init {
         fetchNews(forceRefresh = false)
     }
 
     fun fetchNews(forceRefresh: Boolean) {
-        Log.d(TAG, "fetchNews called with forceRefresh: $forceRefresh")
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             val currentState = _uiState.value
@@ -48,14 +45,27 @@ class NewsViewModel @Inject constructor(
 
             try {
                 val news = repository.getNews(forceRefresh)
-                Log.d(TAG, "Successfully fetched ${news.size} news items.")
                 _uiState.value = NewsUiState.Success(news, isRefreshing = false)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e(TAG, "Error fetching news", e)
                 _uiState.value = NewsUiState.Error(e.message ?: "An unknown error occurred", isRefreshing = false)
                 e.printStackTrace()
             }
         }
     }
+
+    fun markAsRead(newsItem: NewsItem) {
+        if (!newsItem.unread) return
+        viewModelScope.launch {
+            repository.markNewsAsRead(newsItem)
+            val currentState = _uiState.value
+            if (currentState is NewsUiState.Success) {
+                val updatedList = currentState.news.map {
+                    if (it.newsId == newsItem.newsId) it.copy(unread = false) else it
+                }
+                _uiState.value = currentState.copy(news = updatedList)
+            }
+        }
+    }
 }
+

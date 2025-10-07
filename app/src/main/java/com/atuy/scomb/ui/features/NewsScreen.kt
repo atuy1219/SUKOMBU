@@ -1,6 +1,6 @@
 package com.atuy.scomb.ui.features
 
-import android.net.Uri
+import android.content.Context
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -13,6 +13,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -22,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atuy.scomb.data.db.NewsItem
@@ -34,6 +37,13 @@ fun NewsScreen(
     viewModel: NewsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    fun openUrlInCustomTab(context: Context, url: String) {
+        val builder = CustomTabsIntent.Builder()
+        val customTabsIntent = builder.build()
+        customTabsIntent.launchUrl(context, url.toUri())
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
@@ -51,7 +61,13 @@ fun NewsScreen(
                     },
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    NewsList(newsItems = state.news)
+                    NewsList(
+                        newsItems = state.news,
+                        onItemClick = { newsItem ->
+                            viewModel.markAsRead(newsItem)
+                            openUrlInCustomTab(context, newsItem.url)
+                        }
+                    )
                 }
             }
 
@@ -66,27 +82,37 @@ fun NewsScreen(
 }
 
 @Composable
-fun NewsList(newsItems: List<NewsItem>) {
+fun NewsList(newsItems: List<NewsItem>, onItemClick: (NewsItem) -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         items(newsItems) { news ->
-            NewsListItem(newsItem = news)
+            NewsListItem(
+                newsItem = news,
+                onClick = { onItemClick(news) }
+            )
             HorizontalDivider()
         }
     }
 }
 
 @Composable
-fun NewsListItem(newsItem: NewsItem) {
-    val context = LocalContext.current
+fun NewsListItem(newsItem: NewsItem, onClick: () -> Unit) {
+    val colors = if (newsItem.unread) {
+        ListItemDefaults.colors()
+    } else {
+        ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+            headlineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            supportingColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            trailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+    }
+
     ListItem(
-        modifier = Modifier.clickable {
-            val builder = CustomTabsIntent.Builder()
-            val customTabsIntent = builder.build()
-            customTabsIntent.launchUrl(context, Uri.parse(newsItem.url))
-        },
+        modifier = Modifier.clickable(onClick = onClick),
+        colors = colors,
         headlineContent = {
             Text(
                 text = newsItem.title,
@@ -104,3 +130,4 @@ fun NewsListItem(newsItem: NewsItem) {
         }
     )
 }
+

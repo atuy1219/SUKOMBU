@@ -38,32 +38,26 @@ class ScombzRepository @Inject constructor(
         for (task in allTasks) {
             taskDao.insertOrUpdateTask(task)
         }
-        return allTasks
+        return taskDao.getAllTasks()
     }
 
     suspend fun getTimetable(year: Int, term: String, forceRefresh: Boolean): List<ClassCell> {
         val sessionId = sessionManager.sessionIdFlow.firstOrNull()
             ?: throw IllegalStateException("Not logged in")
         val timetableTitle = "$year-$term"
-        Log.d("Repository", "getTimetable called for $timetableTitle, forceRefresh=$forceRefresh")
 
-        if (forceRefresh) {
-            Log.d("Repository", "Forcing refresh, removing old timetable for $timetableTitle")
-            classCellDao.removeTimetable(timetableTitle)
-        } else {
+        if (!forceRefresh) {
             val cachedTimetable = classCellDao.getCells(timetableTitle)
             if (cachedTimetable.isNotEmpty()) {
-                Log.d("Repository", "Returning ${cachedTimetable.size} cached cells for $timetableTitle")
                 return cachedTimetable
             }
         }
 
-        Log.d("Repository", "No cache found or refresh forced, fetching new timetable for $timetableTitle")
         val newTimetable = scraper.fetchTimetable(sessionId, year, term)
+        classCellDao.removeTimetable(timetableTitle)
         for (cell in newTimetable) {
             classCellDao.insertClassCell(cell)
         }
-        Log.d("Repository", "Fetched and cached ${newTimetable.size} new cells for $timetableTitle")
         return newTimetable
     }
 
@@ -80,16 +74,27 @@ class ScombzRepository @Inject constructor(
             }
         }
 
+        Log.d(TAG, "No cache or refresh forced, fetching news from scraper.")
         val newNews = scraper.fetchNews(sessionId)
         Log.d(TAG, "Scraper returned ${newNews.size} news items.")
 
-        newsItemDao.clearAll()
+        if (forceRefresh) {
+            Log.d(TAG, "Forcing refresh, clearing all news from DB.")
+            newsItemDao.clearAll()
+        }
+
         for (newsItem in newNews) {
             newsItemDao.insertOrUpdateNewsItem(newsItem)
         }
-        Log.d(TAG, "DB cleared and updated with ${newNews.size} items.")
 
-        return newNews
+        val finalNews = newsItemDao.getAllNews()
+        Log.d(TAG, "Returning ${finalNews.size} final news items from DB.")
+        return finalNews
+    }
+
+    suspend fun markNewsAsRead(newsItem: NewsItem) {
+        val updatedItem = newsItem.copy(unread = false)
+        newsItemDao.insertOrUpdateNewsItem(updatedItem)
     }
 }
 

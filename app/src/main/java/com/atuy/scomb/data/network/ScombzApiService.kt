@@ -11,7 +11,6 @@ import retrofit2.http.Query
 
 
 interface ScombzApiService {
-    // 課題一覧ページ
     @GET("lms/task")
     suspend fun getTaskList(
         @Header("Cookie") sessionId: String
@@ -29,13 +28,11 @@ interface ScombzApiService {
         @Header("Cookie") sessionId: String
     ): Response<ResponseBody>
 
-    // お知らせ一覧の初期ページ取得用
     @GET("portal/home/information/list")
     suspend fun getNewsListPage(
         @Header("Cookie") sessionId: String
     ): Response<ResponseBody>
 
-    // お知らせの検索結果取得用
     @FormUrlEncoded
     @POST("portal/home/information/list/search")
     suspend fun searchNewsList(
@@ -44,7 +41,6 @@ interface ScombzApiService {
         @Field("viewPage") viewPage: String = "0"
     ): Response<ResponseBody>
 
-    // コミュニティ一覧取得用
     @GET("community/search")
     suspend fun getCommunityList(
         @Header("Cookie") sessionId: String
