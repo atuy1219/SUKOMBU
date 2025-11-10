@@ -6,6 +6,7 @@ import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.data.repository.ScombzRepository
+import com.atuy.scomb.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -59,13 +60,9 @@ class HomeViewModel @Inject constructor(
                     val tasksDeferred = async { repository.getTasksAndSurveys(forceRefresh) }
 
                     val calendar = Calendar.getInstance()
-                    val year =
-                        if (calendar.get(Calendar.MONTH) < 3) calendar.get(Calendar.YEAR) - 1 else calendar.get(
-                            Calendar.YEAR
-                        )
-                    val term = if (calendar.get(Calendar.MONTH) in 3..8) "1" else "2"
+                    val currentTerm = DateUtils.getCurrentScombTerm()
                     val timetableDeferred =
-                        async { repository.getTimetable(year, term, forceRefresh) }
+                        async { repository.getTimetable(currentTerm.year, currentTerm.term, forceRefresh) }
 
                     val newsDeferred = async { repository.getNews(forceRefresh) }
 

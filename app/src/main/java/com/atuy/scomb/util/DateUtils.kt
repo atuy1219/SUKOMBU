@@ -67,4 +67,26 @@ object DateUtils {
             else -> "まもなく"
         }
     }
+
+    data class ScombTerm(val year: Int, val term: String) {
+        val apiTerm: String
+            get() = if (term == "1") "01" else "02"
+        val yearApiTerm: String
+            get() = "$year$apiTerm"
+    }
+
+    fun getCurrentScombTerm(): ScombTerm {
+        val calendar = Calendar.getInstance()
+        val month = calendar.get(Calendar.MONTH) // 0-11
+        val year = if (month < 3) { // 1月, 2月, 3月は前年度扱い
+            calendar.get(Calendar.YEAR) - 1
+        } else {
+            calendar.get(Calendar.YEAR)
+        }
+        // 4月～8月 (index 3-7) が前期 "1"
+        // 9月～3月 (index 8-11, 0-2) が後期 "2"
+        val term = if (month in 3..7) "1" else "2"
+
+        return ScombTerm(year, term)
+    }
 }

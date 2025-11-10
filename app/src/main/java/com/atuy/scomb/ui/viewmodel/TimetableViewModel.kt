@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.repository.ScombzRepository
+import com.atuy.scomb.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -12,7 +13,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.Calendar
 import javax.inject.Inject
 
 
@@ -36,16 +36,12 @@ class TimetableViewModel @Inject constructor(
     val uiState: StateFlow<TimetableUiState> = _uiState.asStateFlow()
 
     private val _currentYear = MutableStateFlow(
-        Calendar.getInstance().let {
-            if (it.get(Calendar.MONTH) < 3) it.get(Calendar.YEAR) - 1 else it.get(Calendar.YEAR)
-        }
+        DateUtils.getCurrentScombTerm().year
     )
     val currentYear: StateFlow<Int> = _currentYear.asStateFlow()
 
     private val _currentTerm = MutableStateFlow(
-        Calendar.getInstance().let {
-            if (it.get(Calendar.MONTH) in 3..7) "1" else "2"
-        }
+        DateUtils.getCurrentScombTerm().term
     )
     val currentTerm: StateFlow<String> = _currentTerm.asStateFlow()
 
