@@ -1,5 +1,6 @@
 package com.atuy.scomb.data.network
 
+import android.util.Base64
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.Task
@@ -7,7 +8,15 @@ import com.atuy.scomb.util.DateUtils
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
-// For POST /login
+private fun String?.decodeBase64(): String? {
+    if (this.isNullOrBlank()) return this
+    return try {
+        String(Base64.decode(this, Base64.DEFAULT), Charsets.UTF_8)
+    } catch (e: Exception) {
+        this
+    }
+}
+
 @JsonClass(generateAdapter = true)
 data class LoginRequest(
     @param:Json(name = "user") val userId: String,
@@ -30,19 +39,16 @@ data class Term(
     val start: List<String>
 )
 
-// For generic "OK" responses
 @JsonClass(generateAdapter = true)
 data class StatusResponse(
     val status: String
 )
 
-// For POST /sessionid
 @JsonClass(generateAdapter = true)
 data class SessionIdRequest(
     val sessionid: String
 )
 
-// For GET /api/timetable/{yearMonth}
 @JsonClass(generateAdapter = true)
 data class ApiClassCell(
     val id: String,
@@ -53,6 +59,10 @@ data class ApiClassCell(
     @param:Json(name = "day_of_week") val dayOfWeek: Int
 ) {
     fun toDbClassCell(year: Int, term: String, timetableTitle: String): ClassCell {
+        val decodedName = name.decodeBase64() ?: "授業名なし"
+        val decodedRoom = room.decodeBase64()
+        val decodedTeachers = teachers.decodeBase64() ?: ""
+
         return ClassCell(
             classId = this.id,
             period = this.period,
@@ -61,9 +71,9 @@ data class ApiClassCell(
             timetableTitle = timetableTitle,
             year = year,
             term = term,
-            name = this.name,
-            teachers = this.teachers,
-            room = this.room,
+            name = decodedName,
+            teachers = decodedTeachers,
+            room = decodedRoom,
             customColorInt = null,
             url = "https://scombz.shibaura-it.ac.jp/lms/course?idnumber=${this.id}",
             note = null,
@@ -73,7 +83,6 @@ data class ApiClassCell(
     }
 }
 
-// For GET /api/task/{yearMonth}
 @JsonClass(generateAdapter = true)
 data class ApiTask(
     @Json(name = "taskType") val taskType: Int?,
@@ -97,10 +106,13 @@ data class ApiTask(
             else -> "https://scombz.shibaura-it.ac.jp/lms/course?idnumber=$classId"
         }
 
+        val decodedTitle = title.decodeBase64() ?: "タイトルなし"
+        val decodedClassName = from.decodeBase64() ?: "未設定"
+
         return Task(
-            id = "$taskType-$classId-$id", // Create a unique ID for DB
-            title = title,
-            className = from ?: "未設定",
+            id = "$taskType-$classId-$id",
+            title = decodedTitle,
+            className = decodedClassName,
             taskType = taskType,
             deadline = DateUtils.stringToTime(submitTimeTo, "yyyy-MM-dd HH:mm:ss"),
             url = url,
@@ -114,7 +126,6 @@ data class ApiTask(
 }
 
 
-// For GET /api/news
 @JsonClass(generateAdapter = true)
 data class ApiNewsItem(
     @param:Json(name = "newsId") val newsId: String,
@@ -126,21 +137,24 @@ data class ApiNewsItem(
     @Json(name = "readTime") val readTime: String?
 ) {
     fun toDbNewsItem(): NewsItem {
-        val category = tags?.split(",")?.getOrNull(0) ?: "その他"
+        val decodedTags = this.tags.decodeBase64()
+        val category = decodedTags?.split(",")?.getOrNull(0) ?: "その他"
         val unread = readTime.isNullOrEmpty()
         val url = "https://mobile.scombz.shibaura-it.ac.jp/$title/news/"
 
+        val decodedTitle = this.title.decodeBase64() ?: "タイトルなし"
+        val decodedDomain = this.author.decodeBase64() ?: "掲載元不明"
+
         return NewsItem(
             newsId = this.newsId,
-            data2 = "", // Not available from API
-            title = this.title ?: "タイトルなし",
+            data2 = "",
+            title = decodedTitle,
             category = category,
-            domain = this.author ?: "掲載元不明",
+            domain = decodedDomain,
             publishTime = this.publishTime ?: "",
-            tags = this.tags ?: "",
+            tags = decodedTags ?: "",
             unread = unread,
             url = url
         )
     }
 }
-
