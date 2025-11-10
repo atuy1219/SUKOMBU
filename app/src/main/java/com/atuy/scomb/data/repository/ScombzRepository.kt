@@ -82,8 +82,7 @@ class ScombzRepository @Inject constructor(
         }
 
         ensureAuthenticated()
-        // APIの `yearMonth` は前期が "04", 後期が "10" 始まりと仮定
-        val yearMonth = if(term == "1") "${year}04" else "${year}10"
+        val yearMonth = if(term == "1") "${year}01" else "${year}02"
 
         val response = apiService.getTimetable(yearMonth)
         if (!response.isSuccessful) {
