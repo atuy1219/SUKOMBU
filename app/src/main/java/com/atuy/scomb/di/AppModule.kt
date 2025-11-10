@@ -55,7 +55,11 @@ object AppModule {
     @Singleton
     fun provideOkHttpClient(authManager: AuthManager): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
         }
 
         val authInterceptor = okhttp3.Interceptor { chain ->
