@@ -64,10 +64,12 @@ data class ApiClassCell(
         val decodedRoom = room
         val decodedTeachers = if (teachers.isNullOrBlank()) "" else teachers
 
+        val appDayOfWeek = this.dayOfWeek - 1
+
         return ClassCell(
             classId = this.id,
             period = this.period,
-            dayOfWeek = this.dayOfWeek,
+            dayOfWeek = appDayOfWeek,
             isUserClassCell = false,
             timetableTitle = timetableTitle,
             year = year,
