@@ -47,6 +47,22 @@ class ScombzRepository @Inject constructor(
         }
     }
 
+    private suspend fun getOtkey(): Result<String> {
+        ensureAuthenticated()
+        return try {
+            val response = apiService.getOtkey()
+            if (response.isSuccessful && response.body() != null && response.body()!!.status == "OK" && response.body()!!.otkey != null) {
+                Result.success(response.body()!!.otkey!!)
+            } else {
+                if (response.code() == 401) throw SessionExpiredException()
+                Result.failure(Exception("otkeyの取得に失敗しました: ${response.message()} (Code: ${response.code()})"))
+            }
+        } catch (e: Exception) {
+            if (e is SessionExpiredException) throw e
+            Result.failure(e)
+        }
+    }
+
     suspend fun getTasksAndSurveys(forceRefresh: Boolean): List<Task> {
         if (!forceRefresh) {
             val cachedTasks = taskDao.getAllTasks()
@@ -54,6 +70,11 @@ class ScombzRepository @Inject constructor(
         }
 
         ensureAuthenticated()
+        val otkeyResult = getOtkey()
+        if (otkeyResult.isFailure) {
+            throw otkeyResult.exceptionOrNull() ?: Exception("otkeyの取得に失敗しました")
+        }
+        val otkey = otkeyResult.getOrNull() ?: throw Exception("otkeyがnullです")
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR)
         val month = calendar.get(Calendar.MONTH) + 1
@@ -68,7 +89,7 @@ class ScombzRepository @Inject constructor(
         }
 
         val apiTasks = response.body() ?: emptyList()
-        val dbTasks = apiTasks.mapNotNull { it.toDbTask() }
+        val dbTasks = apiTasks.mapNotNull { it.toDbTask(otkey) }
 
         dbTasks.forEach { taskDao.insertOrUpdateTask(it) }
         return dbTasks
@@ -82,6 +103,11 @@ class ScombzRepository @Inject constructor(
         }
 
         ensureAuthenticated()
+        val otkeyResult = getOtkey()
+        if (otkeyResult.isFailure) {
+            throw otkeyResult.exceptionOrNull() ?: Exception("otkeyの取得に失敗しました")
+        }
+        val otkey = otkeyResult.getOrNull() ?: throw Exception("otkeyがnullです")
         val yearMonth = if(term == "1") "${year}01" else "${year}02"
 
         val response = apiService.getTimetable(yearMonth)
@@ -107,6 +133,11 @@ class ScombzRepository @Inject constructor(
         }
 
         ensureAuthenticated()
+        val otkeyResult = getOtkey()
+        if (otkeyResult.isFailure) {
+            throw otkeyResult.exceptionOrNull() ?: Exception("otkeyの取得に失敗しました")
+        }
+        val otkey = otkeyResult.getOrNull() ?: throw Exception("otkeyがnullです")
         val response = apiService.getNews()
         if (!response.isSuccessful) {
             if (response.code() == 401) throw SessionExpiredException()
@@ -116,7 +147,7 @@ class ScombzRepository @Inject constructor(
         }
 
         val apiNews = response.body() ?: emptyList()
-        val dbNews = apiNews.map { it.toDbNewsItem() }
+        val dbNews = apiNews.map { it.toDbNewsItem(otkey) }
 
         newsItemDao.clearAll()
         dbNews.forEach { newsItemDao.insertOrUpdateNewsItem(it) }

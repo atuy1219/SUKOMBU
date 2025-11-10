@@ -50,6 +50,13 @@ data class SessionIdRequest(
     val sessionid: String
 )
 
+
+@JsonClass(generateAdapter = true)
+data class OtkeyResponse(
+    val status: String,
+    val otkey: String?
+)
+
 @JsonClass(generateAdapter = true)
 data class ApiClassCell(
     @param:Json(name = "classId") val id: String,
@@ -96,18 +103,20 @@ data class ApiTask(
     val done: Int?,
     @Json(name = "submitTimeTo") val submitTimeTo: String?
 ) {
-    fun toDbTask(): Task? {
-        // Essential fields for a task to be valid
+    fun toDbTask(otkey: String): Task? {
         if (id == null || classId == null || title == null || submitTimeTo == null || taskType == null) {
             return null
         }
 
-        val url = when (taskType) {
+        val baseUrl = when (taskType) {
             0 -> "https://scombz.shibaura-it.ac.jp/lms/course/reports/take?idnumber=$classId&reportId=$id" // 課題
             1 -> "https://scombz.shibaura-it.ac.jp/lms/course/examinations/take?idnumber=$classId&examinationId=$id" // テスト
             2 -> "https://scombz.shibaura-it.ac.jp/lms/course/surveys/take?idnumber=$classId&surveyId=$id" // アンケート
             else -> "https://scombz.shibaura-it.ac.jp/lms/course?idnumber=$classId"
         }
+
+        val url = if (baseUrl.contains("?")) "$baseUrl&otkey=$otkey" else "$baseUrl?otkey=$otkey"
+
 
         val decodedTitle = title.decodeBase64() ?: "タイトルなし"
         val decodedClassName = if (from.isNullOrBlank()) "未設定" else from
@@ -139,11 +148,12 @@ data class ApiNewsItem(
     val tags: String?,
     @Json(name = "readTime") val readTime: String?
 ) {
-    fun toDbNewsItem(): NewsItem {
+    fun toDbNewsItem(otkey: String): NewsItem {
         val decodedTags = this.tags
         val category = decodedTags?.split(",")?.getOrNull(0) ?: "その他"
         val unread = readTime.isNullOrEmpty()
-        val url = "https://mobile.scombz.shibaura-it.ac.jp/$title/news/"
+        val baseUrl = "https://mobile.scombz.shibaura-it.ac.jp/"
+        val url = "$baseUrl$otkey/news/202502$newsId?"
 
         val decodedTitle = this.title.decodeBase64() ?: "タイトルなし"
         val decodedDomain = this.author.decodeBase64() ?: "掲載元不明"

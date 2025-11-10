@@ -22,6 +22,9 @@ interface ScombzApiService {
         @Body sessionId: SessionIdRequest
     ): Response<StatusResponse>
 
+    @GET("otkey")
+    suspend fun getOtkey(): Response<OtkeyResponse>
+
     @GET("timetable/{yearMonth}")
     suspend fun getTimetable(
         @Path("yearMonth") yearMonth: String
@@ -39,5 +42,7 @@ interface ScombzApiService {
 
     @GET("news")
     suspend fun getNews(): Response<List<ApiNewsItem>>
+
+
 }
 
