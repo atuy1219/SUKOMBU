@@ -11,7 +11,7 @@ import com.squareup.moshi.JsonClass
 private fun String?.decodeBase64(): String? {
     if (this.isNullOrBlank()) return this
     return try {
-        val flags = Base64.URL_SAFE or Base64.NO_PADDING
+        val flags = Base64.DEFAULT or Base64.NO_PADDING
         String(Base64.decode(this, flags), Charsets.UTF_8)
     } catch (e: Exception) {
         this
