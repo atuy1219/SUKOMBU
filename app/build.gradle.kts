@@ -68,8 +68,8 @@ dependencies {
     ksp(libs.androidx.room.room.compiler)
     implementation(libs.androidx.room.ktx)
     implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.moshi)
     implementation(libs.logging.interceptor)
-    implementation(libs.jsoup)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.browser)
@@ -80,5 +80,8 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.appcompat)
 
-
+    // Moshi for JSON parsing
+    implementation(libs.moshi)
+    ksp(libs.moshi.codegen)
 }
+
