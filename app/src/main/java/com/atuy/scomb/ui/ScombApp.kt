@@ -42,10 +42,13 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.atuy.scomb.ui.features.ClassDetailScreen
 import com.atuy.scomb.ui.features.HomeScreen
 import com.atuy.scomb.ui.features.LoginScreen
 import com.atuy.scomb.ui.features.NewsScreen
@@ -91,10 +94,11 @@ fun ScombApp(
                 )
             }
         } else if (authState is AuthState.Unauthenticated) {
-            if (navController.currentDestination?.route != Screen.Login.route) {
+            val currentRoute = navController.currentDestination?.route
+            if (currentRoute != Screen.Login.route) {
                 Log.d(
                     "ScombApp_Debug",
-                    "Unauthenticated! Current route is not Login. Navigating to Login and clearing back stack."
+                    "Unauthenticated! Current route is not Login ($currentRoute). Navigating to Login and clearing back stack."
                 )
                 navController.navigate(Screen.Login.route) {
                     popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
@@ -193,9 +197,15 @@ fun ScombApp(
                 }
                 composable(Screen.Home.route) { HomeScreen(paddingValues = innerPadding) }
                 composable(Screen.Tasks.route) { TaskListScreen() }
-                composable(Screen.Timetable.route) { TimetableScreen(timetableViewModel) }
+                composable(Screen.Timetable.route) { TimetableScreen(navController, timetableViewModel) }
                 composable(Screen.News.route) { NewsScreen(newsViewModel) }
                 composable(Screen.Settings.route) { SettingsScreen(navController = navController) }
+                composable(
+                    route = Screen.ClassDetail.route,
+                    arguments = listOf(navArgument("classId") { type = NavType.StringType })
+                ) {
+                    ClassDetailScreen(navController = navController)
+                }
             }
         }
     }

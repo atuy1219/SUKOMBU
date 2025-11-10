@@ -6,6 +6,7 @@ import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.data.db.AppDatabase
 import com.atuy.scomb.data.network.ScombzApiService
 import com.atuy.scomb.data.repository.ScombzRepository
+import com.atuy.scomb.BuildConfig
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module

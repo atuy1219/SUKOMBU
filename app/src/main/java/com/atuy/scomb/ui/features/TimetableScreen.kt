@@ -2,6 +2,7 @@ package com.atuy.scomb.ui.features
 
 import android.util.Log
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.ui.viewmodel.TimetableUiState
 import com.atuy.scomb.ui.viewmodel.TimetableViewModel
@@ -42,6 +44,7 @@ data class TimetableTerm(val year: Int, val term: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimetableScreen(
+    navController: NavController,
     viewModel: TimetableViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -64,7 +67,16 @@ fun TimetableScreen(
                     onRefresh = { viewModel.refresh() },
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    TimetableGrid(timetable = state.timetable)
+                    TimetableGrid(
+                        timetable = state.timetable,
+                        onClassClick = { classCell ->
+                            if (classCell.classId.isNotEmpty()) {
+                                navController.navigate("classDetail/${classCell.classId}")
+                            } else {
+                                Log.w(TAG, "Clicked ClassCell with empty classId: ${classCell.name}")
+                            }
+                        }
+                    )
                 }
             }
             is TimetableUiState.Error -> {
@@ -79,7 +91,10 @@ fun TimetableScreen(
 
 
 @Composable
-fun TimetableGrid(timetable: List<List<ClassCell?>>) {
+fun TimetableGrid(
+    timetable: List<List<ClassCell?>>,
+    onClassClick: (ClassCell) -> Unit
+) {
     val days = listOf("月", "火", "水", "木", "金")
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth()) {
@@ -114,7 +129,14 @@ fun TimetableGrid(timetable: List<List<ClassCell?>>) {
                 timetable.forEach { dayColumn ->
                     Column(modifier = Modifier.weight(1f)) {
                         dayColumn.forEach { classCell ->
-                            ClassCellView(classCell = classCell)
+                            ClassCellView(
+                                classCell = classCell,
+                                onClick = {
+                                    if (classCell != null) {
+                                        onClassClick(classCell)
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -124,13 +146,24 @@ fun TimetableGrid(timetable: List<List<ClassCell?>>) {
 }
 
 @Composable
-fun ClassCellView(classCell: ClassCell?) {
+fun ClassCellView(
+    classCell: ClassCell?,
+    onClick: () -> Unit
+) {
+    val baseModifier = Modifier
+        .height(100.dp)
+        .fillMaxWidth()
+        .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+        .padding(2.dp)
+
+    val modifier = if (classCell != null) {
+        baseModifier.clickable(onClick = onClick)
+    } else {
+        baseModifier
+    }
+
     Box(
-        modifier = Modifier
-            .height(100.dp)
-            .fillMaxWidth()
-            .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
-            .padding(2.dp),
+        modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
         if (classCell != null) {
@@ -158,4 +191,3 @@ fun ClassCellView(classCell: ClassCell?) {
         }
     }
 }
-

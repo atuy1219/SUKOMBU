@@ -22,4 +22,7 @@ interface ClassCellDao {
 
     @Query("DELETE FROM class_cell WHERE timetableTitle = :timetableTitle")
     suspend fun removeTimetable(timetableTitle: String)
+
+    @Query("SELECT * FROM class_cell WHERE classId = :classId")
+    suspend fun getClassCellsById(classId: String): List<ClassCell>
 }

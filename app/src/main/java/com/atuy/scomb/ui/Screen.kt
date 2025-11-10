@@ -15,4 +15,5 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Tasks : Screen("tasks", "課題", Icons.AutoMirrored.Filled.List)
     object News : Screen("news", "お知らせ", Icons.Filled.Notifications)
     object Settings : Screen("settings", "設定", Icons.Filled.Settings)
+    object ClassDetail : Screen("classDetail/{classId}", "授業詳細", Icons.Filled.DateRange)
 }

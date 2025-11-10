@@ -19,4 +19,7 @@ interface TaskDao {
 
     @Query("DELETE FROM task_table WHERE id = :id")
     suspend fun removeTask(id: String)
+
+    @Query("SELECT * FROM task_table WHERE classId = :classId ORDER BY deadline ASC")
+    suspend fun getTasksByClassId(classId: String): List<Task>
 }
