@@ -109,9 +109,9 @@ data class ApiTask(
         }
 
         val url = when (taskType) {
-            0 -> "https://scombz.shibaura-it.ac.jp/lms/course/reports/take?idnumber=$classId&reportId=$id" // 課題
-            1 -> "https://scombz.shibaura-it.ac.jp/lms/course/examinations/take?idnumber=$classId&examinationId=$id" // テスト
-            2 -> "https://scombz.shibaura-it.ac.jp/lms/course/surveys/take?idnumber=$classId&surveyId=$id" // アンケート
+            0 -> "https://scombz.shibaura-it.ac.jp/lms/course/reports/taketop?idnumber=$classId&reportId=$id" // 課題
+            1 -> "https://scombz.shibaura-it.ac.jp/lms/course/examinations/taketop?idnumber=$classId&examinationId=$id" // テスト
+            2 -> "https://scombz.shibaura-it.ac.jp/lms/course/surveys/taketop?idnumber=$classId&surveyId=$id" // アンケート
             else -> "https://scombz.shibaura-it.ac.jp/lms/course?idnumber=$classId"
         }
 
@@ -147,11 +147,11 @@ data class ApiNewsItem(
     val tags: String?,
     @Json(name = "readTime") val readTime: String?
 ) {
-    fun toDbNewsItem(otkey: String): NewsItem {
+    fun toDbNewsItem(otkey: String , yearApiTerm: String): NewsItem {
         val decodedTags = this.tags
         val category = decodedTags?.split(",")?.getOrNull(0) ?: "その他"
         val unread = readTime.isNullOrEmpty()
-        val url = "https://mobile.scombz.shibaura-it.ac.jp/news/202502$newsId?"
+        val url = "https://mobile.scombz.shibaura-it.ac.jp/news/$yearApiTerm$newsId?"
 
         val decodedTitle = this.title.decodeBase64() ?: "タイトルなし"
         val decodedDomain = this.author.decodeBase64() ?: "掲載元不明"

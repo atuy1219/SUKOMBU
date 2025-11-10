@@ -9,6 +9,7 @@ import com.atuy.scomb.data.db.NewsItemDao
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.data.db.TaskDao
 import com.atuy.scomb.data.network.ScombzApiService
+import com.atuy.scomb.util.DateUtils
 import com.atuy.scomb.util.SessionExpiredException
 import kotlinx.coroutines.flow.first
 import java.util.Calendar
@@ -133,6 +134,7 @@ class ScombzRepository @Inject constructor(
         }
 
         ensureAuthenticated()
+        val currentTerm = DateUtils.getCurrentScombTerm()
         val otkeyResult = getOtkey()
         if (otkeyResult.isFailure) {
             throw otkeyResult.exceptionOrNull() ?: Exception("otkeyの取得に失敗しました")
@@ -147,7 +149,7 @@ class ScombzRepository @Inject constructor(
         }
 
         val apiNews = response.body() ?: emptyList()
-        val dbNews = apiNews.map { it.toDbNewsItem(otkey) }
+        val dbNews = apiNews.map { it.toDbNewsItem(otkey, currentTerm.yearApiTerm) }
 
         newsItemDao.clearAll()
         dbNews.forEach { newsItemDao.insertOrUpdateNewsItem(it) }
