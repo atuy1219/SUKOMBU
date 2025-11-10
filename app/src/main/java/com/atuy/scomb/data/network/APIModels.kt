@@ -108,7 +108,7 @@ data class ApiTask(
         }
 
         val decodedTitle = title.decodeBase64() ?: "タイトルなし"
-        val decodedClassName = from.decodeBase64() ?: "未設定"
+        val decodedClassName = if (from.isNullOrBlank()) "未設定" else from
 
         return Task(
             id = "$taskType-$classId-$id",
@@ -138,7 +138,7 @@ data class ApiNewsItem(
     @Json(name = "readTime") val readTime: String?
 ) {
     fun toDbNewsItem(): NewsItem {
-        val decodedTags = this.tags.decodeBase64()
+        val decodedTags = this.tags
         val category = decodedTags?.split(",")?.getOrNull(0) ?: "その他"
         val unread = readTime.isNullOrEmpty()
         val url = "https://mobile.scombz.shibaura-it.ac.jp/$title/news/"
