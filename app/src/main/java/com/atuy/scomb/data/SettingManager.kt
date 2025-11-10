@@ -15,7 +15,7 @@ import javax.inject.Singleton
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 @Singleton
-class SettingsManager @Inject constructor(@ApplicationContext private val context: Context) {
+class SettingsManager @Inject constructor(@param:ApplicationContext private val context: Context) {
 
     companion object {
         val NOTIFICATION_TIMINGS_KEY = stringSetPreferencesKey("notification_timings")

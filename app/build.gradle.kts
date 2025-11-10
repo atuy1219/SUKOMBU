@@ -40,12 +40,20 @@ android {
     kotlin {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
+            freeCompilerArgs.add("-Xannotation-default-target=param-property")
         }
     }
 
     buildFeatures {
         compose = true
     }
+}
+
+configurations.matching {
+    it.name == "hiltJavaCompileDebugAnnotationProcessor" ||
+            it.name == "hiltJavaCompileReleaseAnnotationProcessor"
+}.configureEach {
+    exclude(group = "com.squareup.moshi", module = "moshi-kotlin-codegen")
 }
 
 dependencies {

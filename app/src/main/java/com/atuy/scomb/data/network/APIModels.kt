@@ -20,14 +20,14 @@ private fun String?.decodeBase64(): String? {
 
 @JsonClass(generateAdapter = true)
 data class LoginRequest(
-    @param:Json(name = "user") val userId: String,
-    @param:Json(name = "pass") val userPw: String
+    @Json(name = "user") val userId: String,
+    @Json(name = "pass") val userPw: String
 )
 
 @JsonClass(generateAdapter = true)
 data class LoginResponse(
     val status: String,
-    @param:Json(name = "user_type") val userType: String?,
+    @Json(name = "user_type") val userType: String?,
     val gakubu: String?,
     val gakka: String?,
     val token: String?,
@@ -139,8 +139,8 @@ data class ApiTask(
 
 @JsonClass(generateAdapter = true)
 data class ApiNewsItem(
-    @param:Json(name = "newsId") val newsId: String,
-    @param:Json(name = "classId") val classId: String?,
+    @Json(name = "newsId") val newsId: String,
+    @Json(name = "classId") val classId: String?,
     val title: String?,
     val author: String?,
     @Json(name = "publishTime") val publishTime: String?,
