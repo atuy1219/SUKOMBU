@@ -85,7 +85,7 @@ data class ApiClassCell(
             teachers = decodedTeachers,
             room = decodedRoom,
             customColorInt = null,
-            url = "https://scombz.shibaura-it.ac.jp/lms/course?idnumber=${this.id}",
+            url = "https://mobile.scombz.shibaura-it.ac.jp/lms/course?idnumber=${this.id}",
             note = null,
             syllabusUrl = null,
             numberOfCredit = null
@@ -108,14 +108,13 @@ data class ApiTask(
             return null
         }
 
-        val baseUrl = when (taskType) {
+        val url = when (taskType) {
             0 -> "https://scombz.shibaura-it.ac.jp/lms/course/reports/take?idnumber=$classId&reportId=$id" // 課題
             1 -> "https://scombz.shibaura-it.ac.jp/lms/course/examinations/take?idnumber=$classId&examinationId=$id" // テスト
             2 -> "https://scombz.shibaura-it.ac.jp/lms/course/surveys/take?idnumber=$classId&surveyId=$id" // アンケート
             else -> "https://scombz.shibaura-it.ac.jp/lms/course?idnumber=$classId"
         }
 
-        val url = if (baseUrl.contains("?")) "$baseUrl&otkey=$otkey" else "$baseUrl?otkey=$otkey"
 
 
         val decodedTitle = title.decodeBase64() ?: "タイトルなし"
@@ -152,8 +151,7 @@ data class ApiNewsItem(
         val decodedTags = this.tags
         val category = decodedTags?.split(",")?.getOrNull(0) ?: "その他"
         val unread = readTime.isNullOrEmpty()
-        val baseUrl = "https://mobile.scombz.shibaura-it.ac.jp/"
-        val url = "$baseUrl$otkey/news/202502$newsId?"
+        val url = "https://mobile.scombz.shibaura-it.ac.jp/news/202502$newsId?"
 
         val decodedTitle = this.title.decodeBase64() ?: "タイトルなし"
         val decodedDomain = this.author.decodeBase64() ?: "掲載元不明"
