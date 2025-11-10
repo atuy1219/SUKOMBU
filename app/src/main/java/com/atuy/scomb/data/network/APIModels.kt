@@ -52,6 +52,7 @@ data class SessionIdRequest(
 
 @JsonClass(generateAdapter = true)
 data class ApiClassCell(
+    @param:Json(name = "classId")
     val id: String,
     val name: String,
     val room: String?,
