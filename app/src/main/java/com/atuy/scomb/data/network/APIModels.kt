@@ -52,18 +52,17 @@ data class SessionIdRequest(
 
 @JsonClass(generateAdapter = true)
 data class ApiClassCell(
-    @param:Json(name = "classId")
-    val id: String,
+    @param:Json(name = "classId") val id: String,
     val name: String,
     val room: String?,
     val teachers: String,
     val period: Int,
-    @param:Json(name = "day_of_week") val dayOfWeek: Int
+    val dayOfWeek: Int
 ) {
     fun toDbClassCell(year: Int, term: String, timetableTitle: String): ClassCell {
-        val decodedName = name.decodeBase64() ?: "授業名なし"
-        val decodedRoom = room.decodeBase64()
-        val decodedTeachers = teachers.decodeBase64() ?: ""
+        val decodedName = if (name.isNullOrBlank()) "授業名なし" else name
+        val decodedRoom = room
+        val decodedTeachers = if (teachers.isNullOrBlank()) "" else teachers
 
         return ClassCell(
             classId = this.id,
