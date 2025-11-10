@@ -146,8 +146,12 @@ fun TaskList(tasks: List<Task>, onTaskClick: (Task) -> Unit) {
 }
 
 @Composable
-fun TaskListItem(task: Task, onTaskClick: (Task) -> Unit) {
-    Column(modifier = Modifier.clickable { onTaskClick(task) }) {
+fun TaskListItem(
+    task: Task,
+    onTaskClick: (Task) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.clickable { onTaskClick(task) }) {
         ListItem(
             leadingContent = { TaskTypeIcon(task.taskType) },
             headlineContent = {

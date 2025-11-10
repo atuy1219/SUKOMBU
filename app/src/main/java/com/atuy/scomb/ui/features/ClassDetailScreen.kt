@@ -1,8 +1,11 @@
 package com.atuy.scomb.ui.features
 
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +39,7 @@ import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.ui.viewmodel.ClassDetailUiState
@@ -64,7 +68,6 @@ fun ClassDetailScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
         ) {
             when (val state = uiState) {
                 is ClassDetailUiState.Loading -> {
@@ -72,22 +75,32 @@ fun ClassDetailScreen(
                         CircularProgressIndicator()
                     }
                 }
+
                 is ClassDetailUiState.Success -> {
                     ClassDetailContent(
                         classCell = state.classCell,
-                        tasks = state.tasks
+                        tasks = state.tasks,
+                        contentPadding = paddingValues
                     )
                 }
+
                 is ClassDetailUiState.Error -> {
-                    ErrorState(message = state.message, onRetry = { viewModel.loadClassDetails() })
+                    ErrorState(
+                        message = state.message,
+                        onRetry = { viewModel.loadClassDetails() })
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ClassDetailContent(classCell: ClassCell, tasks: List<Task>) {
+fun ClassDetailContent(
+    classCell: ClassCell,
+    tasks: List<Task>,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
+) {
     val context = LocalContext.current
     fun openUrl(url: String?) {
         if (url.isNullOrEmpty()) return
@@ -96,24 +109,26 @@ fun ClassDetailContent(classCell: ClassCell, tasks: List<Task>) {
             val customTabsIntent = builder.build()
             customTabsIntent.launchUrl(context, url.toUri())
         } catch (e: Exception) {
-            // URLが開けない場合のエラーハンドリング（例: Toast表示など）
         }
     }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp),
+        contentPadding = contentPadding
     ) {
-        item {
+        item(key = "header") {
             Text(
                 text = classCell.name ?: "科目名なし",
                 style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier
+                    .padding(bottom = 16.dp)
+                    .animateItem(fadeInSpec = tween(durationMillis = 300))
             )
         }
 
-        item {
+        item(key = "basic_info") {
             DetailSectionTitle(title = "基本情報")
             DetailInfoRow(label = "曜日", value = (classCell.dayOfWeek).toDayOfWeekString())
             DetailInfoRow(label = "時限", value = "${classCell.period + 1} 限")
@@ -122,22 +137,26 @@ fun ClassDetailContent(classCell: ClassCell, tasks: List<Task>) {
             DetailInfoRow(label = "単位数", value = classCell.numberOfCredit?.toString() ?: "未設定")
         }
 
-        item {
+        item(key = "links") {
             Spacer(modifier = Modifier.height(16.dp))
             DetailSectionTitle(title = "リンク")
             ListItem(
                 headlineContent = { Text("授業ページ") },
                 leadingContent = { Icon(Icons.Default.Link, contentDescription = null) },
-                modifier = Modifier.clickable { openUrl(classCell.url) }
+                modifier = Modifier
+                    .clickable { openUrl(classCell.url) }
+                    .animateItem(fadeInSpec = tween(durationMillis = 300))
             )
             ListItem(
                 headlineContent = { Text("シラバス") },
                 leadingContent = { Icon(Icons.Default.Link, contentDescription = null) },
-                modifier = Modifier.clickable { openUrl(classCell.syllabusUrl) }
+                modifier = Modifier
+                    .clickable { openUrl(classCell.syllabusUrl) }
+                    .animateItem(fadeInSpec = tween(durationMillis = 300))
             )
         }
 
-        item {
+        item(key = "memo") {
             Spacer(modifier = Modifier.height(16.dp))
             DetailSectionTitle(title = "メモ")
             Text(
@@ -147,26 +166,32 @@ fun ClassDetailContent(classCell: ClassCell, tasks: List<Task>) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
+                    .animateItem(fadeInSpec = tween(durationMillis = 300))
             )
         }
 
-        item {
+        item(key = "task_header") {
             Spacer(modifier = Modifier.height(16.dp))
             DetailSectionTitle(title = "関連する課題")
         }
 
         if (tasks.isEmpty()) {
-            item {
+            item(key = "no_tasks") {
                 Text(
                     text = "関連する課題はありません。",
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier
+                        .padding(vertical = 8.dp)
+                        .animateItem(fadeInSpec = tween(durationMillis = 300))
                 )
             }
         } else {
-            // TaskListScreenから TaskListItem と TaskTypeIcon を利用
-            items(tasks) { task ->
-                TaskListItem(task = task, onTaskClick = { openUrl(task.url) })
+            items(tasks, key = { it.id }) { task ->
+                TaskListItem(
+                    task = task,
+                    onTaskClick = { openUrl(task.url) },
+                    modifier = Modifier.animateItem(fadeInSpec = tween(durationMillis = 300))
+                )
             }
         }
     }
