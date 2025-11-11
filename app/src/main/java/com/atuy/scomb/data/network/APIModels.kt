@@ -64,7 +64,10 @@ data class ApiClassCell(
     val room: String?,
     val teachers: String,
     val period: Int,
-    val dayOfWeek: Int
+    val dayOfWeek: Int,
+    val syllabusUrl: String?,
+    val numberOfCredit: Int?,
+    val note: String?
 ) {
     fun toDbClassCell(year: Int, term: String, timetableTitle: String): ClassCell {
         val decodedName = if (name.isNullOrBlank()) "授業名なし" else name
@@ -85,10 +88,10 @@ data class ApiClassCell(
             teachers = decodedTeachers,
             room = decodedRoom,
             customColorInt = null,
-            url = "https://mobile.scombz.shibaura-it.ac.jp/lms/course?idnumber=${this.id}",
-            note = null,
-            syllabusUrl = null,
-            numberOfCredit = null
+            url = "https://scombz.shibaura-it.ac.jp/lms/course?idnumber=${this.id}",
+            note = note,
+            syllabusUrl = syllabusUrl,
+            numberOfCredit = numberOfCredit
         )
     }
 }
