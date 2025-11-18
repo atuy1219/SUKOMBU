@@ -1,6 +1,7 @@
 package com.atuy.scomb.ui.features
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -53,6 +55,16 @@ fun TaskListScreen(
     val context = LocalContext.current
     val customTabsIntent = remember { CustomTabsIntent.Builder().build() }
 
+    LaunchedEffect(viewModel) {
+        viewModel.openUrlEvent.collect { url ->
+            try {
+                customTabsIntent.launchUrl(context, Uri.parse(url))
+            } catch (e: Exception) {
+                Toast.makeText(context, "URLを開けませんでした", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is TaskListUiState.Loading -> {
@@ -76,7 +88,7 @@ fun TaskListScreen(
                     TaskList(
                         tasks = state.tasks,
                         onTaskClick = { task ->
-                            customTabsIntent.launchUrl(context, Uri.parse(task.url))
+                            viewModel.onTaskClick(task)
                         }
                     )
                 }

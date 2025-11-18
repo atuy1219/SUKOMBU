@@ -8,9 +8,11 @@ import com.atuy.scomb.domain.ScheduleNotificationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -44,6 +46,9 @@ class TaskListViewModel @Inject constructor(
     private var allTasks: List<Task> = emptyList()
     private var loadJob: Job? = null
 
+    private val _openUrlEvent = Channel<String>(Channel.BUFFERED)
+    val openUrlEvent = _openUrlEvent.receiveAsFlow()
+
     init {
         fetchTasks(forceRefresh = false)
     }
@@ -73,6 +78,17 @@ class TaskListViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _uiState.value =
                     TaskListUiState.Error(e.message ?: "不明なエラーが発生しました", isRefreshing = false)
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun onTaskClick(task: Task) {
+        viewModelScope.launch {
+            try {
+                val url = repository.getTaskUrl(task)
+                _openUrlEvent.send(url)
+            } catch (e: Exception) {
                 e.printStackTrace()
             }
         }

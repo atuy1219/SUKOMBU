@@ -120,7 +120,7 @@ class ScombzRepository @Inject constructor(
         }
 
         val apiClassCells = response.body() ?: emptyList()
-        val dbClassCells = apiClassCells.map { it.toDbClassCell(year, term, timetableTitle) }
+        val dbClassCells = apiClassCells.map { it.toDbClassCell(year, term, timetableTitle,otkey) }
 
         classCellDao.removeTimetable(timetableTitle)
         dbClassCells.forEach { classCellDao.insertClassCell(it) }
@@ -158,6 +158,22 @@ class ScombzRepository @Inject constructor(
 
     suspend fun markAsRead(newsItem: NewsItem) {
         newsItemDao.insertOrUpdateNewsItem(newsItem.copy(unread = false))
+    }
+
+    suspend fun getTaskUrl(task: Task): String {
+        ensureAuthenticated()
+        val otkeyResult = getOtkey()
+        if (otkeyResult.isFailure) {
+            throw otkeyResult.exceptionOrNull() ?: Exception("otkeyの取得に失敗しました")
+        }
+        val otkey = otkeyResult.getOrNull() ?: throw Exception("otkeyがnullです")
+
+        return when (task.taskType) {
+            0 -> "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course/report/submission?idnumber=${task.classId}&reportId=${task.reportId}" // 課題
+            1 -> "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course/examination/taketop?idnumber=${task.classId}&examinationId=${task.reportId}" // テスト
+            2 -> "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course/surveys/take?idnumber=${task.classId}&surveyId=${task.reportId}" // アンケート
+            else -> "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course?idnumber=${task.classId}"
+        }
     }
 }
 
