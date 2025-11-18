@@ -43,9 +43,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ github.ref_name }}
-          body: |
-            Release build for version ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
           files: app/build/outputs/apk/release/app-release.apk
           draft: false
           prerelease: false
