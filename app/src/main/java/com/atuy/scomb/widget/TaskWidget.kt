@@ -10,11 +10,13 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
@@ -38,12 +40,10 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.atuy.scomb.R
 import com.atuy.scomb.data.db.Task
-import com.atuy.scomb.ui.theme.ScombTheme
 import com.atuy.scomb.util.DateUtils
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import androidx.glance.appwidget.action.ActionCallback
 
 class TaskWidget : GlanceAppWidget() {
 
@@ -54,7 +54,7 @@ class TaskWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
 
         provideContent {
-            ScombTheme {
+            GlanceTheme {
                 val prefs = currentState<Preferences>()
                 val tasksJson = prefs[TaskWidgetWorker.tasksStateKey]
                 val loadingState = prefs[TaskWidgetWorker.loadingStateKey] ?: "loading"
@@ -64,7 +64,8 @@ class TaskWidget : GlanceAppWidget() {
                         emptyList()
                     } else {
                         try {
-                            val listType = Types.newParameterizedType(List::class.java, Task::class.java)
+                            val listType =
+                                Types.newParameterizedType(List::class.java, Task::class.java)
                             val adapter = moshi.adapter<List<Task>>(listType)
                             adapter.fromJson(tasksJson) ?: emptyList()
                         } catch (e: Exception) {
@@ -72,7 +73,7 @@ class TaskWidget : GlanceAppWidget() {
                         }
                     }
                 }
-\                WidgetContent(loadingState, tasks)
+                WidgetContent(loadingState, tasks)
             }
         }
     }
@@ -83,7 +84,7 @@ class TaskWidget : GlanceAppWidget() {
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(ScombTheme.colorScheme.background))
+                .background(GlanceTheme.colors.background)
         ) {
             WidgetHeader()
 
@@ -95,10 +96,11 @@ class TaskWidget : GlanceAppWidget() {
                     ) {
                         Text(
                             text = "読み込み中...",
-                            style = TextStyle(color = ColorProvider(ScombTheme.colorScheme.onBackground))
+                            style = TextStyle(color = GlanceTheme.colors.onBackground)
                         )
                     }
                 }
+
                 loadingState.startsWith("error") -> {
                     Box(
                         modifier = GlanceModifier.fillMaxSize().padding(16.dp),
@@ -106,7 +108,10 @@ class TaskWidget : GlanceAppWidget() {
                     ) {
                         Text(
                             text = "エラーが発生しました。\nアプリを開いてログインしてください。",
-                            style = TextStyle(color = ColorProvider(ScombTheme.colorScheme.error), fontSize = 12.sp)
+                            style = TextStyle(
+                                color = GlanceTheme.colors.error,
+                                fontSize = 12.sp
+                            )
                         )
                     }
                 }
@@ -118,10 +123,11 @@ class TaskWidget : GlanceAppWidget() {
                     ) {
                         Text(
                             text = "直近の課題はありません",
-                            style = TextStyle(color = ColorProvider(ScombTheme.colorScheme.onBackground))
+                            style = TextStyle(color = GlanceTheme.colors.onBackground)
                         )
                     }
                 }
+
                 else -> {
                     TaskList(tasks)
                 }
@@ -135,16 +141,16 @@ class TaskWidget : GlanceAppWidget() {
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                .background(ColorProvider(ScombTheme.colorScheme.background)),
+                .background(GlanceTheme.colors.background),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "直近の課題",
                 style = TextStyle(
-                    color = ColorProvider(ScombTheme.colorScheme.onBackground),
+                    color = GlanceTheme.colors.onBackground,
                     fontSize = 18.sp
                 ),
-                modifier = GlanceModifier.defaultWeight(1f)
+                modifier = GlanceModifier.defaultWeight()
             )
             Box(
                 modifier = GlanceModifier
@@ -156,7 +162,7 @@ class TaskWidget : GlanceAppWidget() {
                     provider = ImageProvider(R.drawable.ic_launcher_foreground),
                     contentDescription = "更新",
                     modifier = GlanceModifier.width(24.dp).height(24.dp),
-                    colorFilter = ColorFilter.tint(ColorProvider(ScombTheme.colorScheme.onBackground))
+                    colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground)
                 )
             }
         }
@@ -167,7 +173,7 @@ class TaskWidget : GlanceAppWidget() {
         LazyColumn(
             modifier = GlanceModifier.fillMaxSize()
         ) {
-            items(tasks, { task: Task -> task.id }) { task ->
+            items(tasks, { task: Task -> task.id.hashCode().toLong() }) { task ->
                 TaskWidgetItem(task)
             }
         }
@@ -184,7 +190,7 @@ class TaskWidget : GlanceAppWidget() {
             Text(
                 text = task.title,
                 style = TextStyle(
-                    color = ColorProvider(ScombTheme.colorScheme.onBackground),
+                    color = GlanceTheme.colors.onBackground,
                     fontSize = 14.sp
                 ),
                 maxLines = 1
@@ -193,7 +199,7 @@ class TaskWidget : GlanceAppWidget() {
             Text(
                 text = task.className,
                 style = TextStyle(
-                    color = ColorProvider(ScombTheme.colorScheme.onSurfaceVariant),
+                    color = GlanceTheme.colors.onSurfaceVariant,
                     fontSize = 12.sp
                 ),
                 maxLines = 1
@@ -209,7 +215,7 @@ class TaskWidget : GlanceAppWidget() {
                     color = if (isOverdue)
                         ColorProvider(Color(0xFFB00020))
                     else
-                        ColorProvider(ScombTheme.colorScheme.onSurfaceVariant),
+                        GlanceTheme.colors.onSurfaceVariant,
                     fontSize = 12.sp
                 )
             )
