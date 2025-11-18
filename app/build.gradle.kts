@@ -10,6 +10,15 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+fun getGitCommitHash(): String {
+    return try {
+        val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD").start()
+        process.inputStream.bufferedReader().use { it.readText().trim() }
+    } catch (e: Exception) {
+        "unknown"
+    }
+}
+
 android {
     namespace = "com.atuy.scomb"
     compileSdk = 36
@@ -51,6 +60,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "GIT_COMMIT_HASH", "\"${getGitCommitHash()}\"")
+
     }
 
     buildTypes {
