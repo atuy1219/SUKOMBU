@@ -112,10 +112,10 @@ data class ApiTask(
         }
 
         val url = when (taskType) {
-            0 -> "https://scombz.shibaura-it.ac.jp/lms/course/report/submission?idnumber=$classId&reportId=$id" // 課題
-            1 -> "https://scombz.shibaura-it.ac.jp/lms/course/examination/take?idnumber=$classId&examinationId=$id" // テスト
-            2 -> "https://scombz.shibaura-it.ac.jp/lms/course/surveys/take?idnumber=$classId&surveyId=$id" // アンケート
-            else -> "https://scombz.shibaura-it.ac.jp/lms/course?idnumber=$classId"
+            0 -> "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course/report/submission?idnumber=$classId&reportId=$id" // 課題
+            1 -> "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course/examination/taketop?idnumber=$classId&examinationId=$id" // テスト
+            2 -> "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course/surveys/take?idnumber=$classId&surveyId=$id" // アンケート
+            else -> "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course?idnumber=$classId"
         }
 
 
