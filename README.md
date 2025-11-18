@@ -24,9 +24,15 @@ Material 3を採用。
 
 ## 📥 インストール方法
 
-1.  このリポジトリの [Releases](../../releases) ページへアクセスします。
-2.  最新の `.apk` ファイルをダウンロードします。
-3.  Android端末でファイルを開き、インストールしてください（提供元不明のアプリのインストール許可が必要な場合があります）。
+<a href="https://github.com/atuy1219/SUKOMBU/releases">
+<img src="https://user-images.githubusercontent.com/69304392/148696068-0cfea65d-b18f-4685-82b5-329a330b1c0d.png"
+alt="Download from GitHub releases" align="center" height="80" /></a>
+
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/atuy1219/SUKOMBU/">
+<img src="https://github.com/ImranR98/Obtainium/blob/main/assets/graphics/badge_obtainium.png"
+alt="Get it on Obtainium" align="center" height="54" /></a>
+
+自動更新してくれるobtaniumを用いてインストールすることを推奨します。
 
 ## ⚠️ 免責事項
 
