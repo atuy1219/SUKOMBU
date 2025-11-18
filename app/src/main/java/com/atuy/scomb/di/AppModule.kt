@@ -1,14 +1,13 @@
 package com.atuy.scomb.di
 
 import android.content.Context
+import com.atuy.scomb.BuildConfig
 import com.atuy.scomb.data.AuthManager
 import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.data.db.AppDatabase
 import com.atuy.scomb.data.network.ScombzApiService
 import com.atuy.scomb.data.repository.ScombzRepository
-import com.atuy.scomb.BuildConfig
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -48,7 +47,6 @@ object AppModule {
     @Singleton
     fun provideMoshi(): Moshi {
         return Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
             .build()
     }
 
@@ -66,7 +64,6 @@ object AppModule {
         val authInterceptor = okhttp3.Interceptor { chain ->
             val originalRequest = chain.request()
 
-            // /login 以外のリクエストにヘッダーを付与
             if (originalRequest.url.encodedPath.endsWith("/login")) {
                 return@Interceptor chain.proceed(originalRequest)
             }

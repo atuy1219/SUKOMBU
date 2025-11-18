@@ -43,12 +43,11 @@ import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.util.DateUtils
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 class TaskWidget : GlanceAppWidget() {
 
     private val moshi: Moshi by lazy {
-        Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+        Moshi.Builder().build()
     }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {

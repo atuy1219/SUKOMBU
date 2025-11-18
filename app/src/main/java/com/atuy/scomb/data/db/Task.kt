@@ -2,8 +2,9 @@ package com.atuy.scomb.data.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.squareup.moshi.JsonClass
 
-
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "task_table")
 data class Task(
     @PrimaryKey
