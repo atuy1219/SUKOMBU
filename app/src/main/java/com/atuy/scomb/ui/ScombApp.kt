@@ -61,6 +61,7 @@ import com.atuy.scomb.ui.features.TimetableTerm
 import com.atuy.scomb.ui.viewmodel.AuthState
 import com.atuy.scomb.ui.viewmodel.MainViewModel
 import com.atuy.scomb.ui.viewmodel.NewsViewModel
+import com.atuy.scomb.ui.viewmodel.TaskListViewModel
 import com.atuy.scomb.ui.viewmodel.TimetableViewModel
 import java.util.Calendar
 
@@ -73,6 +74,8 @@ fun ScombApp(
     val navController = rememberNavController()
     val timetableViewModel: TimetableViewModel = hiltViewModel()
     val newsViewModel: NewsViewModel = hiltViewModel()
+    val taskListViewModel: TaskListViewModel = hiltViewModel()
+
     val context = LocalContext.current
 
     LaunchedEffect(authState, navController) {
@@ -142,7 +145,8 @@ fun ScombApp(
                 AppTopBar(
                     currentRoute = currentDestination?.route,
                     timetableViewModel = timetableViewModel,
-                    newsViewModel = newsViewModel
+                    newsViewModel = newsViewModel,
+                    taskListViewModel = taskListViewModel
                 )
             }
         },
@@ -213,7 +217,7 @@ fun ScombApp(
                     LoginScreen()
                 }
                 composable(Screen.Home.route) { HomeScreen(paddingValues = innerPadding) }
-                composable(Screen.Tasks.route) { TaskListScreen() }
+                composable(Screen.Tasks.route) { TaskListScreen(viewModel = taskListViewModel) } // ViewModelを渡す
                 composable(Screen.Timetable.route) { TimetableScreen(navController, timetableViewModel) }
                 composable(Screen.News.route) { NewsScreen(newsViewModel) }
                 composable(Screen.Settings.route) { SettingsScreen(navController = navController) }
@@ -233,7 +237,8 @@ fun ScombApp(
 fun AppTopBar(
     currentRoute: String?,
     timetableViewModel: TimetableViewModel,
-    newsViewModel: NewsViewModel
+    newsViewModel: NewsViewModel,
+    taskListViewModel: TaskListViewModel
 ) {
     AnimatedContent(
         targetState = currentRoute,
@@ -249,13 +254,15 @@ fun AppTopBar(
             Screen.News.route -> {
                 NewsTopBar(viewModel = newsViewModel)
             }
+            Screen.Tasks.route -> {
+                TasksTopBar(viewModel = taskListViewModel)
+            }
             else -> {
                 TopAppBar(
                     title = {
                         Text(
                             when (targetRoute) {
                                 Screen.Home.route -> "ホーム"
-                                Screen.Tasks.route -> "課題"
                                 Screen.Settings.route -> "設定"
                                 else -> ""
                             }
@@ -275,6 +282,25 @@ fun AppTopBar(
 fun NewsTopBar(viewModel: NewsViewModel) {
     TopAppBar(
         title = { Text("お知らせ") },
+        actions = {
+            IconButton(onClick = { viewModel.toggleSearchActive() }) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "検索"
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background
+        )
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TasksTopBar(viewModel: TaskListViewModel) {
+    TopAppBar(
+        title = { Text("課題") },
         actions = {
             IconButton(onClick = { viewModel.toggleSearchActive() }) {
                 Icon(
@@ -349,4 +375,3 @@ fun TimetableTopBar(
         )
     )
 }
-

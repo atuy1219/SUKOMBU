@@ -29,7 +29,8 @@ sealed interface TaskListUiState {
     data class Success(
         val tasks: List<Task>,
         val filter: TaskFilter,
-        val isRefreshing: Boolean = false
+        val isRefreshing: Boolean = false,
+        val isSearchActive: Boolean = false
     ) : TaskListUiState
 
     data class Error(val message: String, val isRefreshing: Boolean = false) : TaskListUiState
@@ -60,6 +61,8 @@ class TaskListViewModel @Inject constructor(
             val currentState = _uiState.value
             val currentFilter =
                 if (currentState is TaskListUiState.Success) currentState.filter else TaskFilter()
+            val isSearchActive =
+                if (currentState is TaskListUiState.Success) currentState.isSearchActive else false
 
             if (forceRefresh && currentState is TaskListUiState.Success) {
                 _uiState.value = currentState.copy(isRefreshing = true)
@@ -72,7 +75,8 @@ class TaskListViewModel @Inject constructor(
                 _uiState.value = TaskListUiState.Success(
                     tasks = filterTasks(allTasks, currentFilter),
                     filter = currentFilter,
-                    isRefreshing = false
+                    isRefreshing = false,
+                    isSearchActive = isSearchActive
                 )
                 scheduleNotificationsUseCase(allTasks)
             } catch (e: Exception) {
@@ -102,6 +106,13 @@ class TaskListViewModel @Inject constructor(
                 tasks = filterTasks(allTasks, newFilter),
                 filter = newFilter
             )
+        }
+    }
+
+    fun toggleSearchActive() {
+        val currentState = _uiState.value
+        if (currentState is TaskListUiState.Success) {
+            _uiState.value = currentState.copy(isSearchActive = !currentState.isSearchActive)
         }
     }
 

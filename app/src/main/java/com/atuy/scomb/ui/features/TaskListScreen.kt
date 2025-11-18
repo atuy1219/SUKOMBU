@@ -2,6 +2,7 @@ package com.atuy.scomb.ui.features
 
 import android.widget.Toast
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -82,16 +83,21 @@ fun TaskListScreen(
             }
 
             is TaskListUiState.Success -> {
-                TaskSearchBar(
-                    searchQuery = state.filter.searchQuery,
-                    onSearchQueryChanged = { query ->
-                        viewModel.updateFilter(state.filter.copy(searchQuery = query))
+                AnimatedVisibility(visible = state.isSearchActive) {
+                    Column {
+                        TaskSearchBar(
+                            searchQuery = state.filter.searchQuery,
+                            onSearchQueryChanged = { query ->
+                                viewModel.updateFilter(state.filter.copy(searchQuery = query))
+                            }
+                        )
+                        FilterBar(
+                            filter = state.filter,
+                            onFilterChanged = { newFilter -> viewModel.updateFilter(newFilter) }
+                        )
                     }
-                )
-                FilterBar(
-                    filter = state.filter,
-                    onFilterChanged = { newFilter -> viewModel.updateFilter(newFilter) }
-                )
+                }
+
                 PullToRefreshBox(
                     isRefreshing = state.isRefreshing,
                     onRefresh = {
