@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">酢昆布</string>
+    <string name="task_widget_description">直近の課題を表示するウィジェットです。</string>
 </resources>

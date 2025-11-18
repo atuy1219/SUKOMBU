@@ -25,13 +25,14 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -50,47 +51,66 @@ android {
     }
 }
 
-configurations.matching {
-    it.name == "hiltJavaCompileDebugAnnotationProcessor" ||
-            it.name == "hiltJavaCompileReleaseAnnotationProcessor"
+configurations.matching { config ->
+    config.name.startsWith("hiltJavaCompile") && config.name.endsWith("AnnotationProcessor")
 }.configureEach {
     exclude(group = "com.squareup.moshi", module = "moshi-kotlin-codegen")
 }
 
 dependencies {
+    // --- Core & Lifecycle ---
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.browser)
+
+    // --- UI (Compose & Material3) ---
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.extended)
+
+    // --- Navigation ---
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.hilt.navigation.compose)
+
+    // --- Network (Retrofit & Moshi) ---
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.moshi)
+    implementation(libs.logging.interceptor)
+    implementation(libs.moshi)
+    ksp(libs.moshi.codegen)
+
+    // --- Database (Room) ---
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.room.compiler)
+
+    // --- Dependency Injection (Hilt) ---
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+
+    // --- Background & Widgets (WorkManager & Glance) ---
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
+
+    // --- Debugging ---
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
+
+    // --- Testing ---
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
-    implementation(libs.androidx.room.runtime)
-    ksp(libs.androidx.room.room.compiler)
-    implementation(libs.androidx.room.ktx)
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.converter.moshi)
-    implementation(libs.logging.interceptor)
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    implementation(libs.androidx.browser)
-    implementation(libs.androidx.hilt.navigation.compose)
-    implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.datastore.preferences)
-    implementation(libs.androidx.material.icons.extended)
-    implementation(libs.androidx.appcompat)
-
-    // Moshi for JSON parsing
-    implementation(libs.moshi)
-    ksp(libs.moshi.codegen)
 }
-
