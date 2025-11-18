@@ -78,7 +78,7 @@ data class ApiClassCell(
 
         return ClassCell(
             classId = this.id,
-            period = this.period,
+            period = this.period - 1,
             dayOfWeek = appDayOfWeek,
             isUserClassCell = false,
             timetableTitle = timetableTitle,
