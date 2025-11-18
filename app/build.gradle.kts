@@ -1,4 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.FileInputStream
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -12,6 +14,35 @@ android {
     namespace = "com.atuy.scomb"
     compileSdk = 36
 
+    signingConfigs {
+        create("release") {
+            val keystorePropertiesFile = rootProject.file("local.properties")
+            val keystoreProperties = Properties()
+            if (keystorePropertiesFile.exists()) {
+                keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+            }
+
+            val keyStorePath = System.getenv("KEYSTORE_PATH")
+                ?: keystoreProperties.getProperty("key.store")
+
+            val keyStorePwd = System.getenv("KEY_STORE_PASSWORD")
+                ?: keystoreProperties.getProperty("key.store.password")
+
+            val keyAliasVal = System.getenv("ALIAS")
+                ?: keystoreProperties.getProperty("key.alias")
+
+            val keyPwd = System.getenv("KEY_PASSWORD")
+                ?: keystoreProperties.getProperty("key.password")
+
+            if (keyStorePath != null && keyStorePwd != null && keyAliasVal != null && keyPwd != null) {
+                storeFile = file(keyStorePath)
+                storePassword = keyStorePwd
+                keyAlias = keyAliasVal
+                keyPassword = keyPwd
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "com.atuy.scomb"
         minSdk = 34
@@ -24,6 +55,7 @@ android {
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

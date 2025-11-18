@@ -29,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +40,6 @@ import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.ui.viewmodel.ClassDetailUiState
@@ -52,6 +52,18 @@ fun ClassDetailScreen(
     viewModel: ClassDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(viewModel) {
+        viewModel.openUrlEvent.collect { url: String ->
+            try {
+                val builder = CustomTabsIntent.Builder()
+                val customTabsIntent = builder.build()
+                customTabsIntent.launchUrl(context, url.toUri())
+            } catch (e: Exception) {
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -80,7 +92,8 @@ fun ClassDetailScreen(
                     ClassDetailContent(
                         classCell = state.classCell,
                         tasks = state.tasks,
-                        contentPadding = paddingValues
+                        contentPadding = paddingValues,
+                        onClassPageClick = { viewModel.onClassPageClick() }
                     )
                 }
 
@@ -99,7 +112,8 @@ fun ClassDetailScreen(
 fun ClassDetailContent(
     classCell: ClassCell,
     tasks: List<Task>,
-    contentPadding: PaddingValues = PaddingValues(0.dp)
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    onClassPageClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     fun openUrl(url: String?) {
@@ -144,7 +158,7 @@ fun ClassDetailContent(
                 headlineContent = { Text("授業ページ") },
                 leadingContent = { Icon(Icons.Default.Link, contentDescription = null) },
                 modifier = Modifier
-                    .clickable { openUrl(classCell.url) }
+                    .clickable { onClassPageClick() }
                     .animateItem(fadeInSpec = tween(durationMillis = 300))
             )
             ListItem(
