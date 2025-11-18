@@ -74,7 +74,7 @@ class TaskWidgetWorker @AssistedInject constructor(
             Log.e(TAG, "Failed to fetch tasks for widget", e)
             glanceIds.forEach { glanceId ->
                 updateAppWidgetState(context, glanceId) { prefs ->
-                    prefs[loadingStateKey] = "error: ${e.message?.take(100)}" // メッセージが長すぎないように
+                    prefs[loadingStateKey] = "error: ${e.message?.take(100)}"
                 }
                 TaskWidget().update(context, glanceId)
             }

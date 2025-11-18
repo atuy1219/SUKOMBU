@@ -157,8 +157,7 @@ class TaskWidget : GlanceAppWidget() {
                     .padding(8.dp)
             ) {
                 Image(
-                    // TODO: ic_refresh.xml のようなリフレッシュアイコンに変更してください
-                    provider = ImageProvider(R.drawable.ic_launcher_foreground),
+                    provider = ImageProvider(R.drawable.ic_refresh),
                     contentDescription = "更新",
                     modifier = GlanceModifier.width(24.dp).height(24.dp),
                     colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground)
