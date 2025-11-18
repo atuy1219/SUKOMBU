@@ -71,10 +71,6 @@ class ScombzRepository @Inject constructor(
                 Result.failure(Exception("otkeyの取得に失敗しました: ${response.message()} (Code: ${response.code()})"))
             }
         } catch (e: Exception) {
-            // getOtkey内でキャッチしたSessionExpiredExceptionも上位に投げる前に処理が必要だが、
-            // ここでは Result.failure に包んでいるため、呼び出し元で executeWithAuthHandling が機能するように例外を再スローするか、
-            // 呼び出し元で Result をチェックして例外を投げる必要がある。
-            // 今回は executeWithAuthHandling で一括管理するため、そのまま throw する形に修正。
             if (e is SessionExpiredException) throw e
             Result.failure(e)
         }
@@ -170,7 +166,19 @@ class ScombzRepository @Inject constructor(
             }
 
             val apiNews = response.body() ?: emptyList()
-            val dbNews = apiNews.map { it.toDbNewsItem(otkey, currentTerm.yearApiTerm) }
+
+            // 既存の既読状態を保持
+            val existingNewsMap = newsItemDao.getAllNews().associate { it.newsId to it.unread }
+
+            val dbNews = apiNews.map { apiItem ->
+                val newItem = apiItem.toDbNewsItem(otkey, currentTerm.yearApiTerm)
+                // ローカルで既に既読(false)なら、APIからのデータに関わらず既読にする
+                if (existingNewsMap[newItem.newsId] == false) {
+                    newItem.copy(unread = false)
+                } else {
+                    newItem
+                }
+            }
 
             newsItemDao.clearAll()
             dbNews.forEach { newsItemDao.insertOrUpdateNewsItem(it) }
