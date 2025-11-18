@@ -20,7 +20,8 @@ data class TaskFilter(
     val showAssignments: Boolean = true,
     val showTests: Boolean = true,
     val showSurveys: Boolean = true,
-    val showCompleted: Boolean = false
+    val showCompleted: Boolean = false,
+    val searchQuery: String = ""
 )
 
 sealed interface TaskListUiState {
@@ -118,7 +119,15 @@ class TaskListViewModel @Inject constructor(
             } else {
                 !task.done
             }
-            typeMatch && completionMatch
+
+            val queryMatch = if (filter.searchQuery.isBlank()) {
+                true
+            } else {
+                task.title.contains(filter.searchQuery, ignoreCase = true) ||
+                        task.className.contains(filter.searchQuery, ignoreCase = true)
+            }
+
+            typeMatch && completionMatch && queryMatch
         }.sortedBy { it.deadline }
     }
 }

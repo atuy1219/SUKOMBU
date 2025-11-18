@@ -1,6 +1,5 @@
 package com.atuy.scomb.ui.features
 
-import android.net.Uri
 import android.widget.Toast
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.clickable
@@ -16,16 +15,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -35,9 +40,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atuy.scomb.data.db.Task
@@ -58,7 +66,7 @@ fun TaskListScreen(
     LaunchedEffect(viewModel) {
         viewModel.openUrlEvent.collect { url ->
             try {
-                customTabsIntent.launchUrl(context, Uri.parse(url))
+                customTabsIntent.launchUrl(context, url.toUri())
             } catch (e: Exception) {
                 Toast.makeText(context, "URLを開けませんでした", Toast.LENGTH_SHORT).show()
             }
@@ -74,6 +82,12 @@ fun TaskListScreen(
             }
 
             is TaskListUiState.Success -> {
+                TaskSearchBar(
+                    searchQuery = state.filter.searchQuery,
+                    onSearchQueryChanged = { query ->
+                        viewModel.updateFilter(state.filter.copy(searchQuery = query))
+                    }
+                )
                 FilterBar(
                     filter = state.filter,
                     onFilterChanged = { newFilter -> viewModel.updateFilter(newFilter) }
@@ -102,6 +116,34 @@ fun TaskListScreen(
             }
         }
     }
+}
+
+@Composable
+fun TaskSearchBar(
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit
+) {
+    val focusManager = LocalFocusManager.current
+
+    OutlinedTextField(
+        value = searchQuery,
+        onValueChange = onSearchQueryChanged,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        placeholder = { Text("課題名や科目名で検索") },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        trailingIcon = {
+            if (searchQuery.isNotEmpty()) {
+                IconButton(onClick = { onSearchQueryChanged("") }) {
+                    Icon(Icons.Default.Clear, contentDescription = "クリア")
+                }
+            }
+        },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -147,12 +189,18 @@ fun FilterBar(
 
 @Composable
 fun TaskList(tasks: List<Task>, onTaskClick: (Task) -> Unit) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp)
-    ) {
-        items(tasks) { task ->
-            TaskListItem(task = task, onTaskClick = onTaskClick)
+    if (tasks.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("表示する課題がありません")
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
+            items(tasks) { task ->
+                TaskListItem(task = task, onTaskClick = onTaskClick)
+            }
         }
     }
 }
