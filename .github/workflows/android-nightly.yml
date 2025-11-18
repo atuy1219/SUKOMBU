@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  nightly-release:
+  nightly-debug:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -24,21 +24,11 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Decode Keystore
-        run: |
-          echo "${{ secrets.SIGNING_KEY_STORE_BASE64 }}" | base64 -d > release.jks
-
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Signed Release APK
-        run: ./gradlew assembleRelease
-        env:
-          KEYSTORE_PATH: ${{ github.workspace }}/release.jks
-          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          ALIAS: ${{ secrets.ALIAS }}
-
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
 
       - name: Delete existing nightly tag
         uses: dev-drprasad/delete-tag-and-release@v0.2.1
@@ -52,12 +42,12 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: nightly
-          name: Nightly Build
+          name: Nightly Debug Build
           body: |
-            最新のNightlyビルドです。
+            最新のコミットによるデバッグビルドです。
             Commit: ${{ github.sha }}
             Date: ${{ steps.date.outputs.date }}
-          files: app/build/outputs/apk/release/app-release.apk
+          files: app/build/outputs/apk/debug/app-debug.apk
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
