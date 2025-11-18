@@ -48,6 +48,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import android.widget.ImageView
+import androidx.compose.ui.viewinterop.AndroidView
 import com.atuy.scomb.BuildConfig
 import com.atuy.scomb.R
 import com.atuy.scomb.ui.Screen
@@ -195,11 +197,14 @@ private fun AppInfoSection() {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Image(
-                        painter = painterResource(id = R.mipmap.ic_launcher),
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp)
-                    )
+                    AndroidView(
+                modifier = Modifier.size(64.dp),
+                factory = { context ->
+                ImageView(context).apply {
+                setImageResource(R.mipmap.ic_launcher)
+                 }
+                  }
+                )
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(
