@@ -199,4 +199,16 @@ class ScombzRepository @Inject constructor(
             }
         }
     }
+    suspend fun getClassUrl(classId: String): String {
+        return executeWithAuthHandling {
+            ensureAuthenticated()
+            val otkeyResult = getOtkey()
+            if (otkeyResult.isFailure) {
+                throw otkeyResult.exceptionOrNull() ?: Exception("otkeyの取得に失敗しました")
+            }
+            val otkey = otkeyResult.getOrNull() ?: throw Exception("otkeyがnullです")
+
+            "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course?idnumber=$classId"
+        }
+    }
 }

@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import javax.inject.Inject
 
 sealed interface ClassDetailUiState {
@@ -24,7 +26,8 @@ sealed interface ClassDetailUiState {
 class ClassDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val classCellDao: ClassCellDao,
-    private val taskDao: TaskDao
+    private val taskDao: TaskDao,
+    private val repository: com.atuy.scomb.data.repository.ScombzRepository
 ) : ViewModel() {
 
     private val classId: String = savedStateHandle.get<String>("classId")!!
@@ -50,6 +53,19 @@ class ClassDetailViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _uiState.value = ClassDetailUiState.Error(e.message ?: "データの読み込みに失敗しました。")
+            }
+        }
+    }
+    private val _openUrlEvent = Channel<String>(Channel.BUFFERED)
+    val openUrlEvent = _openUrlEvent.receiveAsFlow()
+
+    fun onClassPageClick() {
+        viewModelScope.launch {
+            try {
+                val url = repository.getClassUrl(classId)
+                _openUrlEvent.send(url)
+            } catch (e: Exception) {
+                _uiState.value = ClassDetailUiState.Error(e.message ?: "URLの取得に失敗しました")
             }
         }
     }
