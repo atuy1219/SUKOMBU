@@ -1,4 +1,4 @@
-# 酢昆布 (Sukombu)
+# 酢昆布 (SUKOMBU)
 
 **ScombZ 非公式 3rd パーティークライアント**
 
@@ -32,7 +32,7 @@ alt="Download from GitHub releases" align="center" height="80" /></a>
 <img src="https://github.com/ImranR98/Obtainium/blob/main/assets/graphics/badge_obtainium.png"
 alt="Get it on Obtainium" align="center" height="54" /></a>
 
-自動更新してくれるobtaniumを用いてインストールすることを推奨します。
+自動更新してくれる<a href="https://github.com/ImranR98/Obtainium">Obtanium</a>を用いてインストールすることを推奨します。
 
 ## ⚠️ 免責事項
 
