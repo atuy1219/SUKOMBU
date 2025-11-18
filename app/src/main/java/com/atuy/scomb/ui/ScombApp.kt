@@ -1,5 +1,6 @@
 package com.atuy.scomb.ui
 
+import android.app.Activity
 import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -38,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -71,6 +73,7 @@ fun ScombApp(
     val navController = rememberNavController()
     val timetableViewModel: TimetableViewModel = hiltViewModel()
     val newsViewModel: NewsViewModel = hiltViewModel()
+    val context = LocalContext.current
 
     LaunchedEffect(authState, navController) {
         Log.d(
@@ -79,7 +82,21 @@ fun ScombApp(
         )
 
         if (authState is AuthState.Authenticated) {
-            if (navController.currentDestination?.route == Screen.Login.route) {
+            val activity = context as? Activity
+            val intent = activity?.intent
+            val destination = intent?.getStringExtra("destination")
+
+            if (destination == "tasks") {
+                Log.d("ScombApp_Debug", "Navigating to Tasks from Widget")
+                navController.navigate(Screen.Tasks.route) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+                intent.removeExtra("destination")
+            } else if (navController.currentDestination?.route == Screen.Login.route) {
                 Log.d(
                     "ScombApp_Debug",
                     "Authenticated! Current route is Login. Navigating to Home."

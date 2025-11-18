@@ -1,5 +1,6 @@
 package com.atuy.scomb.widget
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -14,6 +15,8 @@ import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
+import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.ActionCallback
@@ -38,6 +41,7 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.atuy.scomb.MainActivity
 import com.atuy.scomb.R
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.util.DateUtils
@@ -177,13 +181,18 @@ class TaskWidget : GlanceAppWidget() {
         }
     }
 
+    @SuppressLint("RestrictedApi")
     @Composable
     private fun TaskWidgetItem(task: Task) {
         Column(
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
-            // TODO: ここに actionStartActivity を追加して、クリックでアプリの課題詳細を開く
+                .clickable(
+                    actionStartActivity<MainActivity>(
+                        actionParametersOf(ActionParameters.Key<String>("destination") to "tasks")
+                    )
+                )
         ) {
             Text(
                 text = task.title,
