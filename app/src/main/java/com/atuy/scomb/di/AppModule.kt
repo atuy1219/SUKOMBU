@@ -105,14 +105,16 @@ object AppModule {
         classCellDao: com.atuy.scomb.data.db.ClassCellDao,
         newsItemDao: com.atuy.scomb.data.db.NewsItemDao,
         apiService: ScombzApiService,
-        authManager: AuthManager
+        authManager: AuthManager,
+        @ApplicationContext context: Context
     ): ScombzRepository {
         return ScombzRepository(
             taskDao,
             classCellDao,
             newsItemDao,
             apiService,
-            authManager
+            authManager,
+            context
         )
     }
 

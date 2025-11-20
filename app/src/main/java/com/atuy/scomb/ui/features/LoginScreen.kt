@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.atuy.scomb.R
 import com.atuy.scomb.ui.viewmodel.LoginUiState
 import com.atuy.scomb.ui.viewmodel.LoginViewModel
 
@@ -78,7 +80,7 @@ fun LoginForm(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = "ScombZにログイン",
+                text = stringResource(R.string.login_title),
                 style = MaterialTheme.typography.headlineMedium
             )
 
@@ -87,7 +89,7 @@ fun LoginForm(
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("学籍番号") },
+                label = { Text(stringResource(R.string.login_student_id)) },
                 singleLine = true,
                 enabled = !isLoading,
                 keyboardOptions = KeyboardOptions(
@@ -103,13 +105,13 @@ fun LoginForm(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("パスワード") },
+                label = { Text(stringResource(R.string.login_password)) },
                 singleLine = true,
                 enabled = !isLoading,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                    val description = if (passwordVisible) "パスワードを隠す" else "パスワードを表示する"
+                    val description = if (passwordVisible) stringResource(R.string.login_hide_password) else stringResource(R.string.login_show_password)
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(imageVector = image, contentDescription = description)
                     }
@@ -149,7 +151,7 @@ fun LoginForm(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text("ログイン")
+                    Text(stringResource(R.string.login_button))
                 }
             }
         }

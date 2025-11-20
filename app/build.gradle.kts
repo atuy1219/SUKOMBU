@@ -108,6 +108,8 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.browser)
+    implementation(libs.androidx.security.crypto)
+
 
     // --- UI (Compose & Material3) ---
     implementation(platform(libs.androidx.compose.bom))
@@ -142,7 +144,6 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
-
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
 

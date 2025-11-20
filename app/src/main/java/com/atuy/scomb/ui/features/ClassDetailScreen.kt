@@ -34,12 +34,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.atuy.scomb.R
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.ui.viewmodel.ClassDetailUiState
@@ -68,7 +70,7 @@ fun ClassDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("授業詳細") },
+                title = { Text(stringResource(R.string.screen_class_detail)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")

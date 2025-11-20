@@ -1,4 +1,78 @@
 <resources>
     <string name="app_name">酢昆布</string>
     <string name="task_widget_description">直近の課題を表示するウィジェットです。</string>
+
+    <!-- Navigation / Screens -->
+    <string name="screen_login">ログイン</string>
+    <string name="screen_home">ホーム</string>
+    <string name="screen_timetable">時間割</string>
+    <string name="screen_tasks">課題</string>
+    <string name="screen_news">お知らせ</string>
+    <string name="screen_settings">設定</string>
+    <string name="screen_class_detail">授業詳細</string>
+
+    <!-- Common -->
+    <string name="loading">読み込み中...</string>
+    <string name="error_generic_title">エラーが発生しました</string>
+    <string name="retry">再試行</string>
+    <string name="search">検索</string>
+    <string name="refresh">更新</string>
+    <string name="back">戻る</string>
+    <string name="cancel">キャンセル</string>
+    <string name="ok">OK</string>
+
+    <!-- Login Screen -->
+    <string name="login_title">ScombZにログイン</string>
+    <string name="login_student_id">学籍番号</string>
+    <string name="login_password">パスワード</string>
+    <string name="login_show_password">パスワードを表示する</string>
+    <string name="login_hide_password">パスワードを隠す</string>
+    <string name="login_button">ログイン</string>
+    <string name="login_success">ログイン成功</string>
+    <string name="login_error_unknown">不明なエラー</string>
+
+    <!-- Home Screen -->
+    <string name="home_todays_classes">今日の授業</string>
+    <string name="home_no_classes_today">今日の授業はありません。</string>
+    <string name="home_upcoming_tasks">直近の課題</string>
+    <string name="home_no_upcoming_tasks">直近の課題はありません。</string>
+    <string name="home_recent_news">最新のお知らせ</string>
+    <string name="home_no_new_news">新しいお知らせはありません。</string>
+    <string name="home_period_format">%1$d限: %2$s</string>
+    <string name="home_room_unset">未設定</string>
+    <string name="permission_notification_denied">通知権限が拒否されました。課題の通知を受け取れません。</string>
+
+
+
+    <!-- Settings Screen -->
+    <string name="settings_notification_title">通知設定</string>
+    <string name="settings_notification_desc">課題の締め切り何分前に通知を受け取るか設定します。</string>
+    <string name="settings_time_10min">10分前</string>
+    <string name="settings_time_30min">30分前</string>
+    <string name="settings_time_1hour">1時間前</string>
+    <string name="settings_time_2hours">2時間前</string>
+    <string name="settings_time_1day">1日前</string>
+    <string name="settings_time_2days">2日前</string>
+    <string name="settings_app_info_title">アプリについて</string>
+    <string name="settings_version_format">Version %1$s</string>
+    <string name="settings_github_link">GitHubで見る</string>
+    <string name="settings_logout_button">ログアウト</string>
+    <string name="settings_logout_dialog_title">ログアウト</string>
+    <string name="settings_logout_dialog_message">本当にログアウトしますか？\n保存されているセッション情報は削除されます。</string>
+
+    <!-- Error Messages -->
+    <string name="error_network">ネットワークに接続できません。通信環境を確認してください。</string>
+    <string name="error_session_expired">セッションの有効期限が切れました。再度ログインしてください。</string>
+    <string name="error_server">サーバーエラーが発生しました (Code: %1$d)。しばらく待ってから再試行してください。</string>
+    <string name="error_client">リクエストエラーが発生しました (Code: %1$d)。アプリの更新が必要な場合があります。</string>
+    <string name="error_unknown">不明なエラーが発生しました: %1$s</string>
+    <string name="error_login_failed">ログインに失敗しました: %1$s</string>
+    <string name="error_otkey_failed">ワンタイムキーの取得に失敗しました。</string>
+    <string name="error_task_fetch_failed">課題の取得に失敗しました。</string>
+    <string name="error_timetable_fetch_failed">時間割の取得に失敗しました。</string>
+    <string name="error_news_fetch_failed">お知らせの取得に失敗しました。</string>
+    <string name="error_url_fetch_failed">URLの取得に失敗しました。</string>
+    <string name="error_data_loading_failed">データの読み込みに失敗しました。</string>
+    <string name="error_class_not_found">授業情報が見つかりません。</string>
+
 </resources>

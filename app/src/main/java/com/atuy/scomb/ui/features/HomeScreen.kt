@@ -31,10 +31,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.atuy.scomb.R
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.Task
@@ -55,13 +57,15 @@ fun HomeScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val permissionDeniedMessage = stringResource(R.string.permission_notification_denied)
+
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
             if (!isGranted) {
                 scope.launch {
                     snackbarHostState.showSnackbar(
-                        message = "通知権限が拒否されました。課題の通知を受け取れません。",
+                        message = permissionDeniedMessage,
                         duration = SnackbarDuration.Long
                     )
                 }
@@ -70,13 +74,13 @@ fun HomeScreen(
     )
 
     LaunchedEffect(Unit) {
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -131,14 +135,14 @@ fun Dashboard(homeData: HomeData) {
 
 @Composable
 fun TodaysClassesSection(classes: List<ClassCell>) {
-    DashboardSection(title = "今日の授業") {
+    DashboardSection(title = stringResource(R.string.home_todays_classes)) {
         if (classes.isEmpty()) {
-            Text("今日の授業はありません。", modifier = Modifier.padding(16.dp))
+            Text(stringResource(R.string.home_no_classes_today), modifier = Modifier.padding(16.dp))
         } else {
             classes.forEach { classCell ->
                 ListItem(
-                    headlineContent = { Text("${classCell.period + 1}限: ${classCell.name}") },
-                    supportingContent = { Text(classCell.room ?: "未設定") }
+                    headlineContent = { Text(stringResource(R.string.home_period_format, classCell.period + 1, classCell.name ?: "")) },
+                    supportingContent = { Text(classCell.room ?: stringResource(R.string.home_room_unset)) }
                 )
                 HorizontalDivider()
             }
@@ -148,9 +152,9 @@ fun TodaysClassesSection(classes: List<ClassCell>) {
 
 @Composable
 fun UpcomingTasksSection(tasks: List<Task>) {
-    DashboardSection(title = "直近の課題") {
+    DashboardSection(title = stringResource(R.string.home_upcoming_tasks)) {
         if (tasks.isEmpty()) {
-            Text("直近の課題はありません。", modifier = Modifier.padding(16.dp))
+            Text(stringResource(R.string.home_no_upcoming_tasks), modifier = Modifier.padding(16.dp))
         } else {
             tasks.forEach { task ->
                 ListItem(
@@ -167,9 +171,9 @@ fun UpcomingTasksSection(tasks: List<Task>) {
 
 @Composable
 fun RecentNewsSection(news: List<NewsItem>) {
-    DashboardSection(title = "最新のお知らせ") {
+    DashboardSection(title = stringResource(R.string.home_recent_news)) {
         if (news.isEmpty()) {
-            Text("新しいお知らせはありません。", modifier = Modifier.padding(16.dp))
+            Text(stringResource(R.string.home_no_new_news), modifier = Modifier.padding(16.dp))
         } else {
             news.forEach { newsItem ->
                 ListItem(

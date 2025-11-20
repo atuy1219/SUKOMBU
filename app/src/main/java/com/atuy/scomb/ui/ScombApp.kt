@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -50,6 +51,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.atuy.scomb.R
 import com.atuy.scomb.ui.features.ClassDetailScreen
 import com.atuy.scomb.ui.features.HomeScreen
 import com.atuy.scomb.ui.features.LoginScreen
@@ -156,7 +158,7 @@ fun ScombApp(
                     bottomBarScreens.forEach { screen ->
                         NavigationBarItem(
                             icon = { Icon(screen.icon, contentDescription = null) },
-                            label = { Text(screen.label) },
+                            label = { Text(stringResource(screen.resourceId)) },
                             selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                             onClick = {
                                 navController.navigate(screen.route) {
@@ -217,7 +219,7 @@ fun ScombApp(
                     LoginScreen()
                 }
                 composable(Screen.Home.route) { HomeScreen(paddingValues = innerPadding) }
-                composable(Screen.Tasks.route) { TaskListScreen(viewModel = taskListViewModel) } // ViewModelを渡す
+                composable(Screen.Tasks.route) { TaskListScreen(viewModel = taskListViewModel) }
                 composable(Screen.Timetable.route) { TimetableScreen(navController, timetableViewModel) }
                 composable(Screen.News.route) { NewsScreen(newsViewModel) }
                 composable(Screen.Settings.route) { SettingsScreen(navController = navController) }
@@ -261,11 +263,13 @@ fun AppTopBar(
                 TopAppBar(
                     title = {
                         Text(
-                            when (targetRoute) {
-                                Screen.Home.route -> "ホーム"
-                                Screen.Settings.route -> "設定"
-                                else -> ""
-                            }
+                            stringResource(
+                                when (targetRoute) {
+                                    Screen.Home.route -> R.string.screen_home
+                                    Screen.Settings.route -> R.string.screen_settings
+                                    else -> R.string.app_name // デフォルト
+                                }
+                            )
                         )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -281,12 +285,12 @@ fun AppTopBar(
 @Composable
 fun NewsTopBar(viewModel: NewsViewModel) {
     TopAppBar(
-        title = { Text("お知らせ") },
+        title = { Text(stringResource(R.string.screen_news)) },
         actions = {
             IconButton(onClick = { viewModel.toggleSearchActive() }) {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = "検索"
+                    contentDescription = stringResource(R.string.search)
                 )
             }
         },
@@ -300,12 +304,12 @@ fun NewsTopBar(viewModel: NewsViewModel) {
 @Composable
 fun TasksTopBar(viewModel: TaskListViewModel) {
     TopAppBar(
-        title = { Text("課題") },
+        title = { Text(stringResource(R.string.screen_tasks)) },
         actions = {
             IconButton(onClick = { viewModel.toggleSearchActive() }) {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = "検索"
+                    contentDescription = stringResource(R.string.search)
                 )
             }
         },
@@ -334,7 +338,8 @@ fun TimetableTopBar(
                     modifier = Modifier.clickable { menuExpanded = true },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(if (current.year != 0) current.getDisplayName() else "読み込み中...")
+                    // ここは動的な値なのでそのままですが、読み込み中などはリソース化可能
+                    Text(if (current.year != 0) current.getDisplayName() else stringResource(R.string.loading))
                     Icon(Icons.Default.ArrowDropDown, contentDescription = "学期選択")
                 }
                 DropdownMenu(
@@ -366,7 +371,7 @@ fun TimetableTopBar(
             IconButton(onClick = { viewModel.refresh() }) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = "更新"
+                    contentDescription = stringResource(R.string.refresh)
                 )
             }
         },

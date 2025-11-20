@@ -1,9 +1,8 @@
 package com.atuy.scomb.ui.features
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.Image
+import android.widget.ImageView
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -40,10 +39,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -117,22 +116,22 @@ private fun NotificationSettingsSection(
     onTimingsChange: (Set<Int>) -> Unit
 ) {
     val notificationOptions = mapOf(
-        10 to "10分前",
-        30 to "30分前",
-        60 to "1時間前",
-        120 to "2時間前",
-        1440 to "1日前",
-        2880 to "2日前"
+        10 to stringResource(R.string.settings_time_10min),
+        30 to stringResource(R.string.settings_time_30min),
+        60 to stringResource(R.string.settings_time_1hour),
+        120 to stringResource(R.string.settings_time_2hours),
+        1440 to stringResource(R.string.settings_time_1day),
+        2880 to stringResource(R.string.settings_time_2days)
     )
 
     Column {
         Text(
-            text = "通知設定",
+            text = stringResource(R.string.settings_notification_title),
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(bottom = 8.dp)
         )
         Text(
-            text = "課題の締め切り何分前に通知を受け取るか設定します。",
+            text = stringResource(R.string.settings_notification_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -168,7 +167,6 @@ private fun AppInfoSection() {
     val versionName = BuildConfig.VERSION_NAME
     val commitHash = BuildConfig.GIT_COMMIT_HASH
 
-    // Nightlyビルド、またはGitハッシュが利用可能な場合に表示を調整
     val displayVersion = if (versionName.contains("nightly", ignoreCase = true) || BuildConfig.DEBUG) {
         "$versionName ($commitHash)"
     } else {
@@ -177,7 +175,7 @@ private fun AppInfoSection() {
 
     Column {
         Text(
-            text = "アプリについて",
+            text = stringResource(R.string.settings_app_info_title),
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -195,10 +193,13 @@ private fun AppInfoSection() {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Image(
-                        painter = painterResource(id = R.mipmap.ic_launcher),
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp)
+                    AndroidView(
+                        modifier = Modifier.size(64.dp),
+                        factory = { context ->
+                            ImageView(context).apply {
+                                setImageResource(R.mipmap.ic_launcher)
+                            }
+                        }
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
@@ -208,7 +209,7 @@ private fun AppInfoSection() {
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Version $displayVersion",
+                            text = stringResource(R.string.settings_version_format, displayVersion),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -228,7 +229,7 @@ private fun AppInfoSection() {
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("GitHubで見る")
+                    Text(stringResource(R.string.settings_github_link))
                 }
             }
         }
@@ -245,7 +246,7 @@ private fun LogoutSection(onLogoutClick: () -> Unit) {
             onClick = onLogoutClick,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
         ) {
-            Text("ログアウト")
+            Text(stringResource(R.string.settings_logout_button))
         }
     }
 }
@@ -257,19 +258,19 @@ fun LogoutDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("ログアウト") },
-        text = { Text("本当にログアウトしますか？\n保存されているセッション情報は削除されます。") },
+        title = { Text(stringResource(R.string.settings_logout_dialog_title)) },
+        text = { Text(stringResource(R.string.settings_logout_dialog_message)) },
         confirmButton = {
             TextButton(
                 onClick = onConfirm,
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
             ) {
-                Text("ログアウト")
+                Text(stringResource(R.string.settings_logout_button))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("キャンセル")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
