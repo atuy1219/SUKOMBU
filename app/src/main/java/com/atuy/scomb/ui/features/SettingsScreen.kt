@@ -29,6 +29,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -83,6 +84,17 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         item {
+            HomeSettingsSection(
+                showHomeNews = uiState.showHomeNews,
+                onShowHomeNewsChange = { viewModel.updateShowHomeNews(it) }
+            )
+        }
+
+        item {
+            HorizontalDivider()
+        }
+
+        item {
             NotificationSettingsSection(
                 selectedTimings = uiState.notificationTimings,
                 onTimingsChange = { viewModel.updateNotificationTimings(it) }
@@ -104,6 +116,35 @@ fun SettingsScreen(
         item {
             LogoutSection(
                 onLogoutClick = { showLogoutDialog = true }
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeSettingsSection(
+    showHomeNews: Boolean,
+    onShowHomeNewsChange: (Boolean) -> Unit
+) {
+    Column {
+        Text(
+            text = stringResource(R.string.settings_home_title),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.settings_show_home_news),
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Switch(
+                checked = showHomeNews,
+                onCheckedChange = onShowHomeNewsChange
             )
         }
     }

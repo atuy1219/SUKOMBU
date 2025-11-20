@@ -4,9 +4,13 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +25,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -34,8 +39,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import com.atuy.scomb.R
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.NewsItem
@@ -43,6 +50,7 @@ import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.ui.viewmodel.HomeData
 import com.atuy.scomb.ui.viewmodel.HomeUiState
 import com.atuy.scomb.ui.viewmodel.HomeViewModel
+import com.atuy.scomb.ui.viewmodel.LinkItem
 import com.atuy.scomb.util.DateUtils
 import kotlinx.coroutines.launch
 
@@ -50,6 +58,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    navController: NavController,
     paddingValues: PaddingValues,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -72,6 +81,16 @@ fun HomeScreen(
             }
         }
     )
+
+    fun openUrl(url: String) {
+        try {
+            val builder = CustomTabsIntent.Builder()
+            val customTabsIntent = builder.build()
+            customTabsIntent.launchUrl(context, url.toUri())
+        } catch (e: Exception) {
+            // Handle error
+        }
+    }
 
     LaunchedEffect(Unit) {
         if (ContextCompat.checkSelfPermission(
@@ -99,7 +118,14 @@ fun HomeScreen(
                     },
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    Dashboard(homeData = state.homeData)
+                    Dashboard(
+                        homeData = state.homeData,
+                        showNews = state.showNews,
+                        onClassClick = { classId -> navController.navigate("classDetail/$classId") },
+                        onTaskClick = { url -> openUrl(url) },
+                        onNewsClick = { url -> openUrl(url) },
+                        onLinkClick = { url -> openUrl(url) }
+                    )
                 }
             }
 
@@ -114,27 +140,55 @@ fun HomeScreen(
 }
 
 @Composable
-fun Dashboard(homeData: HomeData) {
+fun Dashboard(
+    homeData: HomeData,
+    showNews: Boolean,
+    onClassClick: (String) -> Unit,
+    onTaskClick: (String) -> Unit,
+    onNewsClick: (String) -> Unit,
+    onLinkClick: (String) -> Unit
+) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            TodaysClassesSection(classes = homeData.todaysClasses)
+            TodaysClassesSection(
+                classes = homeData.todaysClasses,
+                onClassClick = onClassClick
+            )
         }
         item {
-            UpcomingTasksSection(tasks = homeData.upcomingTasks)
+            UpcomingTasksSection(
+                tasks = homeData.upcomingTasks,
+                onTaskClick = onTaskClick
+            )
+        }
+
+        if (showNews) {
+            item {
+                RecentNewsSection(
+                    news = homeData.recentNews,
+                    onNewsClick = onNewsClick
+                )
+            }
         }
 
         item {
-            RecentNewsSection(news = homeData.recentNews)
+            QuickLinksSection(
+                links = homeData.quickLinks,
+                onLinkClick = onLinkClick
+            )
         }
     }
 }
 
 @Composable
-fun TodaysClassesSection(classes: List<ClassCell>) {
+fun TodaysClassesSection(
+    classes: List<ClassCell>,
+    onClassClick: (String) -> Unit
+) {
     DashboardSection(title = stringResource(R.string.home_todays_classes)) {
         if (classes.isEmpty()) {
             Text(stringResource(R.string.home_no_classes_today), modifier = Modifier.padding(16.dp))
@@ -142,7 +196,12 @@ fun TodaysClassesSection(classes: List<ClassCell>) {
             classes.forEach { classCell ->
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.home_period_format, classCell.period + 1, classCell.name ?: "")) },
-                    supportingContent = { Text(classCell.room ?: stringResource(R.string.home_room_unset)) }
+                    supportingContent = { Text(classCell.room ?: stringResource(R.string.home_room_unset)) },
+                    modifier = Modifier.clickable {
+                        if (classCell.classId.isNotEmpty()) {
+                            onClassClick(classCell.classId)
+                        }
+                    }
                 )
                 HorizontalDivider()
             }
@@ -151,7 +210,10 @@ fun TodaysClassesSection(classes: List<ClassCell>) {
 }
 
 @Composable
-fun UpcomingTasksSection(tasks: List<Task>) {
+fun UpcomingTasksSection(
+    tasks: List<Task>,
+    onTaskClick: (String) -> Unit
+) {
     DashboardSection(title = stringResource(R.string.home_upcoming_tasks)) {
         if (tasks.isEmpty()) {
             Text(stringResource(R.string.home_no_upcoming_tasks), modifier = Modifier.padding(16.dp))
@@ -160,7 +222,8 @@ fun UpcomingTasksSection(tasks: List<Task>) {
                 ListItem(
                     headlineContent = { Text(task.title, maxLines = 1) },
                     supportingContent = { Text(task.className) },
-                    trailingContent = { Text(DateUtils.timeToString(task.deadline)) }
+                    trailingContent = { Text(DateUtils.timeToString(task.deadline)) },
+                    modifier = Modifier.clickable { onTaskClick(task.url) }
                 )
                 HorizontalDivider()
             }
@@ -170,7 +233,10 @@ fun UpcomingTasksSection(tasks: List<Task>) {
 
 
 @Composable
-fun RecentNewsSection(news: List<NewsItem>) {
+fun RecentNewsSection(
+    news: List<NewsItem>,
+    onNewsClick: (String) -> Unit
+) {
     DashboardSection(title = stringResource(R.string.home_recent_news)) {
         if (news.isEmpty()) {
             Text(stringResource(R.string.home_no_new_news), modifier = Modifier.padding(16.dp))
@@ -179,9 +245,32 @@ fun RecentNewsSection(news: List<NewsItem>) {
                 ListItem(
                     headlineContent = { Text(newsItem.title, maxLines = 2) },
                     supportingContent = { Text(newsItem.domain) },
-                    trailingContent = { Text(newsItem.publishTime) }
+                    trailingContent = { Text(newsItem.publishTime) },
+                    modifier = Modifier.clickable { onNewsClick(newsItem.url) }
                 )
                 HorizontalDivider()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun QuickLinksSection(
+    links: List<LinkItem>,
+    onLinkClick: (String) -> Unit
+) {
+    DashboardSection(title = stringResource(R.string.home_quick_links)) {
+        FlowRow(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            links.forEach { link ->
+                SuggestionChip(
+                    onClick = { onLinkClick(link.url) },
+                    label = { Text(link.title) }
+                )
             }
         }
     }

@@ -2,6 +2,7 @@ package com.atuy.scomb.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.Task
@@ -19,21 +20,29 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
 
+data class LinkItem(val title: String, val url: String)
+
 data class HomeData(
     val upcomingTasks: List<Task>,
     val todaysClasses: List<ClassCell>,
-    val recentNews: List<NewsItem>
+    val recentNews: List<NewsItem>,
+    val quickLinks: List<LinkItem>
 )
 
 sealed interface HomeUiState {
     object Loading : HomeUiState
-    data class Success(val homeData: HomeData, val isRefreshing: Boolean = false) : HomeUiState
+    data class Success(
+        val homeData: HomeData,
+        val showNews: Boolean = true,
+        val isRefreshing: Boolean = false
+    ) : HomeUiState
     data class Error(val message: String, val isRefreshing: Boolean = false) : HomeUiState
 }
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: ScombzRepository
+    private val repository: ScombzRepository,
+    private val settingsManager: SettingsManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
@@ -41,8 +50,27 @@ class HomeViewModel @Inject constructor(
 
     private var loadJob: Job? = null
 
+    private val quickLinks = listOf(
+        LinkItem("ScombZ ログイン", "https://scombz.shibaura-it.ac.jp/"),
+        LinkItem("シラバス", "https://syllabus.sic.shibaura-it.ac.jp/"),
+        LinkItem("時間割", "https://timetable.sic.shibaura-it.ac.jp/"),
+        LinkItem("学年歴", "https://www.shibaura-it.ac.jp/campus_life/school_calendar")
+        )
+
     init {
         loadHomeData(forceRefresh = false)
+        observeSettings()
+    }
+
+    private fun observeSettings() {
+        viewModelScope.launch {
+            settingsManager.showHomeNewsFlow.collect { showNews ->
+                val currentState = _uiState.value
+                if (currentState is HomeUiState.Success) {
+                    _uiState.value = currentState.copy(showNews = showNews)
+                }
+            }
+        }
     }
 
     fun loadHomeData(forceRefresh: Boolean) {
@@ -81,12 +109,16 @@ class HomeViewModel @Inject constructor(
 
                     val recentNews = news.take(3)
 
+                    val showNews = (currentState as? HomeUiState.Success)?.showNews ?: true
+
                     _uiState.value = HomeUiState.Success(
                         HomeData(
                             upcomingTasks = upcomingTasks,
                             todaysClasses = todaysClasses,
-                            recentNews = recentNews
+                            recentNews = recentNews,
+                            quickLinks = quickLinks
                         ),
+                        showNews = showNews,
                         isRefreshing = false
                     )
                 }

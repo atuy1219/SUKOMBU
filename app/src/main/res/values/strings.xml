@@ -40,11 +40,14 @@
     <string name="home_no_new_news">新しいお知らせはありません。</string>
     <string name="home_period_format">%1$d限: %2$s</string>
     <string name="home_room_unset">未設定</string>
+    <string name="home_quick_links">リンク集</string>
     <string name="permission_notification_denied">通知権限が拒否されました。課題の通知を受け取れません。</string>
 
 
 
     <!-- Settings Screen -->
+    <string name="settings_home_title">ホーム画面設定</string>
+    <string name="settings_show_home_news">最新のお知らせを表示</string>
     <string name="settings_notification_title">通知設定</string>
     <string name="settings_notification_desc">課題の締め切り何分前に通知を受け取るか設定します。</string>
     <string name="settings_time_10min">10分前</string>

@@ -218,7 +218,7 @@ fun ScombApp(
                 composable(Screen.Login.route) {
                     LoginScreen()
                 }
-                composable(Screen.Home.route) { HomeScreen(paddingValues = innerPadding) }
+                composable(Screen.Home.route) { HomeScreen(navController = navController, paddingValues = innerPadding) }
                 composable(Screen.Tasks.route) { TaskListScreen(viewModel = taskListViewModel) }
                 composable(Screen.Timetable.route) { TimetableScreen(navController, timetableViewModel) }
                 composable(Screen.News.route) { NewsScreen(newsViewModel) }

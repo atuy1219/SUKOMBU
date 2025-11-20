@@ -7,13 +7,14 @@ import com.atuy.scomb.data.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SettingsUiState(
-    val notificationTimings: Set<Int> = emptySet()
+    val notificationTimings: Set<Int> = emptySet(),
+    val showHomeNews: Boolean = true
 )
 
 @HiltViewModel
@@ -22,10 +23,15 @@ class SettingsViewModel @Inject constructor(
     private val settingsManager: SettingsManager
 ) : ViewModel() {
 
-    val uiState: StateFlow<SettingsUiState> = settingsManager.notificationTimingsFlow
-        .map { timings ->
-            SettingsUiState(notificationTimings = timings.mapNotNull { it.toIntOrNull() }.toSet())
-        }
+    val uiState: StateFlow<SettingsUiState> = combine(
+        settingsManager.notificationTimingsFlow,
+        settingsManager.showHomeNewsFlow
+    ) { timings, showNews ->
+        SettingsUiState(
+            notificationTimings = timings.mapNotNull { it.toIntOrNull() }.toSet(),
+            showHomeNews = showNews
+        )
+    }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -35,6 +41,12 @@ class SettingsViewModel @Inject constructor(
     fun updateNotificationTimings(timings: Set<Int>) {
         viewModelScope.launch {
             settingsManager.setNotificationTimings(timings.map { it.toString() }.toSet())
+        }
+    }
+
+    fun updateShowHomeNews(show: Boolean) {
+        viewModelScope.launch {
+            settingsManager.setShowHomeNews(show)
         }
     }
 
