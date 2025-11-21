@@ -7,6 +7,7 @@ import android.content.Intent
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
+import com.atuy.scomb.R
 import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.receiver.NotificationReceiver
@@ -100,5 +101,48 @@ class ScheduleNotificationsUseCase @Inject constructor(
                 }
             }
         }
+    }
+
+    fun scheduleTestNotification() {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        if (!alarmManager.canScheduleExactAlarms()) {
+            Toast.makeText(
+                context,
+                "通知には「アラーム＆リマインダー」の権限が必要です",
+                Toast.LENGTH_LONG
+            ).show()
+            Intent().also { intent ->
+                intent.action = Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            }
+            return
+        }
+
+        val triggerAtMillis = System.currentTimeMillis() + 60 * 1000L // 1分後
+
+        val intent = Intent(context, NotificationReceiver::class.java).apply {
+            putExtra("TASK_ID", "test_notification_id")
+            putExtra("TASK_TITLE", "これはテスト通知です")
+            putExtra("TASK_URL", "https://scombz.shibaura-it.ac.jp/")
+        }
+
+        val requestCode = "test_notification".hashCode()
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            triggerAtMillis,
+            pendingIntent
+        )
+        Log.d("ScheduleNotifications", "Scheduled TEST notification at $triggerAtMillis")
+        Toast.makeText(context, context.getString(R.string.settings_test_notification_scheduled), Toast.LENGTH_SHORT).show()
     }
 }
