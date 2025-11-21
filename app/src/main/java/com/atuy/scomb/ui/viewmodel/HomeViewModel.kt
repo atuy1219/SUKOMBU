@@ -16,6 +16,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
@@ -55,7 +56,8 @@ class HomeViewModel @Inject constructor(
         LinkItem("シラバス", "https://syllabus.sic.shibaura-it.ac.jp/"),
         LinkItem("時間割", "https://timetable.sic.shibaura-it.ac.jp/"),
         LinkItem("学年歴", "https://www.shibaura-it.ac.jp/campus_life/school_calendar")
-        )
+    )
+
 
     init {
         loadHomeData(forceRefresh = false)
@@ -94,9 +96,12 @@ class HomeViewModel @Inject constructor(
 
                     val newsDeferred = async { repository.getNews(forceRefresh) }
 
+                    val showNewsDeferred = async { settingsManager.showHomeNewsFlow.first() }
+
                     val tasks = tasksDeferred.await()
                     val timetable = timetableDeferred.await()
                     val news = newsDeferred.await()
+                    val showNews = showNewsDeferred.await()
 
                     val upcomingTasks = tasks
                         .filter { it.deadline > System.currentTimeMillis() && !it.done }
@@ -108,8 +113,6 @@ class HomeViewModel @Inject constructor(
                         .sortedBy { it.period }
 
                     val recentNews = news.take(3)
-
-                    val showNews = (currentState as? HomeUiState.Success)?.showNews ?: true
 
                     _uiState.value = HomeUiState.Success(
                         HomeData(
