@@ -24,6 +24,9 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
 
         val SHOW_HOME_NEWS_KEY = booleanPreferencesKey("show_home_news")
         const val DEFAULT_SHOW_HOME_NEWS = true
+
+        val DEBUG_MODE_KEY = booleanPreferencesKey("debug_mode")
+        const val DEFAULT_DEBUG_MODE = false
     }
 
     val notificationTimingsFlow: Flow<Set<String>> = context.settingsDataStore.data.map { preferences ->
@@ -43,6 +46,16 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
     suspend fun setShowHomeNews(show: Boolean) {
         context.settingsDataStore.edit { preferences ->
             preferences[SHOW_HOME_NEWS_KEY] = show
+        }
+    }
+
+    val debugModeFlow: Flow<Boolean> = context.settingsDataStore.data.map { preferences ->
+        preferences[DEBUG_MODE_KEY] ?: DEFAULT_DEBUG_MODE
+    }
+
+    suspend fun setDebugMode(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[DEBUG_MODE_KEY] = enabled
         }
     }
 }

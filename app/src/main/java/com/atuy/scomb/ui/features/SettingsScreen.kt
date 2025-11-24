@@ -3,6 +3,8 @@ package com.atuy.scomb.ui.features
 import android.content.Intent
 import android.net.Uri
 import android.widget.ImageView
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -106,17 +108,22 @@ fun SettingsScreen(
         }
 
         item {
-            AppInfoSection()
-        }
-
-        item {
-            HorizontalDivider()
-        }
-
-        item {
-            DebugSection(
-                onTestNotificationClick = { viewModel.scheduleTestNotification() }
+            AppInfoSection(
+                onVersionClick = { viewModel.onVersionClick() }
             )
+        }
+
+        // デバッグモードが有効な場合のみ表示
+        if (uiState.isDebugMode) {
+            item {
+                HorizontalDivider()
+            }
+
+            item {
+                DebugSection(
+                    onTestNotificationClick = { viewModel.scheduleTestNotification() }
+                )
+            }
         }
 
         item {
@@ -213,7 +220,9 @@ private fun NotificationSettingsSection(
 }
 
 @Composable
-private fun AppInfoSection() {
+private fun AppInfoSection(
+    onVersionClick: () -> Unit
+) {
     val context = LocalContext.current
     val versionName = BuildConfig.VERSION_NAME
     val commitHash = BuildConfig.GIT_COMMIT_HASH
@@ -259,10 +268,16 @@ private fun AppInfoSection() {
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
+                        // バージョン情報部分をクリッカブルにする（リップルエフェクトなし）
                         Text(
                             text = stringResource(R.string.settings_version_format, displayVersion),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onVersionClick
+                            )
                         )
                     }
                 }
