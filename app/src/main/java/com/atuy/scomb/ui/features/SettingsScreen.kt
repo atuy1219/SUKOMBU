@@ -114,6 +114,16 @@ fun SettingsScreen(
         }
 
         item {
+            DebugSection(
+                onTestNotificationClick = { viewModel.scheduleTestNotification() }
+            )
+        }
+
+        item {
+            HorizontalDivider()
+        }
+
+        item {
             LogoutSection(
                 onLogoutClick = { showLogoutDialog = true }
             )
@@ -273,6 +283,23 @@ private fun AppInfoSection() {
                     Text(stringResource(R.string.settings_github_link))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DebugSection(onTestNotificationClick: () -> Unit) {
+    Column {
+        Text(
+            text = stringResource(R.string.settings_debug_title),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        Button(
+            onClick = onTestNotificationClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.settings_test_notification_button))
         }
     }
 }

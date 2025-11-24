@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.atuy.scomb.data.AuthManager
 import com.atuy.scomb.data.SettingsManager
+import com.atuy.scomb.domain.ScheduleNotificationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,8 @@ data class SettingsUiState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val authManager: AuthManager,
-    private val settingsManager: SettingsManager
+    private val settingsManager: SettingsManager,
+    private val scheduleNotificationsUseCase: ScheduleNotificationsUseCase
 ) : ViewModel() {
 
     val uiState: StateFlow<SettingsUiState> = combine(
@@ -48,6 +50,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             settingsManager.setShowHomeNews(show)
         }
+    }
+
+    fun scheduleTestNotification() {
+        // UseCase内ですでにToast表示や権限チェックを行っているので、単純に呼ぶだけにする
+        scheduleNotificationsUseCase.scheduleTestNotification()
     }
 
     fun logout() {
