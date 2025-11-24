@@ -19,13 +19,18 @@ class ScheduleNotificationsUseCase @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val settingsManager: SettingsManager
 ) {
+    companion object {
+        private const val TAG = "ScheduleNotifications"
+    }
+
     suspend operator fun invoke(tasks: List<Task>) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         if (!alarmManager.canScheduleExactAlarms()) {
+            Log.w(TAG, "canScheduleExactAlarms is false. Requesting permission.")
             Toast.makeText(
                 context,
-                "通知には「アラーム＆リマインダー」の権限が必要です",
+                "通知には「アラームとリマインダー」の権限が必要です",
                 Toast.LENGTH_LONG
             ).show()
             Intent().also { intent ->
@@ -39,7 +44,7 @@ class ScheduleNotificationsUseCase @Inject constructor(
         cancelAllScheduledNotifications(tasks)
 
         val notificationTimingsMinutes = settingsManager.notificationTimingsFlow.first().mapNotNull { it.toIntOrNull() }
-        Log.d("ScheduleNotifications", "Scheduling notifications for ${tasks.size} tasks with timings: $notificationTimingsMinutes")
+        Log.d(TAG, "Scheduling notifications for ${tasks.size} tasks with timings: $notificationTimingsMinutes")
 
 
         tasks.forEach { task ->
@@ -49,27 +54,7 @@ class ScheduleNotificationsUseCase @Inject constructor(
                 val triggerAtMillis = task.deadline - (minutes * 60 * 1000L)
 
                 if (triggerAtMillis > System.currentTimeMillis()) {
-                    val intent = Intent(context, NotificationReceiver::class.java).apply {
-                        putExtra("TASK_ID", task.id)
-                        putExtra("TASK_TITLE", task.title)
-                        putExtra("TASK_URL", task.url)
-                    }
-
-                    val requestCode = (task.id + minutes.toString()).hashCode()
-
-                    val pendingIntent = PendingIntent.getBroadcast(
-                        context,
-                        requestCode,
-                        intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-
-                    alarmManager.setExactAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerAtMillis,
-                        pendingIntent
-                    )
-                    Log.d("ScheduleNotifications", "Scheduled notification for ${task.title} at $triggerAtMillis (ID: $requestCode)")
+                    scheduleAlarm(task.id, task.title, task.url, triggerAtMillis, minutes)
                 }
             }
         }
@@ -81,12 +66,8 @@ class ScheduleNotificationsUseCase @Inject constructor(
 
         tasks.forEach { task ->
             allPossibleTimings.forEach { minutes ->
-                val intent = Intent(context, NotificationReceiver::class.java).apply {
-                    putExtra("TASK_ID", task.id)
-                    putExtra("TASK_TITLE", task.title)
-                    putExtra("TASK_URL", task.url)
-                }
                 val requestCode = (task.id + minutes.toString()).hashCode()
+                val intent = Intent(context, NotificationReceiver::class.java)
                 val pendingIntent = PendingIntent.getBroadcast(
                     context,
                     requestCode,
@@ -97,7 +78,7 @@ class ScheduleNotificationsUseCase @Inject constructor(
                 if (pendingIntent != null) {
                     alarmManager.cancel(pendingIntent)
                     pendingIntent.cancel()
-                    Log.d("ScheduleNotifications", "Cancelled old notification for ${task.title} (ID: $requestCode)")
+                    Log.d(TAG, "Cancelled old notification for ${task.title} (ID: $requestCode)")
                 }
             }
         }
@@ -107,9 +88,10 @@ class ScheduleNotificationsUseCase @Inject constructor(
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         if (!alarmManager.canScheduleExactAlarms()) {
+            Log.w(TAG, "Test notification: canScheduleExactAlarms is false.")
             Toast.makeText(
                 context,
-                "通知には「アラーム＆リマインダー」の権限が必要です",
+                "通知には「アラームとリマインダー」の権限が必要です",
                 Toast.LENGTH_LONG
             ).show()
             Intent().also { intent ->
@@ -121,14 +103,22 @@ class ScheduleNotificationsUseCase @Inject constructor(
         }
 
         val triggerAtMillis = System.currentTimeMillis() + 60 * 1000L // 1分後
+        scheduleAlarm("test_notification_id", "これはテスト通知です", "https://scombz.shibaura-it.ac.jp/", triggerAtMillis, 0)
+
+        Toast.makeText(context, context.getString(R.string.settings_test_notification_scheduled), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun scheduleAlarm(taskId: String, title: String, url: String, triggerAtMillis: Long, minutes: Int) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, NotificationReceiver::class.java).apply {
-            putExtra("TASK_ID", "test_notification_id")
-            putExtra("TASK_TITLE", "これはテスト通知です")
-            putExtra("TASK_URL", "https://scombz.shibaura-it.ac.jp/")
+            putExtra("TASK_ID", taskId)
+            putExtra("TASK_TITLE", title)
+            putExtra("TASK_URL", url)
+            putExtra("SCHEDULED_TIME", triggerAtMillis)
         }
 
-        val requestCode = "test_notification".hashCode()
+        val requestCode = if(taskId == "test_notification_id") "test_notification".hashCode() else (taskId + minutes.toString()).hashCode()
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
@@ -137,12 +127,15 @@ class ScheduleNotificationsUseCase @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            triggerAtMillis,
-            pendingIntent
-        )
-        Log.d("ScheduleNotifications", "Scheduled TEST notification at $triggerAtMillis")
-        Toast.makeText(context, context.getString(R.string.settings_test_notification_scheduled), Toast.LENGTH_SHORT).show()
+        try {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerAtMillis,
+                pendingIntent
+            )
+            Log.d(TAG, "Scheduled notification for '$title' at $triggerAtMillis (ID: $requestCode)")
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Failed to schedule alarm: Permission denied", e)
+        }
     }
 }
