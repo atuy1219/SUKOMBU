@@ -62,7 +62,7 @@ class ScheduleNotificationsUseCase @Inject constructor(
 
     private fun cancelAllScheduledNotifications(tasks: List<Task>) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val allPossibleTimings = setOf(10, 30, 60, 120, 1440, 2880)
+        val allPossibleTimings = setOf(10, 30, 60, 120, 1440, 2880, 4320)
 
         tasks.forEach { task ->
             allPossibleTimings.forEach { minutes ->

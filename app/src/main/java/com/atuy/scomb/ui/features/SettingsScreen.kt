@@ -180,7 +180,8 @@ private fun NotificationSettingsSection(
         60 to stringResource(R.string.settings_time_1hour),
         120 to stringResource(R.string.settings_time_2hours),
         1440 to stringResource(R.string.settings_time_1day),
-        2880 to stringResource(R.string.settings_time_2days)
+        2880 to stringResource(R.string.settings_time_2days),
+        4320 to stringResource(R.string.settings_time_3days)
     )
 
     Column {

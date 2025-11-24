@@ -56,6 +56,7 @@
     <string name="settings_time_2hours">2時間前</string>
     <string name="settings_time_1day">1日前</string>
     <string name="settings_time_2days">2日前</string>
+    <string name="settings_time_3days">3日前</string>
     <string name="settings_app_info_title">アプリについて</string>
     <string name="settings_version_format">Version %1$s</string>
     <string name="settings_github_link">GitHubで見る</string>
