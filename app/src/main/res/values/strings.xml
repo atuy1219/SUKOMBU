@@ -66,6 +66,8 @@
     <string name="settings_test_notification_button">1分後にテスト通知をセット</string>
     <string name="settings_test_notification_scheduled">1分後にテスト通知をセットしました</string>
     <string name="settings_debug_mode_enabled">デバッグモードが有効になりました</string>
+    <string name="settings_disable_debug_mode">デバッグモードを無効にする</string>
+    <string name="settings_debug_mode_disabled">デバッグモードを無効にしました</string>
 
     <!-- Error Messages -->
     <string name="error_network">ネットワークに接続できません。通信環境を確認してください。</string>

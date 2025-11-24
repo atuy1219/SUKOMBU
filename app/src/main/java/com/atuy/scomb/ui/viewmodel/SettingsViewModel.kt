@@ -74,6 +74,14 @@ class SettingsViewModel @Inject constructor(
             }
             versionTapCount = 0
         } else if (versionTapCount > 2) {
+            // 残り回数を表示しても良いが、今回はシンプルに実装
+        }
+    }
+
+    fun disableDebugMode() {
+        viewModelScope.launch {
+            settingsManager.setDebugMode(false)
+            Toast.makeText(context, context.getString(R.string.settings_debug_mode_disabled), Toast.LENGTH_SHORT).show()
         }
     }
 

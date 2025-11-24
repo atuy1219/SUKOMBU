@@ -121,7 +121,8 @@ fun SettingsScreen(
 
             item {
                 DebugSection(
-                    onTestNotificationClick = { viewModel.scheduleTestNotification() }
+                    onTestNotificationClick = { viewModel.scheduleTestNotification() },
+                    onDisableDebugModeClick = { viewModel.disableDebugMode() }
                 )
             }
         }
@@ -303,7 +304,10 @@ private fun AppInfoSection(
 }
 
 @Composable
-private fun DebugSection(onTestNotificationClick: () -> Unit) {
+private fun DebugSection(
+    onTestNotificationClick: () -> Unit,
+    onDisableDebugModeClick: () -> Unit
+) {
     Column {
         Text(
             text = stringResource(R.string.settings_debug_title),
@@ -315,6 +319,14 @@ private fun DebugSection(onTestNotificationClick: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(stringResource(R.string.settings_test_notification_button))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = onDisableDebugModeClick,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+        ) {
+            Text(stringResource(R.string.settings_disable_debug_mode))
         }
     }
 }
