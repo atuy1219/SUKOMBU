@@ -24,6 +24,7 @@ sealed interface TimetableUiState {
     object Loading : TimetableUiState
     data class Success(
         val timetable: List<List<ClassCell?>>,
+        val otherClasses: List<ClassCell> = emptyList(),
         val isRefreshing: Boolean = false,
         val displayWeekDays: Set<Int> = setOf(0, 1, 2, 3, 4, 5),
         val periodCount: Int = 7
@@ -35,7 +36,11 @@ sealed interface TimetableUiState {
 // 内部でのデータ取得状態管理用
 private sealed interface TimetableDataState {
     object Loading : TimetableDataState
-    data class Success(val timetable: List<List<ClassCell?>>, val isRefreshing: Boolean) : TimetableDataState
+    data class Success(
+        val timetable: List<List<ClassCell?>>,
+        val otherClasses: List<ClassCell>,
+        val isRefreshing: Boolean
+    ) : TimetableDataState
     data class Error(val message: String, val isRefreshing: Boolean) : TimetableDataState
 }
 
@@ -66,6 +71,7 @@ class TimetableViewModel @Inject constructor(
             is TimetableDataState.Loading -> TimetableUiState.Loading
             is TimetableDataState.Success -> TimetableUiState.Success(
                 timetable = dataState.timetable,
+                otherClasses = dataState.otherClasses,
                 isRefreshing = dataState.isRefreshing,
                 displayWeekDays = displayWeekDays,
                 periodCount = periodCount
@@ -132,8 +138,12 @@ class TimetableViewModel @Inject constructor(
                     }
                 }
 
+                val otherClasses = classCells.filter { it.period == 8 || it.dayOfWeek == 8 }
+                Log.d(TAG, "Found ${otherClasses.size} 'other' classes")
+
                 _dataState.value = TimetableDataState.Success(
                     timetable = timetableGrid,
+                    otherClasses = otherClasses,
                     isRefreshing = false
                 )
 

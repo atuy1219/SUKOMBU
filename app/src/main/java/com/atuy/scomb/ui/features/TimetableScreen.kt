@@ -89,6 +89,7 @@ fun TimetableScreen(
                 ) {
                     TimetableGrid(
                         timetable = state.timetable,
+                        otherClasses = state.otherClasses, // その他の授業リストを渡す
                         displayWeekDays = state.displayWeekDays,
                         periodCount = state.periodCount,
                         // 授業IDだけでなく、曜日と時限も渡して遷移
@@ -123,6 +124,7 @@ fun TimetableScreen(
 @Composable
 fun TimetableGrid(
     timetable: List<List<ClassCell?>>,
+    otherClasses: List<ClassCell>, // 引数追加
     displayWeekDays: Set<Int>,
     periodCount: Int,
     onClassClick: (ClassCell) -> Unit,
@@ -260,6 +262,37 @@ fun TimetableGrid(
                 }
             }
         }
+
+        // 「その他」セクションの表示
+        if (otherClasses.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "その他",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                otherClasses.forEach { classCell ->
+                    // その他の授業は通常のClassCellViewではなく、リスト形式に近い詳細表示を行う
+                    OtherClassCellView(
+                        classCell = classCell,
+                        onClick = { onClassClick(classCell) },
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope
+                    )
+                }
+            }
+            // 下部の余白
+            Spacer(modifier = Modifier.height(16.dp))
+        }
     }
 }
 
@@ -329,6 +362,65 @@ fun ClassCellView(
                             modifier = Modifier.align(Alignment.End)
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+// その他の授業用のビュー
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun OtherClassCellView(
+    classCell: ClassCell,
+    onClick: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
+    with(sharedTransitionScope) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .sharedElement(
+                    sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
+                .clickable(onClick = onClick),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = classCell.name ?: "",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (!classCell.teachers.isNullOrBlank()) {
+                        Text(
+                            text = classCell.teachers,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                if (!classCell.room.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = classCell.room,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }

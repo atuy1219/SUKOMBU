@@ -197,13 +197,13 @@ fun ScombApp(
                             bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
 
                         if (initialIndex == -1 || targetIndex == -1) {
-                            fadeIn(animationSpec = tween(150))
+                            fadeIn(animationSpec = tween(100))
                         } else if (initialIndex < targetIndex) {
-                            slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(150))
+                            slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(100))
                         } else {
                             slideInHorizontally(
                                 initialOffsetX = { -it },
-                                animationSpec = tween(150)
+                                animationSpec = tween(100)
                             )
                         }
                     },
@@ -214,14 +214,14 @@ fun ScombApp(
                             bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
 
                         if (initialIndex == -1 || targetIndex == -1) {
-                            fadeOut(animationSpec = tween(150))
+                            fadeOut(animationSpec = tween(100))
                         } else if (initialIndex < targetIndex) {
                             slideOutHorizontally(
                                 targetOffsetX = { -it },
-                                animationSpec = tween(150)
+                                animationSpec = tween(100)
                             )
                         } else {
-                            slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(150))
+                            slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(100))
                         }
                     }
                 ) {

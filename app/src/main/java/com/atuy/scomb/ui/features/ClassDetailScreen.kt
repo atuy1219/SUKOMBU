@@ -530,10 +530,17 @@ fun InfoGridCard(classCell: ClassCell) {
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // 修正: periodまたはdayOfWeekが8（API値9）の場合は空欄にする
+            val dayPeriodValue = if (classCell.period == 8 || classCell.dayOfWeek == 8) {
+                ""
+            } else {
+                "${(classCell.dayOfWeek).toDayOfWeekString()} ${classCell.period + 1}限"
+            }
+
             InfoRow(
                 icon = Icons.Default.CalendarToday,
                 label = stringResource(R.string.class_detail_info_day_period),
-                value = "${(classCell.dayOfWeek).toDayOfWeekString()} ${classCell.period + 1}限"
+                value = dayPeriodValue
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
             InfoRow(
