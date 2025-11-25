@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Class
 import androidx.compose.material.icons.filled.Link
@@ -499,7 +500,7 @@ fun QuickLinksSection(
                     label = { Text(link.title) },
                     leadingIcon = {
                         Icon(
-                            imageVector = if (link.title.contains("シラバス")) Icons.Default.Class else Icons.Default.CalendarToday, // 簡易的なアイコン切り替え
+                            imageVector = if (link.title.contains("シラバス")) Icons.Default.Class else if (link.title.contains("図書館")) Icons.Default.Book else Icons.Default.CalendarToday,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )

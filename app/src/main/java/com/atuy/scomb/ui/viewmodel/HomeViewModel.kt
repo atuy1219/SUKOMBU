@@ -55,10 +55,13 @@ class HomeViewModel @Inject constructor(
     private var loadJob: Job? = null
 
     private val quickLinks = listOf(
-        LinkItem("ScombZ ログイン", "https://scombz.shibaura-it.ac.jp/"),
+        LinkItem("ScombZ", "https://scombz.shibaura-it.ac.jp/"),
         LinkItem("シラバス", "https://syllabus.sic.shibaura-it.ac.jp/"),
-        LinkItem("時間割", "https://timetable.sic.shibaura-it.ac.jp/"),
-        LinkItem("学年歴", "https://www.shibaura-it.ac.jp/campus_life/school_calendar")
+        LinkItem("時間割検索", "https://timetable.sic.shibaura-it.ac.jp/"),
+        LinkItem("学年歴", "https://www.shibaura-it.ac.jp/campus_life/school_calendar"),
+        LinkItem("S*gsot", "https://sgsot.sic.shibaura-it.ac.jp"),
+        LinkItem("スーパー英語", "https://supereigo2.sic.shibaura-it.ac.jp/sso"),
+        LinkItem("図書館", "https://lib.shibaura-it.ac.jp")
     )
 
     private val _openUrlEvent = Channel<String>(Channel.BUFFERED)
