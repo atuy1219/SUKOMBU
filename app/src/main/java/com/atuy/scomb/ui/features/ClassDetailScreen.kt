@@ -105,10 +105,12 @@ fun ClassDetailScreen(
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                     }
-                }
+                },
+                // 親のScaffoldですでに余白が確保されているため、ここではTopAppBarのインセットを無効化する
+                windowInsets = WindowInsets(0.dp)
             )
         },
-        // 親のScaffoldですでにWindowInsetsが処理されているため、ここでは無効化して二重適用を防ぐ
+        // Scaffold自体のコンテンツインセットも無効化する
         contentWindowInsets = WindowInsets(0.dp)
     ) { paddingValues ->
         // 詳細画面全体のコンテンツをアニメーション対象とする
