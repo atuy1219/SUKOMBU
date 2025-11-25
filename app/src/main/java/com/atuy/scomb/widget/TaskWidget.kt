@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -21,6 +20,8 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.appWidgetBackground
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
@@ -36,9 +37,9 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
+import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.atuy.scomb.MainActivity
@@ -84,10 +85,14 @@ class TaskWidget : GlanceAppWidget() {
 
     @Composable
     private fun WidgetContent(loadingState: String, tasks: List<Task>) {
+        // ウィジェット全体の背景設定
+        // Android 12以降はシステムが角丸を適用するが、それ以前のためにcornerRadiusを設定
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(GlanceTheme.colors.background)
+                .background(GlanceTheme.colors.surface)
+                .appWidgetBackground()
+                .cornerRadius(16.dp)
         ) {
             WidgetHeader()
 
@@ -99,7 +104,7 @@ class TaskWidget : GlanceAppWidget() {
                     ) {
                         Text(
                             text = "読み込み中...",
-                            style = TextStyle(color = GlanceTheme.colors.onBackground)
+                            style = TextStyle(color = GlanceTheme.colors.onSurface)
                         )
                     }
                 }
@@ -110,10 +115,11 @@ class TaskWidget : GlanceAppWidget() {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "エラーが発生しました。\nアプリを開いてログインしてください。",
+                            text = "エラーが発生しました。\nアプリを開いて確認してください。",
                             style = TextStyle(
                                 color = GlanceTheme.colors.error,
-                                fontSize = 12.sp
+                                fontSize = 12.sp,
+                                textAlign = androidx.glance.text.TextAlign.Center
                             )
                         )
                     }
@@ -125,8 +131,8 @@ class TaskWidget : GlanceAppWidget() {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "直近の課題はありません",
-                            style = TextStyle(color = GlanceTheme.colors.onBackground)
+                            text = "予定されている課題はありません",
+                            style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant)
                         )
                     }
                 }
@@ -143,15 +149,15 @@ class TaskWidget : GlanceAppWidget() {
         Row(
             modifier = GlanceModifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .background(GlanceTheme.colors.background),
+                .padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "直近の課題",
                 style = TextStyle(
-                    color = GlanceTheme.colors.onBackground,
-                    fontSize = 18.sp
+                    color = GlanceTheme.colors.primary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
                 ),
                 modifier = GlanceModifier.defaultWeight()
             )
@@ -163,8 +169,8 @@ class TaskWidget : GlanceAppWidget() {
                 Image(
                     provider = ImageProvider(R.drawable.ic_refresh),
                     contentDescription = "更新",
-                    modifier = GlanceModifier.width(24.dp).height(24.dp),
-                    colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground)
+                    modifier = GlanceModifier.width(20.dp).height(20.dp),
+                    colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurfaceVariant)
                 )
             }
         }
@@ -173,10 +179,11 @@ class TaskWidget : GlanceAppWidget() {
     @Composable
     private fun TaskList(tasks: List<Task>) {
         LazyColumn(
-            modifier = GlanceModifier.fillMaxSize()
+            modifier = GlanceModifier.fillMaxSize().padding(horizontal = 12.dp)
         ) {
             items(tasks, { task: Task -> task.id.hashCode().toLong() }) { task ->
                 TaskWidgetItem(task)
+                Spacer(modifier = GlanceModifier.height(8.dp))
             }
         }
     }
@@ -184,48 +191,88 @@ class TaskWidget : GlanceAppWidget() {
     @SuppressLint("RestrictedApi")
     @Composable
     private fun TaskWidgetItem(task: Task) {
-        Column(
+        // タスクの種類に応じた色設定
+        val accentColor = when (task.taskType) {
+            0 -> GlanceTheme.colors.primary      // 課題
+            1 -> GlanceTheme.colors.error        // テスト
+            2 -> GlanceTheme.colors.secondary    // アンケート
+            else -> GlanceTheme.colors.tertiary  // その他
+        }
+
+        val remaining = DateUtils.formatRemainingTime(task.deadline)
+        val isOverdue = task.deadline < System.currentTimeMillis()
+        val deadlineColor = if (isOverdue) GlanceTheme.colors.error else GlanceTheme.colors.onSurfaceVariant
+
+        Row(
             modifier = GlanceModifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .background(GlanceTheme.colors.surfaceVariant) // カード背景色
+                .cornerRadius(12.dp)
                 .clickable(
                     actionStartActivity<MainActivity>(
                         actionParametersOf(ActionParameters.Key<String>("destination") to "tasks")
                     )
-                )
+                ),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = task.title,
-                style = TextStyle(
-                    color = GlanceTheme.colors.onBackground,
-                    fontSize = 14.sp
-                ),
-                maxLines = 1
-            )
-            Spacer(modifier = GlanceModifier.height(4.dp))
-            Text(
-                text = task.className,
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = 12.sp
-                ),
-                maxLines = 1
-            )
-            Spacer(modifier = GlanceModifier.height(4.dp))
+            // 左側のカラーバー
+            Box(
+                modifier = GlanceModifier
+                    .width(6.dp)
+                    .height(64.dp) // カードの高さに合わせるか固定
+                    .background(accentColor)
+            ) {}
 
-            val remaining = DateUtils.formatRemainingTime(task.deadline)
-            val isOverdue = task.deadline < System.currentTimeMillis()
-
-            Text(
-                text = "${DateUtils.timeToString(task.deadline)} ($remaining)",
-                style = TextStyle(
-                    color = if (isOverdue)
-                        ColorProvider(Color(0xFFB00020))
-                    else
-                        GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = 12.sp
+            // コンテンツ部分
+            Column(
+                modifier = GlanceModifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp, horizontal = 12.dp)
+            ) {
+                // タイトルと種類
+                Text(
+                    text = task.title,
+                    style = TextStyle(
+                        color = GlanceTheme.colors.onSurfaceVariant,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    maxLines = 1
                 )
-            )
+                Spacer(modifier = GlanceModifier.height(4.dp))
+
+                // 科目名
+                Text(
+                    text = task.className,
+                    style = TextStyle(
+                        color = GlanceTheme.colors.onSurfaceVariant,
+                        fontSize = 11.sp
+                    ),
+                    maxLines = 1
+                )
+
+                Spacer(modifier = GlanceModifier.height(2.dp))
+
+                // 締め切り情報
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = DateUtils.timeToString(task.deadline),
+                        style = TextStyle(
+                            color = deadlineColor,
+                            fontSize = 12.sp
+                        )
+                    )
+                    Spacer(modifier = GlanceModifier.width(8.dp))
+                    Text(
+                        text = remaining,
+                        style = TextStyle(
+                            color = deadlineColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    )
+                }
+            }
         }
     }
 }

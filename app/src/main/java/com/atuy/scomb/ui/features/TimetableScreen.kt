@@ -1,8 +1,8 @@
 package com.atuy.scomb.ui.features
 
 import android.util.Log
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +12,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -21,7 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -96,38 +101,70 @@ fun TimetableGrid(
     onClassClick: (ClassCell) -> Unit
 ) {
     val days = listOf("月", "火", "水", "木", "金")
-    Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth()) {
-            Spacer(modifier = Modifier.width(24.dp))
+    val scrollState = rememberScrollState()
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(bottom = 16.dp) // 下部に少し余白を追加
+    ) {
+        // 曜日ヘッダー
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Spacer(modifier = Modifier.width(32.dp)) // 時限カラム分のスペース
             days.forEach { day ->
                 Box(
                     modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = day, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        text = day,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
 
+        // グリッド本体
         Row(Modifier.fillMaxWidth()) {
-            Column {
+            // 時限カラム
+            Column(
+                modifier = Modifier.width(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 (1..7).forEach { period ->
                     Box(
-                        modifier = Modifier.height(100.dp),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier
+                            .height(110.dp) // セルの高さに合わせて調整
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.TopCenter
                     ) {
                         Text(
                             text = period.toString(),
-                            modifier = Modifier.width(24.dp),
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp)
                         )
                     }
                 }
             }
-            Row(Modifier.weight(1f)) {
+
+            // 授業カラム
+            Row(
+                Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp) // 右端に余白
+            ) {
                 timetable.forEach { dayColumn ->
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp) // 縦方向のセル間隔
+                    ) {
                         dayColumn.forEach { classCell ->
                             ClassCellView(
                                 classCell = classCell,
@@ -139,6 +176,8 @@ fun TimetableGrid(
                             )
                         }
                     }
+                    // 横方向のセル間隔のためにSpacerを入れるか、paddingを使う
+                    Spacer(modifier = Modifier.width(4.dp))
                 }
             }
         }
@@ -150,43 +189,65 @@ fun ClassCellView(
     classCell: ClassCell?,
     onClick: () -> Unit
 ) {
-    val baseModifier = Modifier
-        .height(100.dp)
-        .fillMaxWidth()
-        .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
-        .padding(2.dp)
+    val cellHeight = 106.dp // 間隔(4dp)を含めて110dpになるように調整
 
-    val modifier = if (classCell != null) {
-        baseModifier.clickable(onClick = onClick)
+    if (classCell == null) {
+        // 空きコマ: 背景なし、あるいは薄い区切り線など
+        // ここではGoogleカレンダー風に、何もない空間として表現しつつ、
+        // グリッド感を出すためにごく薄い背景などを入れても良いが、モダンにするなら空白が良い
+        Box(
+            modifier = Modifier
+                .height(cellHeight)
+                .fillMaxWidth()
+            // デバッグ用に薄い枠線を入れても良いが、今回は完全な空白にする
+            // .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+        )
     } else {
-        baseModifier
-    }
-
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        if (classCell != null) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // 授業あり: カード表示
+        Card(
+            modifier = Modifier
+                .height(cellHeight)
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
+            shape = RoundedCornerShape(12.dp), // 角丸を少し大きめに
+            colors = CardDefaults.cardColors(
+                // Googleカレンダー風に、primaryContainerなどの色付き背景を使用
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // 科目名
                 Text(
                     text = classCell.name ?: "",
-                    fontSize = 12.sp,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = classCell.room ?: "",
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = classCell.teachers ?: "",
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp
+                    ),
+                    maxLines = 4,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                // 教室名
+                if (!classCell.room.isNullOrBlank()) {
+                    Text(
+                        text = classCell.room,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 9.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.align(Alignment.End)
+                    )
+                }
             }
         }
     }
