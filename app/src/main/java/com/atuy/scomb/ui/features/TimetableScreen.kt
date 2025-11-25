@@ -286,7 +286,7 @@ fun ClassCellView(
                     .height(cellHeight)
                     .fillMaxWidth()
                     .sharedElement(
-                        state = rememberSharedContentState(key = "class-${classCell.classId}"),
+                        sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}"),
                         animatedVisibilityScope = animatedVisibilityScope
                     )
                     .clickable(onClick = onClick),

@@ -116,7 +116,7 @@ fun ClassDetailScreen(
                     .then(
                         if (classId != null) {
                             Modifier.sharedElement(
-                                state = rememberSharedContentState(key = "class-$classId"),
+                                sharedContentState = rememberSharedContentState(key = "class-$classId"),
                                 animatedVisibilityScope = animatedVisibilityScope
                             )
                         } else Modifier

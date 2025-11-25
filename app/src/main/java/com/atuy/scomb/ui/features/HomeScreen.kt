@@ -331,7 +331,7 @@ fun TodaysClassesSection(
                         },
                         modifier = Modifier
                             .sharedElement(
-                                state = rememberSharedContentState(key = "class-${classCell.classId}"),
+                                sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}"),
                                 animatedVisibilityScope = animatedVisibilityScope
                             )
                             .clickable {

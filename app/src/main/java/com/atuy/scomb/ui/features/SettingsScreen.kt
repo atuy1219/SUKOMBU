@@ -227,29 +227,37 @@ private fun TimetableSettingsSection(
     periodCount: Int,
     onPeriodCountChange: (Int) -> Unit
 ) {
-    val periodOptions = listOf(5, 6, 7)
+    val periodOptions = listOf(4, 5, 6, 7)
+    val dayOptions = listOf(false to "月〜金", true to "月〜土")
 
     Column {
         SectionHeader(title = "時間割設定", icon = Icons.Default.DateRange)
 
-        // 土曜日表示設定
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "土曜日を表示",
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Switch(
-                checked = showSaturday,
-                onCheckedChange = onShowSaturdayChange
-            )
+        // 表示する曜日設定
+        Text(
+            text = "表示する曜日",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            dayOptions.forEachIndexed { index, (isSaturdayShown, label) ->
+                SegmentedButton(
+                    selected = showSaturday == isSaturdayShown,
+                    onClick = { onShowSaturdayChange(isSaturdayShown) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = dayOptions.size
+                    )
+                ) {
+                    Text(label)
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // 時限数設定
         Text(
             text = "表示する時限数",
             style = MaterialTheme.typography.bodyLarge,
@@ -266,7 +274,7 @@ private fun TimetableSettingsSection(
                         count = periodOptions.size
                     )
                 ) {
-                    Text("${count}限まで")
+                    Text("${count}限")
                 }
             }
         }
