@@ -60,12 +60,13 @@ object DateUtils {
         val hours = (diff / (1000 * 60 * 60)) % 24
         val minutes = (diff / (1000 * 60)) % 60
 
-        return when {
-            days > 0 -> "あと${days}日"
-            hours > 0 -> "あと${hours}時間"
-            minutes > 0 -> "あと${minutes}分"
-            else -> "まもなく"
-        }
+        // 常に分まで詳細に表示する形式に変更
+        val sb = StringBuilder("あと")
+        if (days > 0) sb.append("${days}日")
+        if (hours > 0) sb.append("${hours}時間")
+        sb.append("${minutes}分")
+
+        return sb.toString()
     }
 
     data class ScombTerm(val year: Int, val term: String) {

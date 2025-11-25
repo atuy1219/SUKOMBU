@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -89,7 +90,8 @@ fun TimetableScreen(
                 ) {
                     TimetableGrid(
                         timetable = state.timetable,
-                        otherClasses = state.otherClasses, // その他の授業リストを渡す
+                        otherClasses = state.otherClasses,
+                        undoneTaskClassIds = state.undoneTaskClassIds, // 追加
                         displayWeekDays = state.displayWeekDays,
                         periodCount = state.periodCount,
                         // 授業IDだけでなく、曜日と時限も渡して遷移
@@ -124,7 +126,8 @@ fun TimetableScreen(
 @Composable
 fun TimetableGrid(
     timetable: List<List<ClassCell?>>,
-    otherClasses: List<ClassCell>, // 引数追加
+    otherClasses: List<ClassCell>,
+    undoneTaskClassIds: Set<String>, // 追加
     displayWeekDays: Set<Int>,
     periodCount: Int,
     onClassClick: (ClassCell) -> Unit,
@@ -249,6 +252,7 @@ fun TimetableGrid(
                             val classCell = dayColumn.getOrNull(period - 1)
                             ClassCellView(
                                 classCell = classCell,
+                                hasUndoneTasks = classCell != null && undoneTaskClassIds.contains(classCell.classId),
                                 onClick = {
                                     if (classCell != null) {
                                         onClassClick(classCell)
@@ -281,9 +285,9 @@ fun TimetableGrid(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 otherClasses.forEach { classCell ->
-                    // その他の授業は通常のClassCellViewではなく、リスト形式に近い詳細表示を行う
                     OtherClassCellView(
                         classCell = classCell,
+                        hasUndoneTasks = undoneTaskClassIds.contains(classCell.classId),
                         onClick = { onClassClick(classCell) },
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope
@@ -300,6 +304,7 @@ fun TimetableGrid(
 @Composable
 fun ClassCellView(
     classCell: ClassCell?,
+    hasUndoneTasks: Boolean,
     onClick: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
@@ -314,54 +319,70 @@ fun ClassCellView(
         )
     } else {
         with(sharedTransitionScope) {
-            Card(
+            // バッジ表示のためのBox
+            Box(
                 modifier = Modifier
                     .height(cellHeight)
                     .fillMaxWidth()
-                    .sharedElement(
-                        // キーに曜日と時限を含めることで一意性を保証し、重複表示バグを防ぐ
-                        sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
-                        animatedVisibilityScope = animatedVisibilityScope
-                    )
-                    .clickable(onClick = onClick),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(
+                Card(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(8.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = classCell.name ?: "",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp
-                        ),
-                        maxLines = 4,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    if (!classCell.room.isNullOrBlank()) {
-                        Text(
-                            text = classCell.room,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 9.sp
-                            ),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(
-                                alpha = 0.8f
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.align(Alignment.End)
+                        .sharedElement(
+                            sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
+                            animatedVisibilityScope = animatedVisibilityScope
                         )
+                        .clickable(onClick = onClick),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = classCell.name ?: "",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                lineHeight = 14.sp
+                            ),
+                            maxLines = 4,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        if (!classCell.room.isNullOrBlank()) {
+                            Text(
+                                text = classCell.room,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 9.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(
+                                    alpha = 0.8f
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.align(Alignment.End)
+                            )
+                        }
                     }
+                }
+
+                // 未完了課題がある場合のインジケーター
+                if (hasUndoneTasks) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(MaterialTheme.colorScheme.error, CircleShape)
+                            .align(Alignment.TopEnd)
+                            .offset(x = (-6).dp, y = 6.dp) // カードの内側に少し寄せる
+                    )
                 }
             }
         }
@@ -373,55 +394,69 @@ fun ClassCellView(
 @Composable
 fun OtherClassCellView(
     classCell: ClassCell,
+    hasUndoneTasks: Boolean,
     onClick: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     with(sharedTransitionScope) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .sharedElement(
-                    sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
-                    animatedVisibilityScope = animatedVisibilityScope
-                )
-                .clickable(onClick = onClick),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Row(
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = classCell.name ?: "",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                    .sharedElement(
+                        sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
+                        animatedVisibilityScope = animatedVisibilityScope
                     )
-                    if (!classCell.teachers.isNullOrBlank()) {
+                    .clickable(onClick = onClick),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = classCell.teachers,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = classCell.name ?: "",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (!classCell.teachers.isNullOrBlank()) {
+                            Text(
+                                text = classCell.teachers,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    if (!classCell.room.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = classCell.room,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
+            }
 
-                if (!classCell.room.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = classCell.room,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+            // 未完了課題がある場合のインジケーター
+            if (hasUndoneTasks) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .background(MaterialTheme.colorScheme.error, CircleShape)
+                        .align(Alignment.TopEnd)
+                        .offset(x = (-8).dp, y = 8.dp)
+                )
             }
         }
     }

@@ -10,6 +10,8 @@ import com.atuy.scomb.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +27,7 @@ sealed interface TimetableUiState {
     data class Success(
         val timetable: List<List<ClassCell?>>,
         val otherClasses: List<ClassCell> = emptyList(),
+        val undoneTaskClassIds: Set<String> = emptySet(), // 未完了課題がある授業IDのセット
         val isRefreshing: Boolean = false,
         val displayWeekDays: Set<Int> = setOf(0, 1, 2, 3, 4, 5),
         val periodCount: Int = 7
@@ -39,6 +42,7 @@ private sealed interface TimetableDataState {
     data class Success(
         val timetable: List<List<ClassCell?>>,
         val otherClasses: List<ClassCell>,
+        val undoneTaskClassIds: Set<String>,
         val isRefreshing: Boolean
     ) : TimetableDataState
     data class Error(val message: String, val isRefreshing: Boolean) : TimetableDataState
@@ -72,6 +76,7 @@ class TimetableViewModel @Inject constructor(
             is TimetableDataState.Success -> TimetableUiState.Success(
                 timetable = dataState.timetable,
                 otherClasses = dataState.otherClasses,
+                undoneTaskClassIds = dataState.undoneTaskClassIds,
                 isRefreshing = dataState.isRefreshing,
                 displayWeekDays = displayWeekDays,
                 periodCount = periodCount
@@ -129,23 +134,41 @@ class TimetableViewModel @Inject constructor(
             }
 
             try {
-                val classCells = repository.getTimetable(year, term, forceRefresh)
-                Log.d(TAG, "Successfully fetched ${classCells.size} classes for $year-$term")
+                coroutineScope {
+                    // 並列でデータ取得
+                    // 課題情報の取得 (キャッシュ優先)
+                    val tasksDeferred = async { repository.getTasksAndSurveys(false) }
+                    // 時間割の取得
+                    val timetableDeferred = async { repository.getTimetable(year, term, forceRefresh) }
 
-                val timetableGrid = List(6) { day -> // 月〜土 (0-5)
-                    List(7) { period -> // 1-7限 (0-6)
-                        classCells.find { it.dayOfWeek == day && it.period == period }
+                    val tasks = tasksDeferred.await()
+                    val classCells = timetableDeferred.await()
+
+                    Log.d(TAG, "Successfully fetched ${classCells.size} classes for $year-$term")
+
+                    val timetableGrid = List(6) { day -> // 月〜土 (0-5)
+                        List(7) { period -> // 1-7限 (0-6)
+                            classCells.find { it.dayOfWeek == day && it.period == period }
+                        }
                     }
+
+                    val otherClasses = classCells.filter { it.period == 8 || it.dayOfWeek == 8 }
+                    Log.d(TAG, "Found ${otherClasses.size} 'other' classes")
+
+                    // 未完了かつ期限内の課題がある授業IDを抽出
+                    val currentTime = System.currentTimeMillis()
+                    val undoneTaskClassIds = tasks
+                        .filter { !it.done && it.deadline > currentTime }
+                        .map { it.classId }
+                        .toSet()
+
+                    _dataState.value = TimetableDataState.Success(
+                        timetable = timetableGrid,
+                        otherClasses = otherClasses,
+                        undoneTaskClassIds = undoneTaskClassIds,
+                        isRefreshing = false
+                    )
                 }
-
-                val otherClasses = classCells.filter { it.period == 8 || it.dayOfWeek == 8 }
-                Log.d(TAG, "Found ${otherClasses.size} 'other' classes")
-
-                _dataState.value = TimetableDataState.Success(
-                    timetable = timetableGrid,
-                    otherClasses = otherClasses,
-                    isRefreshing = false
-                )
 
             } catch (e: Exception) {
                 if (e is CancellationException) {
