@@ -1,6 +1,7 @@
 package com.atuy.scomb.ui.features
 
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,8 +12,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
@@ -26,6 +29,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,6 +41,7 @@ import androidx.navigation.NavController
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.ui.viewmodel.TimetableUiState
 import com.atuy.scomb.ui.viewmodel.TimetableViewModel
+import java.util.Calendar
 
 private const val TAG = "TimetableScreen"
 
@@ -103,6 +109,10 @@ fun TimetableGrid(
     val days = listOf("月", "火", "水", "木", "金")
     val scrollState = rememberScrollState()
 
+    // 今日の曜日を取得 (月=0, ... 金=4, 土=5, 日=6)
+    val calendar = Calendar.getInstance()
+    val todayIndex = (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7
+
     Column(
         Modifier
             .fillMaxSize()
@@ -114,25 +124,42 @@ fun TimetableGrid(
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
-                .padding(end = 8.dp) // 本体に合わせて右端にパディングを追加
         ) {
             Spacer(modifier = Modifier.width(32.dp)) // 時限カラム分のスペース
 
             // 曜日部分もカードと同じ間隔で配置するためにRowで囲む
             Row(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp), // 本体に合わせて右端にパディングを追加
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                days.forEach { day ->
+                days.forEachIndexed { index, day ->
+                    val isToday = index == todayIndex
                     Box(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .width(0.dp) // 幅を均等にするためのおまじない
+                            .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = day,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        // 今日の場合のみ背景色をつける
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = day,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+                                ),
+                                color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -171,7 +198,9 @@ fun TimetableGrid(
             ) {
                 timetable.forEach { dayColumn ->
                     Column(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .width(0.dp) // 幅を均等にするためのおまじない
+                            .weight(1f),
                         verticalArrangement = Arrangement.spacedBy(4.dp) // 縦方向のセル間隔
                     ) {
                         dayColumn.forEach { classCell ->
@@ -242,7 +271,6 @@ fun ClassCellView(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // 教室名
                 if (!classCell.room.isNullOrBlank()) {
                     Text(
                         text = classCell.room,
