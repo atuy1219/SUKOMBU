@@ -12,9 +12,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -254,12 +256,14 @@ fun TaskCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth().height(80.dp)) { // 高さを固定または最小高さ設定
+        // IntrinsicSize.Minを使用することで、コンテンツの高さに合わせてRowの高さを決定し、
+        // その高さに合わせて左側のカラーバー(Box)を伸縮させます。
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             // 左端のカラーバー
             Box(
                 modifier = Modifier
                     .width(6.dp)
-                    .fillMaxSize() // 高さいっぱい
+                    .fillMaxHeight()
                     .background(accentColor)
             )
 
@@ -278,10 +282,12 @@ fun TaskCard(
                         text = task.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 1,
+                        // maxLinesを削除または増やして、タイトルが長くても表示されるようにする
+                        // ここでは念のためmaxLines = 2にしておくが、無制限でも良い
+                        maxLines = 2,
                         modifier = Modifier.weight(1f)
                     )
-                    // 完了済みバッジなどがあればここに
+                    // 完了済みバッジ
                     if (task.done) {
                         Icon(
                             imageVector = Icons.Default.Check,
@@ -298,7 +304,7 @@ fun TaskCard(
                     text = task.className,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    maxLines = 1 // クラス名は1行で省略してもそれほど問題ないことが多い
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))

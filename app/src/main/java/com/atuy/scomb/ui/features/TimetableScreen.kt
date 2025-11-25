@@ -114,18 +114,26 @@ fun TimetableGrid(
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
+                .padding(end = 8.dp) // 本体に合わせて右端にパディングを追加
         ) {
             Spacer(modifier = Modifier.width(32.dp)) // 時限カラム分のスペース
-            days.forEach { day ->
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = day,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+
+            // 曜日部分もカードと同じ間隔で配置するためにRowで囲む
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                days.forEach { day ->
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = day,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -158,7 +166,8 @@ fun TimetableGrid(
             Row(
                 Modifier
                     .weight(1f)
-                    .padding(end = 8.dp) // 右端に余白
+                    .padding(end = 8.dp), // 右端に余白
+                horizontalArrangement = Arrangement.spacedBy(4.dp) // カード間の隙間を均等に配置
             ) {
                 timetable.forEach { dayColumn ->
                     Column(
@@ -176,8 +185,6 @@ fun TimetableGrid(
                             )
                         }
                     }
-                    // 横方向のセル間隔のためにSpacerを入れるか、paddingを使う
-                    Spacer(modifier = Modifier.width(4.dp))
                 }
             }
         }

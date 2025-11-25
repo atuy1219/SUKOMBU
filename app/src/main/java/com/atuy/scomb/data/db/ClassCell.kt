@@ -1,6 +1,7 @@
 package com.atuy.scomb.data.db
 
 import androidx.room.Entity
+import com.squareup.moshi.JsonClass
 
 @Entity(
     tableName = "class_cell",
@@ -21,5 +22,13 @@ data class ClassCell(
     val url: String?,
     val note: String?,
     val syllabusUrl: String?,
-    val numberOfCredit: Int?
+    val numberOfCredit: Int?,
+    val userNote: String? = null,
+    val customLinksJson: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class CustomLink(
+    val title: String,
+    val url: String
 )

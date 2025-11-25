@@ -69,7 +69,14 @@ data class ApiClassCell(
     val numberOfCredit: Int?,
     val note: String?
 ) {
-    fun toDbClassCell(year: Int, term: String, timetableTitle: String,otkey: String): ClassCell {
+    fun toDbClassCell(
+        year: Int,
+        term: String,
+        timetableTitle: String,
+        otkey: String,
+        existingUserNote: String? = null,
+        existingCustomLinks: String? = null
+    ): ClassCell {
         val decodedName = if (name.isNullOrBlank()) "授業名なし" else name
         val decodedRoom = room
         val decodedTeachers = if (teachers.isNullOrBlank()) "" else teachers
@@ -91,7 +98,9 @@ data class ApiClassCell(
             url = "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course?idnumber=${this.id}",
             note = note,
             syllabusUrl = syllabusUrl,
-            numberOfCredit = numberOfCredit
+            numberOfCredit = numberOfCredit,
+            userNote = existingUserNote,
+            customLinksJson = existingCustomLinks
         )
     }
 }

@@ -13,7 +13,6 @@ import com.atuy.scomb.data.db.TaskDao
 import com.atuy.scomb.data.network.ScombzApiService
 import com.atuy.scomb.util.ClientException
 import com.atuy.scomb.util.DateUtils
-import com.atuy.scomb.util.NetworkException
 import com.atuy.scomb.util.ServerException
 import com.atuy.scomb.util.SessionExpiredException
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -41,12 +40,9 @@ class ScombzRepository @Inject constructor(
                 is SessionExpiredException -> {
                     Log.d("ScombzRepository", "Session expired. Clearing auth token.")
                     authManager.clearAuthToken()
-                    // UI側で検知しやすいよう、メッセージをリソースから取得したものにするか、
-                    // 専用の例外クラスをそのまま投げる（ViewModelでハンドリングする）
                     throw Exception(context.getString(R.string.error_session_expired), e)
                 }
                 is IOException -> {
-                    // ネットワークエラー (オフライン、タイムアウトなど)
                     throw Exception(context.getString(R.string.error_network), e)
                 }
                 is ServerException -> {
@@ -56,7 +52,6 @@ class ScombzRepository @Inject constructor(
                     throw Exception(context.getString(R.string.error_client, e.code), e)
                 }
                 else -> {
-                    // その他のエラー
                     throw e
                 }
             }
@@ -83,7 +78,6 @@ class ScombzRepository @Inject constructor(
 
     suspend fun login(userId: String, userPw: String): Result<Unit> {
         return try {
-            // ログイン処理は特殊なので executeWithAuthHandling を使わず個別に try-catch
             val response = apiService.login(com.atuy.scomb.data.network.LoginRequest(userId, userPw))
 
             if (response.isSuccessful) {
@@ -112,11 +106,6 @@ class ScombzRepository @Inject constructor(
     }
 
     private suspend fun getOtkey(): Result<String> {
-        // このメソッドは executeWithAuthHandling の内部から呼ばれることを想定
-        // そのため、ここでは例外を投げず、呼び出し元でハンドリングしやすい形にするか、
-        // あるいはここで例外を投げて executeWithAuthHandling でキャッチさせる設計にする。
-        // 今回は、executeWithAuthHandling の内部ロジックの一部として例外を投げる形に統一します。
-
         val response = apiService.getOtkey()
         if (response.isSuccessful) {
             val body = response.body()
@@ -125,10 +114,7 @@ class ScombzRepository @Inject constructor(
             }
         }
 
-        // エラー時の処理
         if (response.code() == 401) throw SessionExpiredException()
-        // その他のエラーは呼び出し元で処理するために Result.failure ではなく例外を投げるか、nullを返すなど検討が必要だが、
-        // 既存コードに合わせて Result を返すが、中身は例外にする
         return Result.failure(Exception("Failed to get otkey: ${response.code()}"))
     }
 
@@ -152,7 +138,6 @@ class ScombzRepository @Inject constructor(
             val yearMonth = String.format("%d%02d", year, month)
 
             val response = apiService.getTasks(yearMonth)
-            // validateResponse でエラーなら例外が投げられる
             val apiTasks = validateResponse(response) ?: emptyList()
 
             val dbTasks = apiTasks.mapNotNull { it.toDbTask(otkey) }
@@ -170,6 +155,11 @@ class ScombzRepository @Inject constructor(
                 if (cachedTimetable.isNotEmpty()) return@executeWithAuthHandling cachedTimetable
             }
 
+            // 既存のデータを取得して、ユーザーメモとカスタムリンクを保持する
+            val existingCells = classCellDao.getCells(timetableTitle)
+            val userNoteMap = existingCells.associate { it.classId to it.userNote }
+            val customLinksMap = existingCells.associate { it.classId to it.customLinksJson }
+
             ensureAuthenticated()
             val otkeyResult = getOtkey()
             val otkey = otkeyResult.getOrNull() ?: run {
@@ -182,7 +172,16 @@ class ScombzRepository @Inject constructor(
             val response = apiService.getTimetable(yearMonth)
             val apiClassCells = validateResponse(response) ?: emptyList()
 
-            val dbClassCells = apiClassCells.map { it.toDbClassCell(year, term, timetableTitle, otkey) }
+            val dbClassCells = apiClassCells.map {
+                it.toDbClassCell(
+                    year,
+                    term,
+                    timetableTitle,
+                    otkey,
+                    existingUserNote = userNoteMap[it.id],
+                    existingCustomLinks = customLinksMap[it.id]
+                )
+            }
 
             classCellDao.removeTimetable(timetableTitle)
             dbClassCells.forEach { classCellDao.insertClassCell(it) }
@@ -208,7 +207,6 @@ class ScombzRepository @Inject constructor(
             val response = apiService.getNews()
             val apiNews = validateResponse(response) ?: emptyList()
 
-            // 既存の既読状態を保持
             val existingNewsMap = newsItemDao.getAllNews().associate { it.newsId to it.unread }
 
             val dbNews = apiNews.map { apiItem ->
@@ -227,7 +225,6 @@ class ScombzRepository @Inject constructor(
     }
 
     suspend fun markAsRead(newsItem: NewsItem) {
-        // ローカル操作のみなのでエラーハンドリングラッパーは不要かもしれないが、一応囲む
         executeWithAuthHandling {
             newsItemDao.insertOrUpdateNewsItem(newsItem.copy(unread = false))
         }

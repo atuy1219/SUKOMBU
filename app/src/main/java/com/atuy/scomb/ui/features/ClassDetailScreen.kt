@@ -19,11 +19,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CreditScore
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -35,15 +40,19 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +63,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.atuy.scomb.R
 import com.atuy.scomb.data.db.ClassCell
+import com.atuy.scomb.data.db.CustomLink
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.ui.viewmodel.ClassDetailUiState
 import com.atuy.scomb.ui.viewmodel.ClassDetailViewModel
@@ -106,7 +116,11 @@ fun ClassDetailScreen(
                     ClassDetailContent(
                         classCell = state.classCell,
                         tasks = state.tasks,
-                        onClassPageClick = { viewModel.onClassPageClick() }
+                        customLinks = state.customLinks,
+                        onClassPageClick = { viewModel.onClassPageClick() },
+                        onUpdateUserNote = { viewModel.updateUserNote(it) },
+                        onAddLink = { title, url -> viewModel.addCustomLink(title, url) },
+                        onRemoveLink = { viewModel.removeCustomLink(it) }
                     )
                 }
 
@@ -125,7 +139,11 @@ fun ClassDetailScreen(
 fun ClassDetailContent(
     classCell: ClassCell,
     tasks: List<Task>,
-    onClassPageClick: () -> Unit = {}
+    customLinks: List<CustomLink>,
+    onClassPageClick: () -> Unit = {},
+    onUpdateUserNote: (String) -> Unit = {},
+    onAddLink: (String, String) -> Unit = { _, _ -> },
+    onRemoveLink: (CustomLink) -> Unit = {}
 ) {
     val context = LocalContext.current
     fun openUrl(url: String?) {
@@ -136,6 +154,30 @@ fun ClassDetailContent(
             customTabsIntent.launchUrl(context, url.toUri())
         } catch (e: Exception) {
         }
+    }
+
+    var showAddLinkDialog by remember { mutableStateOf(false) }
+    var showEditNoteDialog by remember { mutableStateOf(false) }
+
+    if (showAddLinkDialog) {
+        AddLinkDialog(
+            onDismiss = { showAddLinkDialog = false },
+            onConfirm = { title, url ->
+                onAddLink(title, url)
+                showAddLinkDialog = false
+            }
+        )
+    }
+
+    if (showEditNoteDialog) {
+        EditNoteDialog(
+            initialNote = classCell.userNote ?: "",
+            onDismiss = { showEditNoteDialog = false },
+            onConfirm = { note ->
+                onUpdateUserNote(note)
+                showEditNoteDialog = false
+            }
+        )
     }
 
     LazyColumn(
@@ -159,24 +201,51 @@ fun ClassDetailContent(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "リンク",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "リンク",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        IconButton(onClick = { showAddLinkDialog = true }, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Add, contentDescription = "リンクを追加")
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilledTonalButton(
-                            onClick = { openUrl(classCell.syllabusUrl) },
-                            modifier = Modifier.weight(1f)
+
+                    // 公式シラバス
+                    FilledTonalButton(
+                        onClick = { openUrl(classCell.syllabusUrl) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("シラバス")
+                    }
+
+                    // カスタムリンク
+                    customLinks.forEach { link ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.MenuBook,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("シラバス")
+                            FilledTonalButton(
+                                onClick = { openUrl(link.url) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(link.title)
+                            }
+                            IconButton(onClick = { onRemoveLink(link) }) {
+                                Icon(Icons.Default.Delete, contentDescription = "削除", tint = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
                 }
@@ -184,22 +253,53 @@ fun ClassDetailContent(
         }
 
         item(key = "memo") {
-            if (!classCell.note.isNullOrBlank()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
                             text = "メモ",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        IconButton(onClick = { showEditNoteDialog = true }, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Edit, contentDescription = "編集")
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    if (!classCell.userNote.isNullOrBlank()) {
+                        Text(
+                            text = classCell.userNote,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    } else {
+                        Text(
+                            text = "メモはありません",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // API由来のメモがある場合も表示（区別して）
+                    if (!classCell.note.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "大学からの備考:",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         Text(
                             text = classCell.note,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -222,9 +322,7 @@ fun ClassDetailContent(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .padding(24.dp)
-                            .fillMaxWidth(),
+                        modifier = Modifier.padding(24.dp).fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -237,7 +335,7 @@ fun ClassDetailContent(
             }
         } else {
             items(tasks, key = { it.id }) { task ->
-                TaskCard( // TaskListScreenと同じコンポーネントを使用（ここでは複製定義せず、共通化が理想だが簡易的に呼び出す想定）
+                TaskCard( // TaskListScreenと同じコンポーネントを使用
                     task = task,
                     onTaskClick = { openUrl(task.url) }
                 )
@@ -246,6 +344,82 @@ fun ClassDetailContent(
 
         item { Spacer(modifier = Modifier.height(32.dp)) }
     }
+}
+
+@Composable
+fun AddLinkDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit
+) {
+    var title by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("リンクを追加") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("タイトル") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("URL") },
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (title.isNotBlank() && url.isNotBlank()) onConfirm(title, url) }
+            ) {
+                Text("追加")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("キャンセル")
+            }
+        }
+    )
+}
+
+@Composable
+fun EditNoteDialog(
+    initialNote: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var note by remember { mutableStateOf(initialNote) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("メモを編集") },
+        text = {
+            OutlinedTextField(
+                value = note,
+                onValueChange = { note = it },
+                label = { Text("内容") },
+                minLines = 3,
+                maxLines = 10,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(note) }) {
+                Text("保存")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("キャンセル")
+            }
+        }
+    )
 }
 
 @Composable
@@ -267,11 +441,7 @@ fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.Person,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                )
+                Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = classCell.teachers ?: "教員未設定",
@@ -292,11 +462,7 @@ fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
             ) {
                 Text("LMS ページを開く")
                 Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    Icons.Default.OpenInNew,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
+                Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -332,7 +498,7 @@ fun InfoGridCard(classCell: ClassCell) {
 }
 
 @Composable
-fun InfoRow(icon: ImageVector, label: String, value: String) {
+fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.width(16.dp))
