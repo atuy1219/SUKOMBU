@@ -3,10 +3,8 @@ package com.atuy.scomb.ui
 import android.app.Activity
 import android.util.Log
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -199,13 +197,13 @@ fun ScombApp(
                             bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
 
                         if (initialIndex == -1 || targetIndex == -1) {
-                            fadeIn(animationSpec = tween(300))
+                            fadeIn(animationSpec = tween(150))
                         } else if (initialIndex < targetIndex) {
-                            slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300))
+                            slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(150))
                         } else {
                             slideInHorizontally(
                                 initialOffsetX = { -it },
-                                animationSpec = tween(300)
+                                animationSpec = tween(150)
                             )
                         }
                     },
@@ -216,14 +214,14 @@ fun ScombApp(
                             bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
 
                         if (initialIndex == -1 || targetIndex == -1) {
-                            fadeOut(animationSpec = tween(300))
+                            fadeOut(animationSpec = tween(150))
                         } else if (initialIndex < targetIndex) {
                             slideOutHorizontally(
                                 targetOffsetX = { -it },
-                                animationSpec = tween(300)
+                                animationSpec = tween(150)
                             )
                         } else {
-                            slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300))
+                            slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(150))
                         }
                     }
                 ) {
