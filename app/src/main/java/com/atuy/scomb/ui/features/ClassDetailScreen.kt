@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -77,6 +78,8 @@ fun ClassDetailScreen(
     navController: NavController,
     viewModel: ClassDetailViewModel = hiltViewModel(),
     classId: String?,
+    dayOfWeek: Int,
+    period: Int,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
@@ -104,7 +107,9 @@ fun ClassDetailScreen(
                     }
                 }
             )
-        }
+        },
+        // 親のScaffoldですでにWindowInsetsが処理されているため、ここでは無効化して二重適用を防ぐ
+        contentWindowInsets = WindowInsets(0.dp)
     ) { paddingValues ->
         // 詳細画面全体のコンテンツをアニメーション対象とする
         // classIdがnullでない場合のみアニメーションを適用
@@ -114,9 +119,10 @@ fun ClassDetailScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .then(
-                        if (classId != null) {
+                        if (classId != null && dayOfWeek != -1 && period != -1) {
                             Modifier.sharedElement(
-                                sharedContentState = rememberSharedContentState(key = "class-$classId"),
+                                // ホーム画面や時間割画面と一致するキー（ID + 曜日 + 時限）を使用
+                                sharedContentState = rememberSharedContentState(key = "class-$classId-$dayOfWeek-$period"),
                                 animatedVisibilityScope = animatedVisibilityScope
                             )
                         } else Modifier
@@ -124,10 +130,7 @@ fun ClassDetailScreen(
             ) {
                 when (val state = uiState) {
                     is ClassDetailUiState.Loading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator()
                         }
                     }

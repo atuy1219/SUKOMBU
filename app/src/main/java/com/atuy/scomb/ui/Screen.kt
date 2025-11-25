@@ -17,5 +17,10 @@ sealed class Screen(val route: String, @StringRes val resourceId: Int, val icon:
     object Tasks : Screen("tasks", R.string.screen_tasks, Icons.AutoMirrored.Filled.List)
     object News : Screen("news", R.string.screen_news, Icons.Filled.Notifications)
     object Settings : Screen("settings", R.string.screen_settings, Icons.Filled.Settings)
-    object ClassDetail : Screen("classDetail/{classId}", R.string.screen_class_detail, Icons.Filled.DateRange)
+    // dayOfWeekとperiodをオプション引数として追加
+    object ClassDetail : Screen(
+        "classDetail/{classId}?dayOfWeek={dayOfWeek}&period={period}",
+        R.string.screen_class_detail,
+        Icons.Filled.DateRange
+    )
 }

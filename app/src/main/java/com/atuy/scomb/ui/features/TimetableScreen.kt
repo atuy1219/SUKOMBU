@@ -88,9 +88,10 @@ fun TimetableScreen(
                         timetable = state.timetable,
                         displayWeekDays = state.displayWeekDays,
                         periodCount = state.periodCount,
+                        // 授業IDだけでなく、曜日と時限も渡して遷移
                         onClassClick = { classCell ->
                             if (classCell.classId.isNotEmpty()) {
-                                navController.navigate("classDetail/${classCell.classId}")
+                                navController.navigate("classDetail/${classCell.classId}?dayOfWeek=${classCell.dayOfWeek}&period=${classCell.period}")
                             } else {
                                 Log.w(
                                     TAG,
@@ -275,7 +276,8 @@ fun ClassCellView(
                     .height(cellHeight)
                     .fillMaxWidth()
                     .sharedElement(
-                        sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}"),
+                        // キーに曜日と時限を含めることで一意性を保証し、重複表示バグを防ぐ
+                        sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
                         animatedVisibilityScope = animatedVisibilityScope
                     )
                     .clickable(onClick = onClick),

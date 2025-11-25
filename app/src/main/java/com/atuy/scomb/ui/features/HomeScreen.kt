@@ -152,8 +152,11 @@ fun HomeScreen(
                     Dashboard(
                         homeData = state.homeData,
                         showNews = state.showNews,
-                        onClassClick = { classId -> navController.navigate("classDetail/$classId") },
-                        onTaskClick = { task -> viewModel.onTaskClick(task) }, // タスククリック時にViewModelへ通知
+                        // 授業IDだけでなく、曜日と時限も渡して遷移
+                        onClassClick = { classId, day, period ->
+                            navController.navigate("classDetail/$classId?dayOfWeek=$day&period=$period")
+                        },
+                        onTaskClick = { task -> viewModel.onTaskClick(task) },
                         onNewsClick = { url -> openUrl(url) },
                         onLinkClick = { url -> openUrl(url) },
                         sharedTransitionScope = sharedTransitionScope,
@@ -177,8 +180,8 @@ fun HomeScreen(
 fun Dashboard(
     homeData: HomeData,
     showNews: Boolean,
-    onClassClick: (String) -> Unit,
-    onTaskClick: (Task) -> Unit, // 引数をURLからTaskオブジェクトに変更
+    onClassClick: (String, Int, Int) -> Unit, // 引数を変更
+    onTaskClick: (Task) -> Unit,
     onNewsClick: (String) -> Unit,
     onLinkClick: (String) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
@@ -269,7 +272,7 @@ fun DashboardSection(
 @Composable
 fun TodaysClassesSection(
     classes: List<ClassCell>,
-    onClassClick: (String) -> Unit,
+    onClassClick: (String, Int, Int) -> Unit, // 引数を変更
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
@@ -331,12 +334,13 @@ fun TodaysClassesSection(
                         },
                         modifier = Modifier
                             .sharedElement(
-                                sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}"),
+                                // キーに曜日と時限を含めて一致させる
+                                sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
                                 animatedVisibilityScope = animatedVisibilityScope
                             )
                             .clickable {
                                 if (classCell.classId.isNotEmpty()) {
-                                    onClassClick(classCell.classId)
+                                    onClassClick(classCell.classId, classCell.dayOfWeek, classCell.period)
                                 }
                             }
                     )
@@ -355,7 +359,7 @@ fun TodaysClassesSection(
 @Composable
 fun UpcomingTasksSection(
     tasks: List<Task>,
-    onTaskClick: (Task) -> Unit // URL文字列ではなくTaskオブジェクトを受け取るように変更
+    onTaskClick: (Task) -> Unit
 ) {
     DashboardSection(
         title = stringResource(R.string.home_upcoming_tasks),
@@ -399,7 +403,7 @@ fun UpcomingTasksSection(
                             )
                         }
                     },
-                    modifier = Modifier.clickable { onTaskClick(task) } // Taskオブジェクトを渡す
+                    modifier = Modifier.clickable { onTaskClick(task) }
                 )
                 if (index < tasks.size - 1) {
                     HorizontalDivider(

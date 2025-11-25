@@ -3,8 +3,10 @@ package com.atuy.scomb.ui
 import android.app.Activity
 import android.util.Log
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -196,7 +198,6 @@ fun ScombApp(
                         val targetIndex =
                             bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
 
-                        // BottomBar間の遷移でなければフェードイン（SharedElementTransitionの邪魔をしないように）
                         if (initialIndex == -1 || targetIndex == -1) {
                             fadeIn(animationSpec = tween(300))
                         } else if (initialIndex < targetIndex) {
@@ -214,7 +215,6 @@ fun ScombApp(
                         val targetIndex =
                             bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
 
-                        // BottomBar間の遷移でなければフェードアウト
                         if (initialIndex == -1 || targetIndex == -1) {
                             fadeOut(animationSpec = tween(300))
                         } else if (initialIndex < targetIndex) {
@@ -251,12 +251,27 @@ fun ScombApp(
                     composable(Screen.Settings.route) { SettingsScreen(navController = navController) }
                     composable(
                         route = Screen.ClassDetail.route,
-                        arguments = listOf(navArgument("classId") { type = NavType.StringType })
+                        arguments = listOf(
+                            navArgument("classId") { type = NavType.StringType },
+                            navArgument("dayOfWeek") {
+                                type = NavType.IntType
+                                defaultValue = -1
+                            },
+                            navArgument("period") {
+                                type = NavType.IntType
+                                defaultValue = -1
+                            }
+                        )
                     ) { backStackEntry ->
                         val classId = backStackEntry.arguments?.getString("classId")
+                        val dayOfWeek = backStackEntry.arguments?.getInt("dayOfWeek") ?: -1
+                        val period = backStackEntry.arguments?.getInt("period") ?: -1
+
                         ClassDetailScreen(
                             navController = navController,
                             classId = classId,
+                            dayOfWeek = dayOfWeek,
+                            period = period,
                             sharedTransitionScope = this@SharedTransitionLayout,
                             animatedVisibilityScope = this@composable
                         )
