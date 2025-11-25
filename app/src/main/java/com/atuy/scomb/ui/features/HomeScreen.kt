@@ -5,6 +5,9 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -74,12 +77,14 @@ import com.atuy.scomb.util.DateUtils
 import kotlinx.coroutines.launch
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
     paddingValues: PaddingValues,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -150,7 +155,9 @@ fun HomeScreen(
                         onClassClick = { classId -> navController.navigate("classDetail/$classId") },
                         onTaskClick = { task -> viewModel.onTaskClick(task) }, // タスククリック時にViewModelへ通知
                         onNewsClick = { url -> openUrl(url) },
-                        onLinkClick = { url -> openUrl(url) }
+                        onLinkClick = { url -> openUrl(url) },
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope
                     )
                 }
             }
@@ -165,6 +172,7 @@ fun HomeScreen(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Dashboard(
     homeData: HomeData,
@@ -172,7 +180,9 @@ fun Dashboard(
     onClassClick: (String) -> Unit,
     onTaskClick: (Task) -> Unit, // 引数をURLからTaskオブジェクトに変更
     onNewsClick: (String) -> Unit,
-    onLinkClick: (String) -> Unit
+    onLinkClick: (String) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -182,7 +192,9 @@ fun Dashboard(
         item {
             TodaysClassesSection(
                 classes = homeData.todaysClasses,
-                onClassClick = onClassClick
+                onClassClick = onClassClick,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope
             )
         }
         item {
@@ -253,10 +265,13 @@ fun DashboardSection(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun TodaysClassesSection(
     classes: List<ClassCell>,
-    onClassClick: (String) -> Unit
+    onClassClick: (String) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val currentPeriod = DateUtils.getCurrentPeriod()
 
@@ -267,63 +282,70 @@ fun TodaysClassesSection(
         if (classes.isEmpty()) {
             EmptyStateItem(text = stringResource(R.string.home_no_classes_today))
         } else {
-            classes.forEachIndexed { index, classCell ->
-                val isCurrent = classCell.period == currentPeriod
+            with(sharedTransitionScope) {
+                classes.forEachIndexed { index, classCell ->
+                    val isCurrent = classCell.period == currentPeriod
 
-                // 現在の授業の場合は背景色を変えて強調する
-                val backgroundColor = if (isCurrent)
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                else
-                    Color.Transparent
+                    // 現在の授業の場合は背景色を変えて強調する
+                    val backgroundColor = if (isCurrent)
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    else
+                        Color.Transparent
 
-                ListItem(
-                    colors = ListItemDefaults.colors(containerColor = backgroundColor),
-                    headlineContent = {
-                        Text(
-                            text = classCell.name ?: "",
-                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                            maxLines = 1,
-                            color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    },
-                    supportingContent = {
-                        Text(
-                            text = classCell.room ?: stringResource(R.string.home_room_unset),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    leadingContent = {
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
+                    ListItem(
+                        colors = ListItemDefaults.colors(containerColor = backgroundColor),
+                        headlineContent = {
+                            Text(
+                                text = classCell.name ?: "",
+                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1,
+                                color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                text = classCell.room ?: stringResource(R.string.home_room_unset),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        leadingContent = {
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.size(40.dp)
                             ) {
-                                Text(
-                                    text = "${classCell.period + 1}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "${classCell.period + 1}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
-                        }
-                    },
-                    modifier = Modifier.clickable {
-                        if (classCell.classId.isNotEmpty()) {
-                            onClassClick(classCell.classId)
-                        }
-                    }
-                )
-                if (index < classes.size - 1) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        },
+                        modifier = Modifier
+                            .sharedElement(
+                                state = rememberSharedContentState(key = "class-${classCell.classId}"),
+                                animatedVisibilityScope = animatedVisibilityScope
+                            )
+                            .clickable {
+                                if (classCell.classId.isNotEmpty()) {
+                                    onClassClick(classCell.classId)
+                                }
+                            }
                     )
+                    if (index < classes.size - 1) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                    }
                 }
             }
         }

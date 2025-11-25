@@ -3,6 +3,8 @@ package com.atuy.scomb.ui
 import android.app.Activity
 import android.util.Log
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -67,7 +69,7 @@ import com.atuy.scomb.ui.viewmodel.TaskListViewModel
 import com.atuy.scomb.ui.viewmodel.TimetableViewModel
 import java.util.Calendar
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun ScombApp(
     mainViewModel: MainViewModel = hiltViewModel()
@@ -182,52 +184,83 @@ fun ScombApp(
         } else {
             val startDestination =
                 if (authState is AuthState.Authenticated) Screen.Home.route else Screen.Login.route
-            NavHost(
-                navController = navController,
-                startDestination = startDestination,
-                modifier = Modifier.padding(innerPadding),
-                enterTransition = {
-                    val initialIndex =
-                        bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
-                    val targetIndex =
-                        bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
 
-                    if (initialIndex == -1 || targetIndex == -1) {
-                        fadeIn(animationSpec = tween(300))
-                    } else if (initialIndex < targetIndex) {
-                        slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300))
-                    } else {
-                        slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300))
-                    }
-                },
-                exitTransition = {
-                    val initialIndex =
-                        bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
-                    val targetIndex =
-                        bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
+            SharedTransitionLayout {
+                NavHost(
+                    navController = navController,
+                    startDestination = startDestination,
+                    modifier = Modifier.padding(innerPadding),
+                    enterTransition = {
+                        val initialIndex =
+                            bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
+                        val targetIndex =
+                            bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
 
-                    if (initialIndex == -1 || targetIndex == -1) {
-                        fadeOut(animationSpec = tween(300))
-                    } else if (initialIndex < targetIndex) {
-                        slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300))
-                    } else {
-                        slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300))
+                        // BottomBar間の遷移でなければフェードイン（SharedElementTransitionの邪魔をしないように）
+                        if (initialIndex == -1 || targetIndex == -1) {
+                            fadeIn(animationSpec = tween(300))
+                        } else if (initialIndex < targetIndex) {
+                            slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300))
+                        } else {
+                            slideInHorizontally(
+                                initialOffsetX = { -it },
+                                animationSpec = tween(300)
+                            )
+                        }
+                    },
+                    exitTransition = {
+                        val initialIndex =
+                            bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
+                        val targetIndex =
+                            bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
+
+                        // BottomBar間の遷移でなければフェードアウト
+                        if (initialIndex == -1 || targetIndex == -1) {
+                            fadeOut(animationSpec = tween(300))
+                        } else if (initialIndex < targetIndex) {
+                            slideOutHorizontally(
+                                targetOffsetX = { -it },
+                                animationSpec = tween(300)
+                            )
+                        } else {
+                            slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300))
+                        }
                     }
-                }
-            ) {
-                composable(Screen.Login.route) {
-                    LoginScreen()
-                }
-                composable(Screen.Home.route) { HomeScreen(navController = navController, paddingValues = innerPadding) }
-                composable(Screen.Tasks.route) { TaskListScreen(viewModel = taskListViewModel) }
-                composable(Screen.Timetable.route) { TimetableScreen(navController, timetableViewModel) }
-                composable(Screen.News.route) { NewsScreen(newsViewModel) }
-                composable(Screen.Settings.route) { SettingsScreen(navController = navController) }
-                composable(
-                    route = Screen.ClassDetail.route,
-                    arguments = listOf(navArgument("classId") { type = NavType.StringType })
                 ) {
-                    ClassDetailScreen(navController = navController)
+                    composable(Screen.Login.route) {
+                        LoginScreen()
+                    }
+                    composable(Screen.Home.route) {
+                        HomeScreen(
+                            navController = navController,
+                            paddingValues = innerPadding,
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this@composable
+                        )
+                    }
+                    composable(Screen.Tasks.route) { TaskListScreen(viewModel = taskListViewModel) }
+                    composable(Screen.Timetable.route) {
+                        TimetableScreen(
+                            navController,
+                            timetableViewModel,
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this@composable
+                        )
+                    }
+                    composable(Screen.News.route) { NewsScreen(newsViewModel) }
+                    composable(Screen.Settings.route) { SettingsScreen(navController = navController) }
+                    composable(
+                        route = Screen.ClassDetail.route,
+                        arguments = listOf(navArgument("classId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val classId = backStackEntry.arguments?.getString("classId")
+                        ClassDetailScreen(
+                            navController = navController,
+                            classId = classId,
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this@composable
+                        )
+                    }
                 }
             }
         }
@@ -253,12 +286,15 @@ fun AppTopBar(
             Screen.Timetable.route -> {
                 TimetableTopBar(viewModel = timetableViewModel)
             }
+
             Screen.News.route -> {
                 NewsTopBar(viewModel = newsViewModel)
             }
+
             Screen.Tasks.route -> {
                 TasksTopBar(viewModel = taskListViewModel)
             }
+
             else -> {
                 TopAppBar(
                     title = {

@@ -1,6 +1,9 @@
 package com.atuy.scomb.ui.features
 
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,11 +55,13 @@ data class TimetableTerm(val year: Int, val term: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun TimetableScreen(
     navController: NavController,
-    viewModel: TimetableViewModel = hiltViewModel()
+    viewModel: TimetableViewModel = hiltViewModel(),
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -92,7 +97,9 @@ fun TimetableScreen(
                                     "Clicked ClassCell with empty classId: ${classCell.name}"
                                 )
                             }
-                        }
+                        },
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope
                     )
                 }
             }
@@ -108,12 +115,15 @@ fun TimetableScreen(
 }
 
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun TimetableGrid(
     timetable: List<List<ClassCell?>>,
     showSaturday: Boolean,
     periodCount: Int,
-    onClassClick: (ClassCell) -> Unit
+    onClassClick: (ClassCell) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     // 設定に基づいて表示する曜日と時限をフィルタリング
     val displayDays = if (showSaturday) listOf("月", "火", "水", "木", "金", "土") else listOf(
@@ -241,7 +251,9 @@ fun TimetableGrid(
                                     if (classCell != null) {
                                         onClassClick(classCell)
                                     }
-                                }
+                                },
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope
                             )
                         }
                     }
@@ -251,10 +263,13 @@ fun TimetableGrid(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ClassCellView(
     classCell: ClassCell?,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val cellHeight = 106.dp // 間隔(4dp)を含めて110dpになるように調整
 
@@ -265,46 +280,54 @@ fun ClassCellView(
                 .fillMaxWidth()
         )
     } else {
-        Card(
-            modifier = Modifier
-                .height(cellHeight)
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(
+        with(sharedTransitionScope) {
+            Card(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = classCell.name ?: "",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        lineHeight = 14.sp
-                    ),
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                if (!classCell.room.isNullOrBlank()) {
-                    Text(
-                        text = classCell.room,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 9.sp
-                        ),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.align(Alignment.End)
+                    .height(cellHeight)
+                    .fillMaxWidth()
+                    .sharedElement(
+                        state = rememberSharedContentState(key = "class-${classCell.classId}"),
+                        animatedVisibilityScope = animatedVisibilityScope
                     )
+                    .clickable(onClick = onClick),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = classCell.name ?: "",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            lineHeight = 14.sp
+                        ),
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    if (!classCell.room.isNullOrBlank()) {
+                        Text(
+                            text = classCell.room,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 9.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(
+                                alpha = 0.8f
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.align(Alignment.End)
+                        )
+                    }
                 }
             }
         }

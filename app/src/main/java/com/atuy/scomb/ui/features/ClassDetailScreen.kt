@@ -1,6 +1,9 @@
 package com.atuy.scomb.ui.features
 
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -68,11 +71,14 @@ import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.ui.viewmodel.ClassDetailUiState
 import com.atuy.scomb.ui.viewmodel.ClassDetailViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun ClassDetailScreen(
     navController: NavController,
-    viewModel: ClassDetailViewModel = hiltViewModel()
+    viewModel: ClassDetailViewModel = hiltViewModel(),
+    classId: String?,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -100,34 +106,49 @@ fun ClassDetailScreen(
             )
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            when (val state = uiState) {
-                is ClassDetailUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-
-                is ClassDetailUiState.Success -> {
-                    ClassDetailContent(
-                        classCell = state.classCell,
-                        tasks = state.tasks,
-                        customLinks = state.customLinks,
-                        onClassPageClick = { viewModel.onClassPageClick() },
-                        onUpdateUserNote = { viewModel.updateUserNote(it) },
-                        onAddLink = { title, url -> viewModel.addCustomLink(title, url) },
-                        onRemoveLink = { viewModel.removeCustomLink(it) }
+        // 詳細画面全体のコンテンツをアニメーション対象とする
+        // classIdがnullでない場合のみアニメーションを適用
+        with(sharedTransitionScope) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .then(
+                        if (classId != null) {
+                            Modifier.sharedElement(
+                                state = rememberSharedContentState(key = "class-$classId"),
+                                animatedVisibilityScope = animatedVisibilityScope
+                            )
+                        } else Modifier
                     )
-                }
+            ) {
+                when (val state = uiState) {
+                    is ClassDetailUiState.Loading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
 
-                is ClassDetailUiState.Error -> {
-                    ErrorState(
-                        message = state.message,
-                        onRetry = { viewModel.loadClassDetails() })
+                    is ClassDetailUiState.Success -> {
+                        ClassDetailContent(
+                            classCell = state.classCell,
+                            tasks = state.tasks,
+                            customLinks = state.customLinks,
+                            onClassPageClick = { viewModel.onClassPageClick() },
+                            onUpdateUserNote = { viewModel.updateUserNote(it) },
+                            onAddLink = { title, url -> viewModel.addCustomLink(title, url) },
+                            onRemoveLink = { viewModel.removeCustomLink(it) }
+                        )
+                    }
+
+                    is ClassDetailUiState.Error -> {
+                        ErrorState(
+                            message = state.message,
+                            onRetry = { viewModel.loadClassDetails() })
+                    }
                 }
             }
         }
