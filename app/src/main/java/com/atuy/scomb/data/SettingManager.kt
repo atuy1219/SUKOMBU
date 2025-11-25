@@ -30,8 +30,11 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
         const val DEFAULT_DEBUG_MODE = false
 
         // 時間割設定
-        val SHOW_SATURDAY_KEY = booleanPreferencesKey("show_saturday")
-        const val DEFAULT_SHOW_SATURDAY = true
+        // 移行用: 古いキーは削除せず、新しいキーがない場合のフォールバックなどに利用可能だが、
+        // 今回はシンプルに新しいキーを導入し、デフォルト値を「月〜土」とする。
+        val DISPLAY_WEEK_DAYS_KEY = stringSetPreferencesKey("display_week_days")
+        // 0=月, 1=火, 2=水, 3=木, 4=金, 5=土
+        val DEFAULT_DISPLAY_WEEK_DAYS = setOf("0", "1", "2", "3", "4", "5")
 
         val TIMETABLE_PERIOD_COUNT_KEY = intPreferencesKey("timetable_period_count")
         const val DEFAULT_TIMETABLE_PERIOD_COUNT = 7
@@ -67,14 +70,16 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
         }
     }
 
-    // 時間割設定のFlowとSetter
-    val showSaturdayFlow: Flow<Boolean> = context.settingsDataStore.data.map { preferences ->
-        preferences[SHOW_SATURDAY_KEY] ?: DEFAULT_SHOW_SATURDAY
+    // 表示する曜日のFlowとSetter
+    val displayWeekDaysFlow: Flow<Set<Int>> = context.settingsDataStore.data.map { preferences ->
+        (preferences[DISPLAY_WEEK_DAYS_KEY] ?: DEFAULT_DISPLAY_WEEK_DAYS)
+            .mapNotNull { it.toIntOrNull() }
+            .toSet()
     }
 
-    suspend fun setShowSaturday(show: Boolean) {
+    suspend fun setDisplayWeekDays(days: Set<Int>) {
         context.settingsDataStore.edit { preferences ->
-            preferences[SHOW_SATURDAY_KEY] = show
+            preferences[DISPLAY_WEEK_DAYS_KEY] = days.map { it.toString() }.toSet()
         }
     }
 

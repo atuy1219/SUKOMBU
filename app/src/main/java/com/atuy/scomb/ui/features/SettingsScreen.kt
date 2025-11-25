@@ -107,8 +107,8 @@ fun SettingsScreen(
         item {
             SettingsGroupCard {
                 TimetableSettingsSection(
-                    showSaturday = uiState.showSaturday,
-                    onShowSaturdayChange = { viewModel.updateShowSaturday(it) },
+                    displayWeekDays = uiState.displayWeekDays,
+                    onDisplayWeekDaysChange = { viewModel.updateDisplayWeekDays(it) },
                     periodCount = uiState.timetablePeriodCount,
                     onPeriodCountChange = { viewModel.updateTimetablePeriodCount(it) }
                 )
@@ -219,16 +219,16 @@ private fun HomeSettingsSection(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun TimetableSettingsSection(
-    showSaturday: Boolean,
-    onShowSaturdayChange: (Boolean) -> Unit,
+    displayWeekDays: Set<Int>,
+    onDisplayWeekDaysChange: (Set<Int>) -> Unit,
     periodCount: Int,
     onPeriodCountChange: (Int) -> Unit
 ) {
     val periodOptions = listOf(4, 5, 6, 7)
-    val dayOptions = listOf(false to "月〜金", true to "月〜土")
+    val weekDays = listOf("月", "火", "水", "木", "金", "土")
 
     Column {
         SectionHeader(title = "時間割設定", icon = Icons.Default.DateRange)
@@ -240,18 +240,28 @@ private fun TimetableSettingsSection(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            dayOptions.forEachIndexed { index, (isSaturdayShown, label) ->
-                SegmentedButton(
-                    selected = showSaturday == isSaturdayShown,
-                    onClick = { onShowSaturdayChange(isSaturdayShown) },
-                    shape = SegmentedButtonDefaults.itemShape(
-                        index = index,
-                        count = dayOptions.size
-                    )
-                ) {
-                    Text(label)
-                }
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            weekDays.forEachIndexed { index, day ->
+                val isSelected = displayWeekDays.contains(index)
+                FilterChip(
+                    selected = isSelected,
+                    onClick = {
+                        val newSelection = displayWeekDays.toMutableSet()
+                        if (isSelected) {
+                            // 少なくとも1日は選択必須にする場合
+                            if (newSelection.size > 1) {
+                                newSelection.remove(index)
+                            }
+                        } else {
+                            newSelection.add(index)
+                        }
+                        onDisplayWeekDaysChange(newSelection)
+                    },
+                    label = { Text(day) }
+                )
             }
         }
 

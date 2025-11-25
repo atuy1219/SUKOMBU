@@ -21,7 +21,7 @@ data class SettingsUiState(
     val notificationTimings: Set<Int> = emptySet(),
     val showHomeNews: Boolean = true,
     val isDebugMode: Boolean = false,
-    val showSaturday: Boolean = true,
+    val displayWeekDays: Set<Int> = setOf(0, 1, 2, 3, 4, 5), // 0=月 ... 5=土
     val timetablePeriodCount: Int = 7
 )
 
@@ -37,14 +37,14 @@ class SettingsViewModel @Inject constructor(
         settingsManager.notificationTimingsFlow,
         settingsManager.showHomeNewsFlow,
         settingsManager.debugModeFlow,
-        settingsManager.showSaturdayFlow,
+        settingsManager.displayWeekDaysFlow,
         settingsManager.timetablePeriodCountFlow
-    ) { timings, showNews, debugMode, showSat, periodCount ->
+    ) { timings, showNews, debugMode, weekDays, periodCount ->
         SettingsUiState(
             notificationTimings = timings.mapNotNull { it.toIntOrNull() }.toSet(),
             showHomeNews = showNews,
             isDebugMode = debugMode,
-            showSaturday = showSat,
+            displayWeekDays = weekDays,
             timetablePeriodCount = periodCount
         )
     }
@@ -68,9 +68,9 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun updateShowSaturday(show: Boolean) {
+    fun updateDisplayWeekDays(days: Set<Int>) {
         viewModelScope.launch {
-            settingsManager.setShowSaturday(show)
+            settingsManager.setDisplayWeekDays(days)
         }
     }
 

@@ -86,7 +86,7 @@ fun TimetableScreen(
                 ) {
                     TimetableGrid(
                         timetable = state.timetable,
-                        showSaturday = state.showSaturday,
+                        displayWeekDays = state.displayWeekDays,
                         periodCount = state.periodCount,
                         onClassClick = { classCell ->
                             if (classCell.classId.isNotEmpty()) {
@@ -119,20 +119,16 @@ fun TimetableScreen(
 @Composable
 fun TimetableGrid(
     timetable: List<List<ClassCell?>>,
-    showSaturday: Boolean,
+    displayWeekDays: Set<Int>,
     periodCount: Int,
     onClassClick: (ClassCell) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    // 設定に基づいて表示する曜日と時限をフィルタリング
-    val displayDays = if (showSaturday) listOf("月", "火", "水", "木", "金", "土") else listOf(
-        "月",
-        "火",
-        "水",
-        "木",
-        "金"
-    )
+    val allWeekDays = listOf("月", "火", "水", "木", "金", "土")
+    // 表示設定されている曜日のインデックスだけを抽出してソート（0=月...）
+    val targetDayIndices = displayWeekDays.sorted().filter { it < allWeekDays.size }
+
     val displayPeriods = (1..periodCount).toList()
 
     val scrollState = rememberScrollState()
@@ -161,8 +157,8 @@ fun TimetableGrid(
                     .padding(end = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                displayDays.forEachIndexed { index, day ->
-                    val isToday = index == todayIndex
+                targetDayIndices.forEach { dayIndex ->
+                    val isToday = dayIndex == todayIndex
                     Box(
                         modifier = Modifier
                             .width(0.dp)
@@ -179,7 +175,7 @@ fun TimetableGrid(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = day,
+                                text = allWeekDays.getOrElse(dayIndex) { "?" },
                                 style = MaterialTheme.typography.labelMedium.copy(
                                     fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
                                 ),
@@ -222,17 +218,12 @@ fun TimetableGrid(
                     .padding(end = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // 表示する日数分だけループ (timetableは最大で土曜まで含む0-5の6要素を持つリストと想定)
-                val columnCount = if (showSaturday) 6 else 5
+                // timetableは0(月)〜5(土)のリストと想定。
+                // 必要な曜日のカラムだけを取り出して表示する
+                targetDayIndices.forEach { dayIndex ->
+                    // データがない場合の安全策
+                    val dayColumn = timetable.getOrNull(dayIndex) ?: emptyList()
 
-                // timetableのサイズが足りない場合のガード
-                val safeTimetable = if (timetable.size < columnCount) {
-                    timetable + List(columnCount - timetable.size) { emptyList<ClassCell?>() }
-                } else {
-                    timetable
-                }
-
-                safeTimetable.take(columnCount).forEach { dayColumn ->
                     Column(
                         modifier = Modifier
                             .width(0.dp)
@@ -242,8 +233,6 @@ fun TimetableGrid(
                         // 指定時限数分だけループ
                         displayPeriods.forEach { period ->
                             // periodは1始まり、リストインデックスは0始まり
-                            // dayColumnは全時限(7限)分持っているはずなので、該当インデックスを取得
-                            // データがない場合やインデックス外の場合はnullとして扱う
                             val classCell = dayColumn.getOrNull(period - 1)
                             ClassCellView(
                                 classCell = classCell,
