@@ -11,10 +11,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -31,6 +32,13 @@ sealed interface TimetableUiState {
     data class Error(val message: String, val isRefreshing: Boolean = false) : TimetableUiState
 }
 
+// 内部でのデータ取得状態管理用
+private sealed interface TimetableDataState {
+    object Loading : TimetableDataState
+    data class Success(val timetable: List<List<ClassCell?>>, val isRefreshing: Boolean) : TimetableDataState
+    data class Error(val message: String, val isRefreshing: Boolean) : TimetableDataState
+}
+
 @HiltViewModel
 class TimetableViewModel @Inject constructor(
     private val repository: ScombzRepository,
@@ -38,8 +46,40 @@ class TimetableViewModel @Inject constructor(
 ) : ViewModel() {
     private val TAG = "TimetableViewModel"
 
-    private val _uiState = MutableStateFlow<TimetableUiState>(TimetableUiState.Loading)
-    val uiState: StateFlow<TimetableUiState> = _uiState.asStateFlow()
+    // 内部的なデータのロード状態
+    private val _dataState = MutableStateFlow<TimetableDataState>(TimetableDataState.Loading)
+
+    // 設定値のフロー
+    private val settingsFlow = combine(
+        settingsManager.displayWeekDaysFlow,
+        settingsManager.timetablePeriodCountFlow
+    ) { displayWeekDays, periodCount ->
+        Pair(displayWeekDays, periodCount)
+    }
+
+    // UI状態はデータ状態と設定値を合成して生成する
+    val uiState: StateFlow<TimetableUiState> = combine(
+        _dataState,
+        settingsFlow
+    ) { dataState, (displayWeekDays, periodCount) ->
+        when (dataState) {
+            is TimetableDataState.Loading -> TimetableUiState.Loading
+            is TimetableDataState.Success -> TimetableUiState.Success(
+                timetable = dataState.timetable,
+                isRefreshing = dataState.isRefreshing,
+                displayWeekDays = displayWeekDays,
+                periodCount = periodCount
+            )
+            is TimetableDataState.Error -> TimetableUiState.Error(
+                message = dataState.message,
+                isRefreshing = dataState.isRefreshing
+            )
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = TimetableUiState.Loading
+    )
 
     private val _currentYear = MutableStateFlow(
         DateUtils.getCurrentScombTerm().year
@@ -55,23 +95,6 @@ class TimetableViewModel @Inject constructor(
 
     init {
         loadData(forceRefresh = false)
-        observeSettings()
-    }
-
-    private fun observeSettings() {
-        // 設定が変更されたらUI状態を更新する
-        combine(
-            settingsManager.displayWeekDaysFlow,
-            settingsManager.timetablePeriodCountFlow
-        ) { displayWeekDays, periodCount ->
-            val currentState = _uiState.value
-            if (currentState is TimetableUiState.Success) {
-                _uiState.value = currentState.copy(
-                    displayWeekDays = displayWeekDays,
-                    periodCount = periodCount
-                )
-            }
-        }.launchIn(viewModelScope)
     }
 
     fun changeYearAndTerm(newYear: Int, newTerm: String) {
@@ -91,11 +114,12 @@ class TimetableViewModel @Inject constructor(
             val term = _currentTerm.value
             Log.d(TAG, "loadData called for $year-$term, forceRefresh=$forceRefresh")
 
-            val currentState = _uiState.value
-            if (forceRefresh && currentState is TimetableUiState.Success) {
-                _uiState.value = currentState.copy(isRefreshing = true)
+            // 現在の状態がSuccessならリフレッシュ表示にする
+            val currentDataState = _dataState.value
+            if (forceRefresh && currentDataState is TimetableDataState.Success) {
+                _dataState.value = currentDataState.copy(isRefreshing = true)
             } else {
-                _uiState.value = TimetableUiState.Loading
+                _dataState.value = TimetableDataState.Loading
             }
 
             try {
@@ -108,10 +132,9 @@ class TimetableViewModel @Inject constructor(
                     }
                 }
 
-                _uiState.value = TimetableUiState.Success(
+                _dataState.value = TimetableDataState.Success(
                     timetable = timetableGrid,
                     isRefreshing = false
-                    // displayWeekDays, periodCount は observeSettings で更新される
                 )
 
             } catch (e: Exception) {
@@ -120,7 +143,7 @@ class TimetableViewModel @Inject constructor(
                     throw e
                 }
                 val message = e.message ?: "不明なエラーが発生しました"
-                _uiState.value = TimetableUiState.Error(message, isRefreshing = false)
+                _dataState.value = TimetableDataState.Error(message, isRefreshing = false)
                 Log.e(TAG, "Error fetching timetable: $message", e)
             }
         }
