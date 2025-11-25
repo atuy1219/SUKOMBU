@@ -1,29 +1,39 @@
 package com.atuy.scomb.ui.features
 
 import androidx.browser.customtabs.CustomTabsIntent
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CreditScore
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -33,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -82,6 +93,7 @@ fun ClassDetailScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(paddingValues)
         ) {
             when (val state = uiState) {
                 is ClassDetailUiState.Loading -> {
@@ -94,7 +106,6 @@ fun ClassDetailScreen(
                     ClassDetailContent(
                         classCell = state.classCell,
                         tasks = state.tasks,
-                        contentPadding = paddingValues,
                         onClassPageClick = { viewModel.onClassPageClick() }
                     )
                 }
@@ -114,7 +125,6 @@ fun ClassDetailScreen(
 fun ClassDetailContent(
     classCell: ClassCell,
     tasks: List<Task>,
-    contentPadding: PaddingValues = PaddingValues(0.dp),
     onClassPageClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -132,81 +142,160 @@ fun ClassDetailContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        contentPadding = contentPadding
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item(key = "header") {
-            Text(
-                text = classCell.name ?: "科目名なし",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier
-                    .padding(bottom = 16.dp)
-                    .animateItem(fadeInSpec = tween(durationMillis = 300))
-            )
+            ClassHeaderCard(classCell, onClassPageClick)
         }
 
-        item(key = "basic_info") {
-            DetailSectionTitle(title = "基本情報")
-            DetailInfoRow(label = "曜日", value = (classCell.dayOfWeek).toDayOfWeekString())
-            DetailInfoRow(label = "時限", value = "${classCell.period + 1} 限")
-            DetailInfoRow(label = "教室", value = classCell.room ?: "未設定")
-            DetailInfoRow(label = "教員", value = classCell.teachers ?: "未設定")
-            DetailInfoRow(label = "単位数", value = classCell.numberOfCredit?.toString() ?: "未設定")
+        item(key = "info_grid") {
+            InfoGridCard(classCell)
         }
 
         item(key = "links") {
-            Spacer(modifier = Modifier.height(16.dp))
-            DetailSectionTitle(title = "リンク")
-            ListItem(
-                headlineContent = { Text("授業ページ") },
-                leadingContent = { Icon(Icons.Default.Link, contentDescription = null) },
-                modifier = Modifier
-                    .clickable { onClassPageClick() }
-                    .animateItem(fadeInSpec = tween(durationMillis = 300))
-            )
-            ListItem(
-                headlineContent = { Text("シラバス") },
-                leadingContent = { Icon(Icons.Default.Link, contentDescription = null) },
-                modifier = Modifier
-                    .clickable { openUrl(classCell.syllabusUrl) }
-                    .animateItem(fadeInSpec = tween(durationMillis = 300))
-            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "リンク",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilledTonalButton(
+                            onClick = { openUrl(classCell.syllabusUrl) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.MenuBook,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("シラバス")
+                        }
+                    }
+                }
+            }
         }
 
         item(key = "memo") {
-            Spacer(modifier = Modifier.height(16.dp))
-            DetailSectionTitle(title = "メモ")
-            Text(
-                // TODO: メモを編集可能にする
-                text = classCell.note ?: "メモはありません。",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-                    .animateItem(fadeInSpec = tween(durationMillis = 300))
-            )
+            if (!classCell.note.isNullOrBlank()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "メモ",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        Text(
+                            text = classCell.note,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
         }
 
         item(key = "task_header") {
-            Spacer(modifier = Modifier.height(16.dp))
-            DetailSectionTitle(title = "関連する課題")
+            Text(
+                text = "関連する課題",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
         }
 
         if (tasks.isEmpty()) {
             item(key = "no_tasks") {
-                Text(
-                    text = "関連する課題はありません。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier
-                        .padding(vertical = 8.dp)
-                        .animateItem(fadeInSpec = tween(durationMillis = 300))
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .padding(24.dp)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "関連する課題はありません",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         } else {
             items(tasks, key = { it.id }) { task ->
-                TaskListItem(
+                TaskCard( // TaskListScreenと同じコンポーネントを使用（ここでは複製定義せず、共通化が理想だが簡易的に呼び出す想定）
                     task = task,
-                    onTaskClick = { openUrl(task.url) },
-                    modifier = Modifier.animateItem(fadeInSpec = tween(durationMillis = 300))
+                    onTaskClick = { openUrl(task.url) }
+                )
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(32.dp)) }
+    }
+}
+
+@Composable
+fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = classCell.name ?: "科目名なし",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = classCell.teachers ?: "教員未設定",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = onClassPageClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    contentColor = MaterialTheme.colorScheme.primaryContainer
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("LMS ページを開く")
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    Icons.Default.OpenInNew,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -214,31 +303,51 @@ fun ClassDetailContent(
 }
 
 @Composable
-fun DetailSectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(bottom = 8.dp)
-    )
-    HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
+fun InfoGridCard(classCell: ClassCell) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            InfoRow(
+                icon = Icons.Default.CalendarToday,
+                label = "曜日・時限",
+                value = "${(classCell.dayOfWeek).toDayOfWeekString()} ${classCell.period + 1}限"
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+            InfoRow(
+                icon = Icons.Default.LocationOn,
+                label = "教室",
+                value = classCell.room ?: "未設定"
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+            InfoRow(
+                icon = Icons.Default.CreditScore,
+                label = "単位数",
+                value = classCell.numberOfCredit?.toString() ?: "-"
+            )
+        }
+    }
 }
 
 @Composable
-fun DetailInfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.width(80.dp)
-        )
-        Text(text = value, style = MaterialTheme.typography.bodyMedium)
+fun InfoRow(icon: ImageVector, label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 

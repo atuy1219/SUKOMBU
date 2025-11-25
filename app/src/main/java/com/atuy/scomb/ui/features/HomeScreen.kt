@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,20 +13,35 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Class
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -35,8 +51,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -181,6 +200,49 @@ fun Dashboard(
                 onLinkClick = onLinkClick
             )
         }
+
+        item {
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+fun DashboardSection(
+    title: String,
+    icon: ImageVector,
+    content: @Composable () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column {
+                content()
+            }
+        }
     }
 }
 
@@ -189,21 +251,53 @@ fun TodaysClassesSection(
     classes: List<ClassCell>,
     onClassClick: (String) -> Unit
 ) {
-    DashboardSection(title = stringResource(R.string.home_todays_classes)) {
+    DashboardSection(title = stringResource(R.string.home_todays_classes), icon = Icons.Default.Class) {
         if (classes.isEmpty()) {
-            Text(stringResource(R.string.home_no_classes_today), modifier = Modifier.padding(16.dp))
+            EmptyStateItem(text = stringResource(R.string.home_no_classes_today))
         } else {
-            classes.forEach { classCell ->
+            classes.forEachIndexed { index, classCell ->
                 ListItem(
-                    headlineContent = { Text(stringResource(R.string.home_period_format, classCell.period + 1, classCell.name ?: "")) },
-                    supportingContent = { Text(classCell.room ?: stringResource(R.string.home_room_unset)) },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    headlineContent = {
+                        Text(
+                            text = classCell.name ?: "",
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = classCell.room ?: stringResource(R.string.home_room_unset),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    leadingContent = {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "${classCell.period + 1}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    },
                     modifier = Modifier.clickable {
                         if (classCell.classId.isNotEmpty()) {
                             onClassClick(classCell.classId)
                         }
                     }
                 )
-                HorizontalDivider()
+                if (index < classes.size - 1) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                }
             }
         }
     }
@@ -214,18 +308,49 @@ fun UpcomingTasksSection(
     tasks: List<Task>,
     onTaskClick: (String) -> Unit
 ) {
-    DashboardSection(title = stringResource(R.string.home_upcoming_tasks)) {
+    DashboardSection(title = stringResource(R.string.home_upcoming_tasks), icon = Icons.Default.AccessTime) {
         if (tasks.isEmpty()) {
-            Text(stringResource(R.string.home_no_upcoming_tasks), modifier = Modifier.padding(16.dp))
+            EmptyStateItem(text = stringResource(R.string.home_no_upcoming_tasks))
         } else {
-            tasks.forEach { task ->
+            tasks.forEachIndexed { index, task ->
+                val isOverdue = task.deadline < System.currentTimeMillis()
+                val timeColor = if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+
                 ListItem(
-                    headlineContent = { Text(task.title, maxLines = 1) },
-                    supportingContent = { Text(task.className) },
-                    trailingContent = { Text(DateUtils.timeToString(task.deadline)) },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    headlineContent = {
+                        Text(
+                            text = task.title,
+                            maxLines = 1,
+                            fontWeight = FontWeight.Medium
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = task.className,
+                            maxLines = 1,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    },
+                    trailingContent = {
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = DateUtils.timeToString(task.deadline),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = timeColor
+                            )
+                            Text(
+                                text = DateUtils.formatRemainingTime(task.deadline),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = timeColor
+                            )
+                        }
+                    },
                     modifier = Modifier.clickable { onTaskClick(task.url) }
                 )
-                HorizontalDivider()
+                if (index < tasks.size - 1) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                }
             }
         }
     }
@@ -237,18 +362,48 @@ fun RecentNewsSection(
     news: List<NewsItem>,
     onNewsClick: (String) -> Unit
 ) {
-    DashboardSection(title = stringResource(R.string.home_recent_news)) {
+    DashboardSection(title = stringResource(R.string.home_recent_news), icon = Icons.Default.Notifications) {
         if (news.isEmpty()) {
-            Text(stringResource(R.string.home_no_new_news), modifier = Modifier.padding(16.dp))
+            EmptyStateItem(text = stringResource(R.string.home_no_new_news))
         } else {
-            news.forEach { newsItem ->
+            news.forEachIndexed { index, newsItem ->
                 ListItem(
-                    headlineContent = { Text(newsItem.title, maxLines = 2) },
-                    supportingContent = { Text(newsItem.domain) },
-                    trailingContent = { Text(newsItem.publishTime) },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    headlineContent = {
+                        Text(
+                            text = newsItem.title,
+                            maxLines = 2,
+                            fontWeight = if (newsItem.unread) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    supportingContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                            if (newsItem.unread) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(end = 8.dp)
+                                        .size(8.dp)
+                                        .background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.CircleShape)
+                                )
+                            }
+                            Text(
+                                text = newsItem.category,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = newsItem.publishTime,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
                     modifier = Modifier.clickable { onNewsClick(newsItem.url) }
                 )
-                HorizontalDivider()
+                if (index < news.size - 1) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                }
             }
         }
     }
@@ -260,16 +415,27 @@ fun QuickLinksSection(
     links: List<LinkItem>,
     onLinkClick: (String) -> Unit
 ) {
-    DashboardSection(title = stringResource(R.string.home_quick_links)) {
+    DashboardSection(title = stringResource(R.string.home_quick_links), icon = Icons.Default.Link) {
         FlowRow(
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             links.forEach { link ->
-                SuggestionChip(
+                AssistChip(
                     onClick = { onLinkClick(link.url) },
-                    label = { Text(link.title) }
+                    label = { Text(link.title) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (link.title.contains("シラバス")) Icons.Default.Class else Icons.Default.CalendarToday, // 簡易的なアイコン切り替え
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        labelColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
             }
         }
@@ -277,21 +443,17 @@ fun QuickLinksSection(
 }
 
 @Composable
-fun DashboardSection(
-    title: String,
-    content: @Composable () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+fun EmptyStateItem(text: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Column {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(16.dp)
-            )
-            content()
-        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

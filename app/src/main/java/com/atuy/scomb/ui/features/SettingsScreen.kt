@@ -18,8 +18,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -27,7 +33,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -41,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -83,52 +89,44 @@ fun SettingsScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            HomeSettingsSection(
-                showHomeNews = uiState.showHomeNews,
-                onShowHomeNewsChange = { viewModel.updateShowHomeNews(it) }
-            )
-        }
-
-        item {
-            HorizontalDivider()
-        }
-
-        item {
-            NotificationSettingsSection(
-                selectedTimings = uiState.notificationTimings,
-                onTimingsChange = { viewModel.updateNotificationTimings(it) }
-            )
-        }
-
-        item {
-            HorizontalDivider()
-        }
-
-        item {
-            AppInfoSection(
-                onVersionClick = { viewModel.onVersionClick() }
-            )
-        }
-
-        // デバッグモードが有効な場合のみ表示
-        if (uiState.isDebugMode) {
-            item {
-                HorizontalDivider()
-            }
-
-            item {
-                DebugSection(
-                    onTestNotificationClick = { viewModel.scheduleTestNotification() },
-                    onDisableDebugModeClick = { viewModel.disableDebugMode() }
+            SettingsGroupCard {
+                HomeSettingsSection(
+                    showHomeNews = uiState.showHomeNews,
+                    onShowHomeNewsChange = { viewModel.updateShowHomeNews(it) }
                 )
             }
         }
 
         item {
-            HorizontalDivider()
+            SettingsGroupCard {
+                NotificationSettingsSection(
+                    selectedTimings = uiState.notificationTimings,
+                    onTimingsChange = { viewModel.updateNotificationTimings(it) }
+                )
+            }
+        }
+
+        item {
+            SettingsGroupCard {
+                AppInfoSection(
+                    onVersionClick = { viewModel.onVersionClick() }
+                )
+            }
+        }
+
+        // デバッグモードが有効な場合のみ表示
+        if (uiState.isDebugMode) {
+            item {
+                SettingsGroupCard {
+                    DebugSection(
+                        onTestNotificationClick = { viewModel.scheduleTestNotification() },
+                        onDisableDebugModeClick = { viewModel.disableDebugMode() }
+                    )
+                }
+            }
         }
 
         item {
@@ -136,6 +134,46 @@ fun SettingsScreen(
                 onLogoutClick = { showLogoutDialog = true }
             )
         }
+
+        item {
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+fun SettingsGroupCard(content: @Composable () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // フラットなデザイン
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            content()
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(title: String, icon: ImageVector) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(bottom = 12.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
@@ -145,11 +183,7 @@ private fun HomeSettingsSection(
     onShowHomeNewsChange: (Boolean) -> Unit
 ) {
     Column {
-        Text(
-            text = stringResource(R.string.settings_home_title),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        SectionHeader(title = stringResource(R.string.settings_home_title), icon = Icons.Default.Home)
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -185,17 +219,14 @@ private fun NotificationSettingsSection(
     )
 
     Column {
-        Text(
-            text = stringResource(R.string.settings_notification_title),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        SectionHeader(title = stringResource(R.string.settings_notification_title), icon = Icons.Default.Notifications)
+
         Text(
             text = stringResource(R.string.settings_notification_desc),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 12.dp)
         )
-        Spacer(modifier = Modifier.height(16.dp))
 
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
@@ -236,70 +267,57 @@ private fun AppInfoSection(
     }
 
     Column {
-        Text(
-            text = stringResource(R.string.settings_app_info_title),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        SectionHeader(title = stringResource(R.string.settings_app_info_title), icon = Icons.Default.Info)
 
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            ),
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 8.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AndroidView(
-                        modifier = Modifier.size(64.dp),
-                        factory = { context ->
-                            ImageView(context).apply {
-                                setImageResource(R.mipmap.ic_launcher)
-                            }
-                        }
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            text = stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        // バージョン情報部分をクリッカブルにする（リップルエフェクトなし）
-                        Text(
-                            text = stringResource(R.string.settings_version_format, displayVersion),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onVersionClick
-                            )
-                        )
+            AndroidView(
+                modifier = Modifier.size(56.dp),
+                factory = { context ->
+                    ImageView(context).apply {
+                        setImageResource(R.mipmap.ic_launcher)
                     }
                 }
-
-                OutlinedButton(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/atuy1219/SUKOMBU"))
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                // バージョン情報部分をクリッカブルにする（リップルエフェクトなし）
+                Text(
+                    text = stringResource(R.string.settings_version_format, displayVersion),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onVersionClick
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.settings_github_link))
-                }
+                )
             }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/atuy1219/SUKOMBU"))
+                context.startActivity(intent)
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.settings_github_link))
         }
     }
 }
@@ -310,11 +328,8 @@ private fun DebugSection(
     onDisableDebugModeClick: () -> Unit
 ) {
     Column {
-        Text(
-            text = stringResource(R.string.settings_debug_title),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        SectionHeader(title = stringResource(R.string.settings_debug_title), icon = Icons.Default.BugReport)
+
         Button(
             onClick = onTestNotificationClick,
             modifier = Modifier.fillMaxWidth()
@@ -334,16 +349,15 @@ private fun DebugSection(
 
 @Composable
 private fun LogoutSection(onLogoutClick: () -> Unit) {
-    Column(
+    Button(
+        onClick = onLogoutClick,
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        shape = RoundedCornerShape(16.dp) // 他のカードと統一感を持たせる
     ) {
-        Button(
-            onClick = onLogoutClick,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-        ) {
-            Text(stringResource(R.string.settings_logout_button))
-        }
+        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(stringResource(R.string.settings_logout_button))
     }
 }
 

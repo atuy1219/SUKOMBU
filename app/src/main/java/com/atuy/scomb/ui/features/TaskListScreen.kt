@@ -3,6 +3,11 @@ package com.atuy.scomb.ui.features
 import android.widget.Toast
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,24 +17,26 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -42,10 +49,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -83,8 +89,16 @@ fun TaskListScreen(
             }
 
             is TaskListUiState.Success -> {
-                AnimatedVisibility(visible = state.isSearchActive) {
-                    Column {
+                AnimatedVisibility(
+                    visible = state.isSearchActive,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(bottom = 8.dp)
+                    ) {
                         TaskSearchBar(
                             searchQuery = state.filter.searchQuery,
                             onSearchQueryChanged = { query ->
@@ -136,7 +150,7 @@ fun TaskSearchBar(
         onValueChange = onSearchQueryChanged,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         placeholder = { Text("課題名や科目名で検索") },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         trailingIcon = {
@@ -147,6 +161,7 @@ fun TaskSearchBar(
             }
         },
         singleLine = true,
+        shape = RoundedCornerShape(12.dp),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
     )
@@ -161,7 +176,7 @@ fun FilterBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         FilterChip(
@@ -186,7 +201,7 @@ fun FilterBar(
             label = { Text("完了済み") },
             leadingIcon = {
                 if (filter.showCompleted) {
-                    Icon(Icons.Default.Check, contentDescription = "完了済み")
+                    Icon(Icons.Default.Check, contentDescription = "完了済み", modifier = Modifier.size(18.dp))
                 }
             }
         )
@@ -197,71 +212,117 @@ fun FilterBar(
 fun TaskList(tasks: List<Task>, onTaskClick: (Task) -> Unit) {
     if (tasks.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("表示する課題がありません")
+            Text(
+                "表示する課題がありません",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 16.dp)
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(tasks) { task ->
-                TaskListItem(task = task, onTaskClick = onTaskClick)
+            items(tasks, key = { it.id }) { task ->
+                TaskCard(task = task, onTaskClick = onTaskClick)
             }
         }
     }
 }
 
 @Composable
-fun TaskListItem(
+fun TaskCard(
     task: Task,
-    onTaskClick: (Task) -> Unit,
-    modifier: Modifier = Modifier
+    onTaskClick: (Task) -> Unit
 ) {
-    Column(modifier = modifier.clickable { onTaskClick(task) }) {
-        ListItem(
-            leadingContent = { TaskTypeIcon(task.taskType) },
-            headlineContent = {
-                Text(
-                    text = task.title,
-                    textDecoration = if (task.done) TextDecoration.LineThrough else null,
-                    color = if (task.done) MaterialTheme.colorScheme.outline else LocalContentColor.current
-                )
-            },
-            supportingContent = {
-                Column {
-                    Text(task.className)
-                    val remainingTime = DateUtils.formatRemainingTime(task.deadline)
+    val accentColor = when (task.taskType) {
+        0 -> MaterialTheme.colorScheme.primary      // 課題
+        1 -> MaterialTheme.colorScheme.error        // テスト
+        2 -> MaterialTheme.colorScheme.secondary    // アンケート
+        else -> MaterialTheme.colorScheme.tertiary  // その他
+    }
+
+    val isOverdue = task.deadline < System.currentTimeMillis() && !task.done
+    val deadlineColor = if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onTaskClick(task) },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth().height(80.dp)) { // 高さを固定または最小高さ設定
+            // 左端のカラーバー
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .fillMaxSize() // 高さいっぱい
+                    .background(accentColor)
+            )
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(
-                        text = "${DateUtils.timeToString(task.deadline)} ($remainingTime)",
-                        color = if (task.deadline < System.currentTimeMillis() && !task.done) {
-                            MaterialTheme.colorScheme.error
-                        } else if (task.deadline < System.currentTimeMillis() + 24 * 60 * 60 * 1000 && !task.done) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            LocalContentColor.current
-                        },
-                        fontSize = 12.sp
+                        text = task.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
                     )
+                    // 完了済みバッジなどがあればここに
+                    if (task.done) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Done",
+                            tint = MaterialTheme.colorScheme.green,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = task.className,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = DateUtils.timeToString(task.deadline),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = deadlineColor
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    if (!task.done) {
+                        Text(
+                            text = DateUtils.formatRemainingTime(task.deadline),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = deadlineColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
-        )
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        }
     }
 }
 
-@Composable
-fun TaskTypeIcon(taskType: Int) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(56.dp)) {
-        val (iconText, color) = when (taskType) {
-            0 -> "課題" to MaterialTheme.colorScheme.primary
-            1 -> "テスト" to MaterialTheme.colorScheme.error
-            2 -> "アンケート" to MaterialTheme.colorScheme.secondary
-            else -> "他" to MaterialTheme.colorScheme.onSurface
-        }
-        Text(
-            text = iconText,
-            fontSize = 12.sp,
-            color = color
-        )
-    }
-}
+val androidx.compose.material3.ColorScheme.green: androidx.compose.ui.graphics.Color
+    get() = androidx.compose.ui.graphics.Color(0xFF4CAF50)
