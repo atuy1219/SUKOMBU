@@ -346,7 +346,10 @@ fun NewsCard(newsItem: NewsItem, onClick: () -> Unit) {
                 // カテゴリバッジ
                 Box(
                     modifier = Modifier
-                        .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(4.dp))
+                        .background(
+                            MaterialTheme.colorScheme.secondaryContainer,
+                            RoundedCornerShape(4.dp)
+                        )
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(

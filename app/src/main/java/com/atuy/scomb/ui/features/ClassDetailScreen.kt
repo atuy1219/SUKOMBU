@@ -211,7 +211,10 @@ fun ClassDetailContent(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        IconButton(onClick = { showAddLinkDialog = true }, modifier = Modifier.size(24.dp)) {
+                        IconButton(
+                            onClick = { showAddLinkDialog = true },
+                            modifier = Modifier.size(24.dp)
+                        ) {
                             Icon(Icons.Default.Add, contentDescription = "リンクを追加")
                         }
                     }
@@ -223,7 +226,11 @@ fun ClassDetailContent(
                         onClick = { openUrl(classCell.syllabusUrl) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.AutoMirrored.Filled.MenuBook,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("シラバス")
                     }
@@ -239,12 +246,20 @@ fun ClassDetailContent(
                                 onClick = { openUrl(link.url) },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    Icons.Default.Link,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(link.title)
                             }
                             IconButton(onClick = { onRemoveLink(link) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "削除", tint = MaterialTheme.colorScheme.error)
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "削除",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
                             }
                         }
                     }
@@ -269,7 +284,10 @@ fun ClassDetailContent(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        IconButton(onClick = { showEditNoteDialog = true }, modifier = Modifier.size(24.dp)) {
+                        IconButton(
+                            onClick = { showEditNoteDialog = true },
+                            modifier = Modifier.size(24.dp)
+                        ) {
                             Icon(Icons.Default.Edit, contentDescription = "編集")
                         }
                     }
@@ -322,7 +340,9 @@ fun ClassDetailContent(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                 ) {
                     Box(
-                        modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                        modifier = Modifier
+                            .padding(24.dp)
+                            .fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -441,7 +461,11 @@ fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = classCell.teachers ?: "教員未設定",
@@ -462,7 +486,11 @@ fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
             ) {
                 Text("LMS ページを開く")
                 Spacer(modifier = Modifier.width(8.dp))
-                Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.OpenInNew,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }

@@ -121,6 +121,13 @@ fun HomeScreen(
         }
     }
 
+    // ViewModelからのURLオープンイベントを監視
+    LaunchedEffect(viewModel) {
+        viewModel.openUrlEvent.collect { url ->
+            openUrl(url)
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is HomeUiState.Loading -> {
@@ -141,7 +148,7 @@ fun HomeScreen(
                         homeData = state.homeData,
                         showNews = state.showNews,
                         onClassClick = { classId -> navController.navigate("classDetail/$classId") },
-                        onTaskClick = { url -> openUrl(url) },
+                        onTaskClick = { task -> viewModel.onTaskClick(task) }, // タスククリック時にViewModelへ通知
                         onNewsClick = { url -> openUrl(url) },
                         onLinkClick = { url -> openUrl(url) }
                     )
@@ -163,7 +170,7 @@ fun Dashboard(
     homeData: HomeData,
     showNews: Boolean,
     onClassClick: (String) -> Unit,
-    onTaskClick: (String) -> Unit,
+    onTaskClick: (Task) -> Unit, // 引数をURLからTaskオブジェクトに変更
     onNewsClick: (String) -> Unit,
     onLinkClick: (String) -> Unit
 ) {
@@ -326,7 +333,7 @@ fun TodaysClassesSection(
 @Composable
 fun UpcomingTasksSection(
     tasks: List<Task>,
-    onTaskClick: (String) -> Unit
+    onTaskClick: (Task) -> Unit // URL文字列ではなくTaskオブジェクトを受け取るように変更
 ) {
     DashboardSection(
         title = stringResource(R.string.home_upcoming_tasks),
@@ -370,7 +377,7 @@ fun UpcomingTasksSection(
                             )
                         }
                     },
-                    modifier = Modifier.clickable { onTaskClick(task.url) }
+                    modifier = Modifier.clickable { onTaskClick(task) } // Taskオブジェクトを渡す
                 )
                 if (index < tasks.size - 1) {
                     HorizontalDivider(

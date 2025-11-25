@@ -12,11 +12,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
@@ -37,6 +39,7 @@ sealed interface HomeUiState {
         val showNews: Boolean = true,
         val isRefreshing: Boolean = false
     ) : HomeUiState
+
     data class Error(val message: String, val isRefreshing: Boolean = false) : HomeUiState
 }
 
@@ -57,6 +60,9 @@ class HomeViewModel @Inject constructor(
         LinkItem("時間割", "https://timetable.sic.shibaura-it.ac.jp/"),
         LinkItem("学年歴", "https://www.shibaura-it.ac.jp/campus_life/school_calendar")
     )
+
+    private val _openUrlEvent = Channel<String>(Channel.BUFFERED)
+    val openUrlEvent = _openUrlEvent.receiveAsFlow()
 
 
     init {
@@ -92,7 +98,13 @@ class HomeViewModel @Inject constructor(
                     val calendar = Calendar.getInstance()
                     val currentTerm = DateUtils.getCurrentScombTerm()
                     val timetableDeferred =
-                        async { repository.getTimetable(currentTerm.year, currentTerm.term, forceRefresh) }
+                        async {
+                            repository.getTimetable(
+                                currentTerm.year,
+                                currentTerm.term,
+                                forceRefresh
+                            )
+                        }
 
                     val newsDeferred = async { repository.getNews(forceRefresh) }
 
@@ -105,6 +117,7 @@ class HomeViewModel @Inject constructor(
 
                     val upcomingTasks = tasks
                         .filter { it.deadline > System.currentTimeMillis() && !it.done }
+                        .sortedBy { it.deadline }
                         .take(3)
 
                     val todayOfWeek = (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7
@@ -127,8 +140,25 @@ class HomeViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.value = HomeUiState.Error(e.message ?: "不明なエラーが発生しました", isRefreshing = false)
+                _uiState.value = HomeUiState.Error(
+                    e.message ?: "不明なエラーが発生しました",
+                    isRefreshing = false
+                )
                 e.printStackTrace()
+            }
+        }
+    }
+
+    fun onTaskClick(task: Task) {
+        viewModelScope.launch {
+            try {
+                val url = repository.getTaskUrl(task)
+                _openUrlEvent.send(url)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // 必要に応じてエラー処理を追加（トースト表示など）
+                // 今回はエラー時でも元のURLを開く、あるいは何もしない等の対応が考えられるが
+                // シンプルにログ出力のみとする
             }
         }
     }

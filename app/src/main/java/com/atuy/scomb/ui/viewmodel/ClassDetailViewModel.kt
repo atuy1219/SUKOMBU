@@ -26,6 +26,7 @@ sealed interface ClassDetailUiState {
         val tasks: List<Task>,
         val customLinks: List<CustomLink> = emptyList()
     ) : ClassDetailUiState
+
     data class Error(val message: String) : ClassDetailUiState
 }
 
@@ -63,7 +64,8 @@ class ClassDetailViewModel @Inject constructor(
                     _uiState.value = ClassDetailUiState.Success(classCell, tasks, customLinks)
                 }
             } catch (e: Exception) {
-                _uiState.value = ClassDetailUiState.Error(e.message ?: "データの読み込みに失敗しました。")
+                _uiState.value =
+                    ClassDetailUiState.Error(e.message ?: "データの読み込みに失敗しました。")
             }
         }
     }
@@ -106,7 +108,8 @@ class ClassDetailViewModel @Inject constructor(
 
             viewModelScope.launch {
                 classCellDao.insertClassCell(updatedClassCell)
-                _uiState.value = currentState.copy(classCell = updatedClassCell, customLinks = updatedLinks)
+                _uiState.value =
+                    currentState.copy(classCell = updatedClassCell, customLinks = updatedLinks)
             }
         }
     }
@@ -120,7 +123,8 @@ class ClassDetailViewModel @Inject constructor(
 
             viewModelScope.launch {
                 classCellDao.insertClassCell(updatedClassCell)
-                _uiState.value = currentState.copy(classCell = updatedClassCell, customLinks = updatedLinks)
+                _uiState.value =
+                    currentState.copy(classCell = updatedClassCell, customLinks = updatedLinks)
             }
         }
     }

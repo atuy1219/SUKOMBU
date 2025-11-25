@@ -72,6 +72,7 @@ fun TimetableScreen(
                     CircularProgressIndicator()
                 }
             }
+
             is TimetableUiState.Success -> {
                 PullToRefreshBox(
                     isRefreshing = state.isRefreshing,
@@ -86,12 +87,16 @@ fun TimetableScreen(
                             if (classCell.classId.isNotEmpty()) {
                                 navController.navigate("classDetail/${classCell.classId}")
                             } else {
-                                Log.w(TAG, "Clicked ClassCell with empty classId: ${classCell.name}")
+                                Log.w(
+                                    TAG,
+                                    "Clicked ClassCell with empty classId: ${classCell.name}"
+                                )
                             }
                         }
                     )
                 }
             }
+
             is TimetableUiState.Error -> {
                 ErrorState(
                     message = state.message,
@@ -111,7 +116,13 @@ fun TimetableGrid(
     onClassClick: (ClassCell) -> Unit
 ) {
     // 設定に基づいて表示する曜日と時限をフィルタリング
-    val displayDays = if (showSaturday) listOf("月", "火", "水", "木", "金", "土") else listOf("月", "火", "水", "木", "金")
+    val displayDays = if (showSaturday) listOf("月", "火", "水", "木", "金", "土") else listOf(
+        "月",
+        "火",
+        "水",
+        "木",
+        "金"
+    )
     val displayPeriods = (1..periodCount).toList()
 
     val scrollState = rememberScrollState()

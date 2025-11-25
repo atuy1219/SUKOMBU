@@ -203,7 +203,11 @@ fun FilterBar(
             label = { Text("完了済み") },
             leadingIcon = {
                 if (filter.showCompleted) {
-                    Icon(Icons.Default.Check, contentDescription = "完了済み", modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = "完了済み",
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         )
@@ -246,7 +250,8 @@ fun TaskCard(
     }
 
     val isOverdue = task.deadline < System.currentTimeMillis() && !task.done
-    val deadlineColor = if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+    val deadlineColor =
+        if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
 
     Card(
         modifier = Modifier
@@ -258,7 +263,9 @@ fun TaskCard(
     ) {
         // IntrinsicSize.Minを使用することで、コンテンツの高さに合わせてRowの高さを決定し、
         // その高さに合わせて左側のカラーバー(Box)を伸縮させます。
-        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)) {
             // 左端のカラーバー
             Box(
                 modifier = Modifier

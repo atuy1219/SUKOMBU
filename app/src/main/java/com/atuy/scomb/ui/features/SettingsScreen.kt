@@ -197,7 +197,10 @@ private fun HomeSettingsSection(
     onShowHomeNewsChange: (Boolean) -> Unit
 ) {
     Column {
-        SectionHeader(title = stringResource(R.string.settings_home_title), icon = Icons.Default.Home)
+        SectionHeader(
+            title = stringResource(R.string.settings_home_title),
+            icon = Icons.Default.Home
+        )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -258,7 +261,10 @@ private fun TimetableSettingsSection(
                 SegmentedButton(
                     selected = periodCount == count,
                     onClick = { onPeriodCountChange(count) },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = periodOptions.size)
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = periodOptions.size
+                    )
                 ) {
                     Text("${count}限まで")
                 }
@@ -284,7 +290,10 @@ private fun NotificationSettingsSection(
     )
 
     Column {
-        SectionHeader(title = stringResource(R.string.settings_notification_title), icon = Icons.Default.Notifications)
+        SectionHeader(
+            title = stringResource(R.string.settings_notification_title),
+            icon = Icons.Default.Notifications
+        )
 
         Text(
             text = stringResource(R.string.settings_notification_desc),
@@ -325,14 +334,18 @@ private fun AppInfoSection(
     val versionName = BuildConfig.VERSION_NAME
     val commitHash = BuildConfig.GIT_COMMIT_HASH
 
-    val displayVersion = if (versionName.contains("nightly", ignoreCase = true) || BuildConfig.DEBUG) {
-        "$versionName ($commitHash)"
-    } else {
-        versionName
-    }
+    val displayVersion =
+        if (versionName.contains("nightly", ignoreCase = true) || BuildConfig.DEBUG) {
+            "$versionName ($commitHash)"
+        } else {
+            versionName
+        }
 
     Column {
-        SectionHeader(title = stringResource(R.string.settings_app_info_title), icon = Icons.Default.Info)
+        SectionHeader(
+            title = stringResource(R.string.settings_app_info_title),
+            icon = Icons.Default.Info
+        )
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -370,7 +383,8 @@ private fun AppInfoSection(
 
         OutlinedButton(
             onClick = {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/atuy1219/SUKOMBU"))
+                val intent =
+                    Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/atuy1219/SUKOMBU"))
                 context.startActivity(intent)
             },
             modifier = Modifier.fillMaxWidth()
@@ -392,7 +406,10 @@ private fun DebugSection(
     onDisableDebugModeClick: () -> Unit
 ) {
     Column {
-        SectionHeader(title = stringResource(R.string.settings_debug_title), icon = Icons.Default.BugReport)
+        SectionHeader(
+            title = stringResource(R.string.settings_debug_title),
+            icon = Icons.Default.BugReport
+        )
 
         Button(
             onClick = onTestNotificationClick,

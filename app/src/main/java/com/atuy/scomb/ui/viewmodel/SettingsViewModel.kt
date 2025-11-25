@@ -87,7 +87,11 @@ class SettingsViewModel @Inject constructor(
         if (versionTapCount >= 7) {
             viewModelScope.launch {
                 settingsManager.setDebugMode(true)
-                Toast.makeText(context, context.getString(R.string.settings_debug_mode_enabled), Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.settings_debug_mode_enabled),
+                    Toast.LENGTH_SHORT
+                ).show()
             }
             versionTapCount = 0
         }
@@ -96,7 +100,11 @@ class SettingsViewModel @Inject constructor(
     fun disableDebugMode() {
         viewModelScope.launch {
             settingsManager.setDebugMode(false)
-            Toast.makeText(context, context.getString(R.string.settings_debug_mode_disabled), Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                context.getString(R.string.settings_debug_mode_disabled),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 

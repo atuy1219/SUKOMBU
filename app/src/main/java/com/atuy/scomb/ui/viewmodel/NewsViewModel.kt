@@ -28,6 +28,7 @@ sealed interface NewsUiState {
         val isSearchActive: Boolean,
         val isRefreshing: Boolean = false
     ) : NewsUiState
+
     data class Error(val message: String, val isRefreshing: Boolean = false) : NewsUiState
 }
 
@@ -59,8 +60,10 @@ class NewsViewModel @Inject constructor(
             try {
                 allNews = repository.getNews(forceRefresh).sortedByDescending { it.publishTime }
                 val categories = allNews.map { it.category }.distinct()
-                val initialFilter = if (currentState is NewsUiState.Success) currentState.filter else NewsFilter()
-                val isSearchActive = if (currentState is NewsUiState.Success) currentState.isSearchActive else false
+                val initialFilter =
+                    if (currentState is NewsUiState.Success) currentState.filter else NewsFilter()
+                val isSearchActive =
+                    if (currentState is NewsUiState.Success) currentState.isSearchActive else false
 
                 _uiState.value = NewsUiState.Success(
                     filteredNews = applyFilters(allNews, initialFilter),
@@ -71,7 +74,10 @@ class NewsViewModel @Inject constructor(
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.value = NewsUiState.Error(e.message ?: "An unknown error occurred", isRefreshing = false)
+                _uiState.value = NewsUiState.Error(
+                    e.message ?: "An unknown error occurred",
+                    isRefreshing = false
+                )
             }
         }
     }
@@ -79,7 +85,8 @@ class NewsViewModel @Inject constructor(
     fun markAsRead(newsItem: NewsItem) {
         viewModelScope.launch {
             repository.markAsRead(newsItem)
-            allNews = allNews.map { if (it.newsId == newsItem.newsId) it.copy(unread = false) else it }
+            allNews =
+                allNews.map { if (it.newsId == newsItem.newsId) it.copy(unread = false) else it }
             applyUiFilters()
         }
     }
