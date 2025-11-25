@@ -80,6 +80,8 @@ fun TimetableScreen(
                 ) {
                     TimetableGrid(
                         timetable = state.timetable,
+                        showSaturday = state.showSaturday,
+                        periodCount = state.periodCount,
                         onClassClick = { classCell ->
                             if (classCell.classId.isNotEmpty()) {
                                 navController.navigate("classDetail/${classCell.classId}")
@@ -104,9 +106,14 @@ fun TimetableScreen(
 @Composable
 fun TimetableGrid(
     timetable: List<List<ClassCell?>>,
+    showSaturday: Boolean,
+    periodCount: Int,
     onClassClick: (ClassCell) -> Unit
 ) {
-    val days = listOf("月", "火", "水", "木", "金")
+    // 設定に基づいて表示する曜日と時限をフィルタリング
+    val displayDays = if (showSaturday) listOf("月", "火", "水", "木", "金", "土") else listOf("月", "火", "水", "木", "金")
+    val displayPeriods = (1..periodCount).toList()
+
     val scrollState = rememberScrollState()
 
     // 今日の曜日を取得 (月=0, ... 金=4, 土=5, 日=6)
@@ -117,7 +124,7 @@ fun TimetableGrid(
         Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(bottom = 16.dp) // 下部に少し余白を追加
+            .padding(bottom = 16.dp)
     ) {
         // 曜日ヘッダー
         Row(
@@ -127,22 +134,20 @@ fun TimetableGrid(
         ) {
             Spacer(modifier = Modifier.width(32.dp)) // 時限カラム分のスペース
 
-            // 曜日部分もカードと同じ間隔で配置するためにRowで囲む
             Row(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(end = 8.dp), // 本体に合わせて右端にパディングを追加
+                    .padding(end = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                days.forEachIndexed { index, day ->
+                displayDays.forEachIndexed { index, day ->
                     val isToday = index == todayIndex
                     Box(
                         modifier = Modifier
-                            .width(0.dp) // 幅を均等にするためのおまじない
+                            .width(0.dp)
                             .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        // 今日の場合のみ背景色をつける
                         Box(
                             modifier = Modifier
                                 .size(32.dp)
@@ -172,10 +177,10 @@ fun TimetableGrid(
                 modifier = Modifier.width(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                (1..7).forEach { period ->
+                displayPeriods.forEach { period ->
                     Box(
                         modifier = Modifier
-                            .height(110.dp) // セルの高さに合わせて調整
+                            .height(110.dp)
                             .fillMaxWidth(),
                         contentAlignment = Alignment.TopCenter
                     ) {
@@ -193,17 +198,32 @@ fun TimetableGrid(
             Row(
                 Modifier
                     .weight(1f)
-                    .padding(end = 8.dp), // 右端に余白
-                horizontalArrangement = Arrangement.spacedBy(4.dp) // カード間の隙間を均等に配置
+                    .padding(end = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                timetable.forEach { dayColumn ->
+                // 表示する日数分だけループ (timetableは最大で土曜まで含む0-5の6要素を持つリストと想定)
+                val columnCount = if (showSaturday) 6 else 5
+
+                // timetableのサイズが足りない場合のガード
+                val safeTimetable = if (timetable.size < columnCount) {
+                    timetable + List(columnCount - timetable.size) { emptyList<ClassCell?>() }
+                } else {
+                    timetable
+                }
+
+                safeTimetable.take(columnCount).forEach { dayColumn ->
                     Column(
                         modifier = Modifier
-                            .width(0.dp) // 幅を均等にするためのおまじない
+                            .width(0.dp)
                             .weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp) // 縦方向のセル間隔
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        dayColumn.forEach { classCell ->
+                        // 指定時限数分だけループ
+                        displayPeriods.forEach { period ->
+                            // periodは1始まり、リストインデックスは0始まり
+                            // dayColumnは全時限(7限)分持っているはずなので、該当インデックスを取得
+                            // データがない場合やインデックス外の場合はnullとして扱う
+                            val classCell = dayColumn.getOrNull(period - 1)
                             ClassCellView(
                                 classCell = classCell,
                                 onClick = {
@@ -228,26 +248,19 @@ fun ClassCellView(
     val cellHeight = 106.dp // 間隔(4dp)を含めて110dpになるように調整
 
     if (classCell == null) {
-        // 空きコマ: 背景なし、あるいは薄い区切り線など
-        // ここではGoogleカレンダー風に、何もない空間として表現しつつ、
-        // グリッド感を出すためにごく薄い背景などを入れても良いが、モダンにするなら空白が良い
         Box(
             modifier = Modifier
                 .height(cellHeight)
                 .fillMaxWidth()
-            // デバッグ用に薄い枠線を入れても良いが、今回は完全な空白にする
-            // .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
         )
     } else {
-        // 授業あり: カード表示
         Card(
             modifier = Modifier
                 .height(cellHeight)
                 .fillMaxWidth()
                 .clickable(onClick = onClick),
-            shape = RoundedCornerShape(12.dp), // 角丸を少し大きめに
+            shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(
-                // Googleカレンダー風に、primaryContainerなどの色付き背景を使用
                 containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ),
@@ -259,7 +272,6 @@ fun ClassCellView(
                     .padding(8.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // 科目名
                 Text(
                     text = classCell.name ?: "",
                     style = MaterialTheme.typography.bodySmall.copy(

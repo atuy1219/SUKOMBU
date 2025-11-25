@@ -20,7 +20,9 @@ import javax.inject.Inject
 data class SettingsUiState(
     val notificationTimings: Set<Int> = emptySet(),
     val showHomeNews: Boolean = true,
-    val isDebugMode: Boolean = false
+    val isDebugMode: Boolean = false,
+    val showSaturday: Boolean = true,
+    val timetablePeriodCount: Int = 7
 )
 
 @HiltViewModel
@@ -34,12 +36,16 @@ class SettingsViewModel @Inject constructor(
     val uiState: StateFlow<SettingsUiState> = combine(
         settingsManager.notificationTimingsFlow,
         settingsManager.showHomeNewsFlow,
-        settingsManager.debugModeFlow
-    ) { timings, showNews, debugMode ->
+        settingsManager.debugModeFlow,
+        settingsManager.showSaturdayFlow,
+        settingsManager.timetablePeriodCountFlow
+    ) { timings, showNews, debugMode, showSat, periodCount ->
         SettingsUiState(
             notificationTimings = timings.mapNotNull { it.toIntOrNull() }.toSet(),
             showHomeNews = showNews,
-            isDebugMode = debugMode
+            isDebugMode = debugMode,
+            showSaturday = showSat,
+            timetablePeriodCount = periodCount
         )
     }
         .stateIn(
@@ -62,8 +68,19 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateShowSaturday(show: Boolean) {
+        viewModelScope.launch {
+            settingsManager.setShowSaturday(show)
+        }
+    }
+
+    fun updateTimetablePeriodCount(count: Int) {
+        viewModelScope.launch {
+            settingsManager.setTimetablePeriodCount(count)
+        }
+    }
+
     fun onVersionClick() {
-        // すでにデバッグモードの場合は何もしない
         if (uiState.value.isDebugMode) return
 
         versionTapCount++
@@ -73,8 +90,6 @@ class SettingsViewModel @Inject constructor(
                 Toast.makeText(context, context.getString(R.string.settings_debug_mode_enabled), Toast.LENGTH_SHORT).show()
             }
             versionTapCount = 0
-        } else if (versionTapCount > 2) {
-            // 残り回数を表示しても良いが、今回はシンプルに実装
         }
     }
 

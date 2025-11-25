@@ -89,4 +89,38 @@ object DateUtils {
 
         return ScombTerm(year, term)
     }
+
+    // 現在の時限を取得 (0-based index: 0=1限, 1=2限...)
+    // 該当なしの場合は -1 を返す
+    fun getCurrentPeriod(): Int {
+        val calendar = Calendar.getInstance()
+        val hour = calendar.get(Calendar.HOUR_OF_DAY)
+        val minute = calendar.get(Calendar.MINUTE)
+        val currentTime = hour * 60 + minute
+
+        // 開始・終了時刻を分単位で定義
+        // 1限: 9:00 - 10:40
+        // 2限: 10:50 - 12:30
+        // 3限: 13:20 - 15:00
+        // 4限: 15:10 - 16:50
+        // 5限: 17:00 - 18:40
+        // 6限: 18:50 - 20:30
+
+        val periods = listOf(
+            9 * 60 + 0 to 10 * 60 + 40,
+            10 * 60 + 40 to 12 * 60 + 30,
+            12 * 60 + 30 to 15 * 60 + 0,
+            15 * 60 + 0 to 16 * 60 + 50,
+            16 * 60 + 50 to 18 * 60 + 40,
+            18 * 60 + 40 to 20 * 60 + 30
+        )
+
+        for (i in periods.indices) {
+            val (start, end) = periods[i]
+            if (currentTime in (start - 10)..end) {
+                return i
+            }
+        }
+        return -1
+    }
 }

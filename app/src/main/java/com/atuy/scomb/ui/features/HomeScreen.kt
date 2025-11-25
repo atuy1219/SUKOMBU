@@ -251,18 +251,32 @@ fun TodaysClassesSection(
     classes: List<ClassCell>,
     onClassClick: (String) -> Unit
 ) {
-    DashboardSection(title = stringResource(R.string.home_todays_classes), icon = Icons.Default.Class) {
+    val currentPeriod = DateUtils.getCurrentPeriod()
+
+    DashboardSection(
+        title = stringResource(R.string.home_todays_classes),
+        icon = Icons.Default.Class
+    ) {
         if (classes.isEmpty()) {
             EmptyStateItem(text = stringResource(R.string.home_no_classes_today))
         } else {
             classes.forEachIndexed { index, classCell ->
+                val isCurrent = classCell.period == currentPeriod
+
+                // 現在の授業の場合は背景色を変えて強調する
+                val backgroundColor = if (isCurrent)
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                else
+                    Color.Transparent
+
                 ListItem(
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    colors = ListItemDefaults.colors(containerColor = backgroundColor),
                     headlineContent = {
                         Text(
                             text = classCell.name ?: "",
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
+                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                            color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
                     },
                     supportingContent = {
@@ -274,13 +288,16 @@ fun TodaysClassesSection(
                     leadingContent = {
                         Card(
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                containerColor = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
                             ),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.size(40.dp)
                         ) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
                                     text = "${classCell.period + 1}",
                                     style = MaterialTheme.typography.titleMedium,
@@ -296,7 +313,10 @@ fun TodaysClassesSection(
                     }
                 )
                 if (index < classes.size - 1) {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
                 }
             }
         }
@@ -308,13 +328,17 @@ fun UpcomingTasksSection(
     tasks: List<Task>,
     onTaskClick: (String) -> Unit
 ) {
-    DashboardSection(title = stringResource(R.string.home_upcoming_tasks), icon = Icons.Default.AccessTime) {
+    DashboardSection(
+        title = stringResource(R.string.home_upcoming_tasks),
+        icon = Icons.Default.AccessTime
+    ) {
         if (tasks.isEmpty()) {
             EmptyStateItem(text = stringResource(R.string.home_no_upcoming_tasks))
         } else {
             tasks.forEachIndexed { index, task ->
                 val isOverdue = task.deadline < System.currentTimeMillis()
-                val timeColor = if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                val timeColor =
+                    if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
 
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -349,7 +373,10 @@ fun UpcomingTasksSection(
                     modifier = Modifier.clickable { onTaskClick(task.url) }
                 )
                 if (index < tasks.size - 1) {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
                 }
             }
         }
@@ -362,7 +389,10 @@ fun RecentNewsSection(
     news: List<NewsItem>,
     onNewsClick: (String) -> Unit
 ) {
-    DashboardSection(title = stringResource(R.string.home_recent_news), icon = Icons.Default.Notifications) {
+    DashboardSection(
+        title = stringResource(R.string.home_recent_news),
+        icon = Icons.Default.Notifications
+    ) {
         if (news.isEmpty()) {
             EmptyStateItem(text = stringResource(R.string.home_no_new_news))
         } else {
@@ -377,13 +407,19 @@ fun RecentNewsSection(
                         )
                     },
                     supportingContent = {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
                             if (newsItem.unread) {
                                 Box(
                                     modifier = Modifier
                                         .padding(end = 8.dp)
                                         .size(8.dp)
-                                        .background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.CircleShape)
+                                        .background(
+                                            MaterialTheme.colorScheme.primary,
+                                            androidx.compose.foundation.shape.CircleShape
+                                        )
                                 )
                             }
                             Text(
@@ -402,7 +438,10 @@ fun RecentNewsSection(
                     modifier = Modifier.clickable { onNewsClick(newsItem.url) }
                 )
                 if (index < news.size - 1) {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
                 }
             }
         }

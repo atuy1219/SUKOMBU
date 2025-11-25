@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
@@ -36,6 +37,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -102,6 +106,17 @@ fun SettingsScreen(
 
         item {
             SettingsGroupCard {
+                TimetableSettingsSection(
+                    showSaturday = uiState.showSaturday,
+                    onShowSaturdayChange = { viewModel.updateShowSaturday(it) },
+                    periodCount = uiState.timetablePeriodCount,
+                    onPeriodCountChange = { viewModel.updateTimetablePeriodCount(it) }
+                )
+            }
+        }
+
+        item {
+            SettingsGroupCard {
                 NotificationSettingsSection(
                     selectedTimings = uiState.notificationTimings,
                     onTimingsChange = { viewModel.updateNotificationTimings(it) }
@@ -117,7 +132,6 @@ fun SettingsScreen(
             }
         }
 
-        // デバッグモードが有効な場合のみ表示
         if (uiState.isDebugMode) {
             item {
                 SettingsGroupCard {
@@ -147,7 +161,7 @@ fun SettingsGroupCard(content: @Composable () -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // フラットなデザイン
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             content()
@@ -198,6 +212,57 @@ private fun HomeSettingsSection(
                 checked = showHomeNews,
                 onCheckedChange = onShowHomeNewsChange
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimetableSettingsSection(
+    showSaturday: Boolean,
+    onShowSaturdayChange: (Boolean) -> Unit,
+    periodCount: Int,
+    onPeriodCountChange: (Int) -> Unit
+) {
+    val periodOptions = listOf(5, 6, 7)
+
+    Column {
+        SectionHeader(title = "時間割設定", icon = Icons.Default.DateRange)
+
+        // 土曜日表示設定
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "土曜日を表示",
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Switch(
+                checked = showSaturday,
+                onCheckedChange = onShowSaturdayChange
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "表示する時限数",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            periodOptions.forEachIndexed { index, count ->
+                SegmentedButton(
+                    selected = periodCount == count,
+                    onClick = { onPeriodCountChange(count) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = periodOptions.size)
+                ) {
+                    Text("${count}限まで")
+                }
+            }
         }
     }
 }
@@ -288,7 +353,6 @@ private fun AppInfoSection(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                // バージョン情報部分をクリッカブルにする（リップルエフェクトなし）
                 Text(
                     text = stringResource(R.string.settings_version_format, displayVersion),
                     style = MaterialTheme.typography.bodyMedium,
@@ -353,7 +417,7 @@ private fun LogoutSection(onLogoutClick: () -> Unit) {
         onClick = onLogoutClick,
         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp) // 他のカードと統一感を持たせる
+        shape = RoundedCornerShape(16.dp)
     ) {
         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
         Spacer(modifier = Modifier.width(8.dp))
