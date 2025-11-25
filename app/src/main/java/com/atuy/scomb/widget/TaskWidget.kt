@@ -13,6 +13,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
@@ -85,6 +86,7 @@ class TaskWidget : GlanceAppWidget() {
 
     @Composable
     private fun WidgetContent(loadingState: String, tasks: List<Task>) {
+        val context = LocalContext.current
         // ウィジェット全体の背景設定
         // Android 12以降はシステムが角丸を適用するが、それ以前のためにcornerRadiusを設定
         Column(
@@ -103,7 +105,7 @@ class TaskWidget : GlanceAppWidget() {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "読み込み中...",
+                            text = context.getString(R.string.widget_loading),
                             style = TextStyle(color = GlanceTheme.colors.onSurface)
                         )
                     }
@@ -115,7 +117,7 @@ class TaskWidget : GlanceAppWidget() {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "エラーが発生しました。\nアプリを開いて確認してください。",
+                            text = context.getString(R.string.widget_error_message),
                             style = TextStyle(
                                 color = GlanceTheme.colors.error,
                                 fontSize = 12.sp,
@@ -131,7 +133,7 @@ class TaskWidget : GlanceAppWidget() {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "予定されている課題はありません",
+                            text = context.getString(R.string.widget_no_tasks),
                             style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant)
                         )
                     }
@@ -146,6 +148,7 @@ class TaskWidget : GlanceAppWidget() {
 
     @Composable
     private fun WidgetHeader() {
+        val context = LocalContext.current
         Row(
             modifier = GlanceModifier
                 .fillMaxWidth()
@@ -153,7 +156,7 @@ class TaskWidget : GlanceAppWidget() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "直近の課題",
+                text = context.getString(R.string.widget_header_title),
                 style = TextStyle(
                     color = GlanceTheme.colors.primary,
                     fontSize = 16.sp,
@@ -168,7 +171,7 @@ class TaskWidget : GlanceAppWidget() {
             ) {
                 Image(
                     provider = ImageProvider(R.drawable.ic_refresh),
-                    contentDescription = "更新",
+                    contentDescription = context.getString(R.string.widget_update_desc),
                     modifier = GlanceModifier.width(20.dp).height(20.dp),
                     colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurfaceVariant)
                 )

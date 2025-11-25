@@ -103,7 +103,7 @@ fun ClassDetailScreen(
                 title = { Text(stringResource(R.string.screen_class_detail)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 // 親のScaffoldですでに余白が確保されているため、ここではTopAppBarのインセットを無効化する
@@ -233,7 +233,7 @@ fun ClassDetailContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "リンク",
+                            text = stringResource(R.string.class_detail_link_section),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -241,7 +241,7 @@ fun ClassDetailContent(
                             onClick = { showAddLinkDialog = true },
                             modifier = Modifier.size(24.dp)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "リンクを追加")
+                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.class_detail_add_link_button))
                         }
                     }
 
@@ -258,7 +258,7 @@ fun ClassDetailContent(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("シラバス")
+                        Text(stringResource(R.string.class_detail_syllabus))
                     }
 
                     // カスタムリンク
@@ -283,7 +283,7 @@ fun ClassDetailContent(
                             IconButton(onClick = { onRemoveLink(link) }) {
                                 Icon(
                                     Icons.Default.Delete,
-                                    contentDescription = "削除",
+                                    contentDescription = stringResource(R.string.class_detail_delete_link),
                                     tint = MaterialTheme.colorScheme.error
                                 )
                             }
@@ -306,7 +306,7 @@ fun ClassDetailContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "メモ",
+                            text = stringResource(R.string.class_detail_memo_section),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -314,7 +314,7 @@ fun ClassDetailContent(
                             onClick = { showEditNoteDialog = true },
                             modifier = Modifier.size(24.dp)
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = "編集")
+                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.class_detail_edit_memo))
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -326,7 +326,7 @@ fun ClassDetailContent(
                         )
                     } else {
                         Text(
-                            text = "メモはありません",
+                            text = stringResource(R.string.class_detail_no_memo),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -336,7 +336,7 @@ fun ClassDetailContent(
                     if (!classCell.note.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "大学からの備考:",
+                            text = stringResource(R.string.class_detail_university_note),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -352,7 +352,7 @@ fun ClassDetailContent(
 
         item(key = "task_header") {
             Text(
-                text = "関連する課題",
+                text = stringResource(R.string.class_detail_related_tasks),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp)
@@ -372,7 +372,7 @@ fun ClassDetailContent(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "関連する課題はありません",
+                            text = stringResource(R.string.class_detail_no_related_tasks),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -402,19 +402,19 @@ fun AddLinkDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("リンクを追加") },
+        title = { Text(stringResource(R.string.class_detail_dialog_add_link_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("タイトル") },
+                    label = { Text(stringResource(R.string.class_detail_dialog_title_label)) },
                     singleLine = true
                 )
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("URL") },
+                    label = { Text(stringResource(R.string.class_detail_dialog_url_label)) },
                     singleLine = true
                 )
             }
@@ -423,12 +423,12 @@ fun AddLinkDialog(
             TextButton(
                 onClick = { if (title.isNotBlank() && url.isNotBlank()) onConfirm(title, url) }
             ) {
-                Text("追加")
+                Text(stringResource(R.string.add))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("キャンセル")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -444,12 +444,12 @@ fun EditNoteDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("メモを編集") },
+        title = { Text(stringResource(R.string.class_detail_dialog_edit_memo_title)) },
         text = {
             OutlinedTextField(
                 value = note,
                 onValueChange = { note = it },
-                label = { Text("内容") },
+                label = { Text(stringResource(R.string.class_detail_dialog_content_label)) },
                 minLines = 3,
                 maxLines = 10,
                 modifier = Modifier.fillMaxWidth()
@@ -457,12 +457,12 @@ fun EditNoteDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(note) }) {
-                Text("保存")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("キャンセル")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -480,7 +480,7 @@ fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = classCell.name ?: "科目名なし",
+                text = classCell.name ?: stringResource(R.string.class_detail_no_name),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -494,7 +494,7 @@ fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = classCell.teachers ?: "教員未設定",
+                    text = classCell.teachers ?: stringResource(R.string.class_detail_no_teacher),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                 )
@@ -510,7 +510,7 @@ fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("LMS ページを開く")
+                Text(stringResource(R.string.class_detail_open_lms))
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
                     Icons.Default.OpenInNew,
@@ -532,19 +532,19 @@ fun InfoGridCard(classCell: ClassCell) {
         Column(modifier = Modifier.padding(16.dp)) {
             InfoRow(
                 icon = Icons.Default.CalendarToday,
-                label = "曜日・時限",
+                label = stringResource(R.string.class_detail_info_day_period),
                 value = "${(classCell.dayOfWeek).toDayOfWeekString()} ${classCell.period + 1}限"
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
             InfoRow(
                 icon = Icons.Default.LocationOn,
-                label = "教室",
-                value = classCell.room ?: "未設定"
+                label = stringResource(R.string.class_detail_info_room),
+                value = classCell.room ?: stringResource(R.string.home_room_unset)
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
             InfoRow(
                 icon = Icons.Default.CreditScore,
-                label = "単位数",
+                label = stringResource(R.string.class_detail_info_credit),
                 value = classCell.numberOfCredit?.toString() ?: "-"
             )
         }
@@ -571,15 +571,16 @@ fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String
     }
 }
 
+@Composable
 private fun Int.toDayOfWeekString(): String {
     return when (this) {
-        0 -> "月曜日"
-        1 -> "火曜日"
-        2 -> "水曜日"
-        3 -> "木曜日"
-        4 -> "金曜日"
-        5 -> "土曜日"
-        6 -> "日曜日"
-        else -> "不明"
+        0 -> stringResource(R.string.day_monday)
+        1 -> stringResource(R.string.day_tuesday)
+        2 -> stringResource(R.string.day_wednesday)
+        3 -> stringResource(R.string.day_thursday)
+        4 -> stringResource(R.string.day_friday)
+        5 -> stringResource(R.string.day_saturday)
+        6 -> stringResource(R.string.day_sunday)
+        else -> stringResource(R.string.day_unknown)
     }
 }

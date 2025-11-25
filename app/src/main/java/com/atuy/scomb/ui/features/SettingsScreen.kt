@@ -228,14 +228,24 @@ private fun TimetableSettingsSection(
     onPeriodCountChange: (Int) -> Unit
 ) {
     val periodOptions = listOf(4, 5, 6, 7)
-    val weekDays = listOf("月", "火", "水", "木", "金", "土")
+    val weekDays = listOf(
+        stringResource(R.string.day_mon),
+        stringResource(R.string.day_tue),
+        stringResource(R.string.day_wed),
+        stringResource(R.string.day_thu),
+        stringResource(R.string.day_fri),
+        stringResource(R.string.day_sat)
+    )
 
     Column {
-        SectionHeader(title = "時間割設定", icon = Icons.Default.DateRange)
+        SectionHeader(
+            title = stringResource(R.string.settings_timetable_title),
+            icon = Icons.Default.DateRange
+        )
 
         // 表示する曜日設定
         Text(
-            text = "表示する曜日",
+            text = stringResource(R.string.settings_display_week_days),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(bottom = 8.dp)
         )
@@ -269,7 +279,7 @@ private fun TimetableSettingsSection(
 
         // 時限数設定
         Text(
-            text = "表示する時限数",
+            text = stringResource(R.string.settings_period_count),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(bottom = 8.dp)
         )
@@ -284,7 +294,7 @@ private fun TimetableSettingsSection(
                         count = periodOptions.size
                     )
                 ) {
-                    Text("${count}限")
+                    Text(stringResource(R.string.settings_period_suffix, count))
                 }
             }
         }

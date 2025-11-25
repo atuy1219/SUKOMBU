@@ -51,12 +51,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.atuy.scomb.R
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.ui.viewmodel.TaskFilter
 import com.atuy.scomb.ui.viewmodel.TaskListUiState
@@ -77,7 +79,7 @@ fun TaskListScreen(
             try {
                 customTabsIntent.launchUrl(context, url.toUri())
             } catch (e: Exception) {
-                Toast.makeText(context, "URLを開けませんでした", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.error_url_fetch_failed), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -153,12 +155,12 @@ fun TaskSearchBar(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
-        placeholder = { Text("課題名や科目名で検索") },
+        placeholder = { Text(stringResource(R.string.task_list_search_placeholder)) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         trailingIcon = {
             if (searchQuery.isNotEmpty()) {
                 IconButton(onClick = { onSearchQueryChanged("") }) {
-                    Icon(Icons.Default.Clear, contentDescription = "クリア")
+                    Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear))
                 }
             }
         },
@@ -184,28 +186,28 @@ fun FilterBar(
         FilterChip(
             selected = filter.showAssignments,
             onClick = { onFilterChanged(filter.copy(showAssignments = !filter.showAssignments)) },
-            label = { Text("課題") }
+            label = { Text(stringResource(R.string.task_list_filter_assignment)) }
         )
         FilterChip(
             selected = filter.showTests,
             onClick = { onFilterChanged(filter.copy(showTests = !filter.showTests)) },
-            label = { Text("テスト") }
+            label = { Text(stringResource(R.string.task_list_filter_test)) }
         )
         FilterChip(
             selected = filter.showSurveys,
             onClick = { onFilterChanged(filter.copy(showSurveys = !filter.showSurveys)) },
-            label = { Text("アンケート") }
+            label = { Text(stringResource(R.string.task_list_filter_survey)) }
         )
         Spacer(modifier = Modifier.weight(1f))
         FilterChip(
             selected = filter.showCompleted,
             onClick = { onFilterChanged(filter.copy(showCompleted = !filter.showCompleted)) },
-            label = { Text("完了済み") },
+            label = { Text(stringResource(R.string.task_list_filter_completed)) },
             leadingIcon = {
                 if (filter.showCompleted) {
                     Icon(
                         Icons.Default.Check,
-                        contentDescription = "完了済み",
+                        contentDescription = stringResource(R.string.task_list_filter_completed),
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -219,7 +221,7 @@ fun TaskList(tasks: List<Task>, onTaskClick: (Task) -> Unit) {
     if (tasks.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                "表示する課題がありません",
+                stringResource(R.string.task_list_no_tasks),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -298,7 +300,7 @@ fun TaskCard(
                     if (task.done) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Done",
+                            contentDescription = stringResource(R.string.task_list_done),
                             tint = MaterialTheme.colorScheme.green,
                             modifier = Modifier.size(20.dp)
                         )

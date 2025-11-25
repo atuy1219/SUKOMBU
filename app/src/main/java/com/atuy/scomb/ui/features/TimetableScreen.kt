@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.atuy.scomb.R
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.ui.viewmodel.TimetableUiState
 import com.atuy.scomb.ui.viewmodel.TimetableViewModel
@@ -49,9 +51,10 @@ import java.util.Calendar
 private const val TAG = "TimetableScreen"
 
 data class TimetableTerm(val year: Int, val term: String) {
+    @Composable
     fun getDisplayName(): String {
-        val termString = if (term == "1") "前期" else "後期"
-        return "$year 年度 $termString"
+        val termString = if (term == "1") stringResource(R.string.timetable_term_1) else stringResource(R.string.timetable_term_2)
+        return stringResource(R.string.timetable_term_display_format, year, termString)
     }
 }
 
@@ -126,7 +129,14 @@ fun TimetableGrid(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    val allWeekDays = listOf("月", "火", "水", "木", "金", "土")
+    val allWeekDays = listOf(
+        stringResource(R.string.day_mon),
+        stringResource(R.string.day_tue),
+        stringResource(R.string.day_wed),
+        stringResource(R.string.day_thu),
+        stringResource(R.string.day_fri),
+        stringResource(R.string.day_sat)
+    )
     // 表示設定されている曜日のインデックスだけを抽出してソート（0=月...）
     val targetDayIndices = displayWeekDays.sorted().filter { it < allWeekDays.size }
 

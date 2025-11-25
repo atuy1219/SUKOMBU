@@ -20,6 +20,12 @@
     <string name="back">戻る</string>
     <string name="cancel">キャンセル</string>
     <string name="ok">OK</string>
+    <string name="add">追加</string>
+    <string name="save">保存</string>
+    <string name="delete">削除</string>
+    <string name="edit">編集</string>
+    <string name="clear">クリア</string>
+    <string name="unknown">不明</string>
 
     <!-- Login Screen -->
     <string name="login_title">ScombZにログイン</string>
@@ -43,11 +49,70 @@
     <string name="home_quick_links">リンク集</string>
     <string name="permission_notification_denied">通知権限が拒否されました。課題の通知を受け取れません。</string>
 
+    <!-- Timetable Screen -->
+    <string name="timetable_term_1">前期</string>
+    <string name="timetable_term_2">後期</string>
+    <string name="timetable_term_display_format">%1$d 年度 %2$s</string>
+    <string name="timetable_select_term">学期選択</string>
+    <string name="day_mon">月</string>
+    <string name="day_tue">火</string>
+    <string name="day_wed">水</string>
+    <string name="day_thu">木</string>
+    <string name="day_fri">金</string>
+    <string name="day_sat">土</string>
+    <string name="day_sun">日</string>
 
+    <!-- Task List Screen -->
+    <string name="task_list_search_placeholder">課題名や科目名で検索</string>
+    <string name="task_list_filter_assignment">課題</string>
+    <string name="task_list_filter_test">テスト</string>
+    <string name="task_list_filter_survey">アンケート</string>
+    <string name="task_list_filter_completed">完了済み</string>
+    <string name="task_list_no_tasks">表示する課題がありません</string>
+    <string name="task_list_done">Done</string>
+
+    <!-- Class Detail Screen -->
+    <string name="class_detail_no_name">科目名なし</string>
+    <string name="class_detail_no_teacher">教員未設定</string>
+    <string name="class_detail_open_lms">LMS ページを開く</string>
+    <string name="class_detail_syllabus">シラバス</string>
+    <string name="class_detail_link_section">リンク</string>
+    <string name="class_detail_add_link_button">リンクを追加</string>
+    <string name="class_detail_memo_section">メモ</string>
+    <string name="class_detail_no_memo">メモはありません</string>
+    <string name="class_detail_university_note">大学からの備考:</string>
+    <string name="class_detail_related_tasks">関連する課題</string>
+    <string name="class_detail_no_related_tasks">関連する課題はありません</string>
+    <string name="class_detail_dialog_title_label">タイトル</string>
+    <string name="class_detail_dialog_url_label">URL</string>
+    <string name="class_detail_dialog_edit_memo_title">メモを編集</string>
+    <string name="class_detail_dialog_content_label">内容</string>
+    <string name="class_detail_info_day_period">曜日・時限</string>
+    <string name="class_detail_info_room">教室</string>
+    <string name="class_detail_info_credit">単位数</string>
+    <string name="day_monday">月曜日</string>
+    <string name="day_tuesday">火曜日</string>
+    <string name="day_wednesday">水曜日</string>
+    <string name="day_thursday">木曜日</string>
+    <string name="day_friday">金曜日</string>
+    <string name="day_saturday">土曜日</string>
+    <string name="day_sunday">日曜日</string>
+    <string name="day_unknown">不明</string>
+
+    <!-- Widget -->
+    <string name="widget_loading">読み込み中...</string>
+    <string name="widget_error_message">エラーが発生しました。\nアプリを開いて確認してください。</string>
+    <string name="widget_no_tasks">予定されている課題はありません</string>
+    <string name="widget_header_title">直近の課題</string>
+    <string name="widget_update_desc">更新</string>
 
     <!-- Settings Screen -->
     <string name="settings_home_title">ホーム画面設定</string>
     <string name="settings_show_home_news">最新のお知らせを表示</string>
+    <string name="settings_timetable_title">時間割設定</string>
+    <string name="settings_display_week_days">表示する曜日</string>
+    <string name="settings_period_count">表示する時限数</string>
+    <string name="settings_period_suffix">%1$d限</string>
     <string name="settings_notification_title">通知設定</string>
     <string name="settings_notification_desc">課題の締め切り何分前に通知を受け取るか設定します。</string>
     <string name="settings_time_10min">10分前</string>
@@ -84,5 +149,18 @@
     <string name="error_url_fetch_failed">URLの取得に失敗しました。</string>
     <string name="error_data_loading_failed">データの読み込みに失敗しました。</string>
     <string name="error_class_not_found">授業情報が見つかりません。</string>
+
+    <!-- News Screen -->
+    <string name="news_search_placeholder">タイトルを検索</string>
+    <string name="news_filter_unread">未読のみ</string>
+    <string name="news_category_select">カテゴリを選択</string>
+    <string name="news_category_button_format">カテゴリ (%1$d)</string>
+    <string name="news_category_button_default">カテゴリ</string>
+    <string name="news_no_content">表示するお知らせがありません。</string>
+    <string name="news_source_unknown">掲載元不明</string>
+    <string name="news_title_none">タイトルなし</string>
+    <string name="class_detail_dialog_add_link_title">リンクを追加</string>
+    <string name="class_detail_edit_memo">メモはありません</string>
+    <string name="class_detail_delete_link">削除</string>
 
 </resources>
