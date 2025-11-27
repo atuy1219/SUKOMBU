@@ -10,6 +10,7 @@ import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.NewsItemDao
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.data.db.TaskDao
+import com.atuy.scomb.data.network.ApiUpdateClassRequest
 import com.atuy.scomb.data.network.ScombzApiService
 import com.atuy.scomb.util.ClientException
 import com.atuy.scomb.util.DateUtils
@@ -155,9 +156,8 @@ class ScombzRepository @Inject constructor(
                 if (cachedTimetable.isNotEmpty()) return@executeWithAuthHandling cachedTimetable
             }
 
-            // 既存のデータを取得して、ユーザーメモとカスタムリンクを保持する
+            // カスタムリンクのみ保持する (userNoteはAPI統合のため廃止/同期優先)
             val existingCells = classCellDao.getCells(timetableTitle)
-            val userNoteMap = existingCells.associate { it.classId to it.userNote }
             val customLinksMap = existingCells.associate { it.classId to it.customLinksJson }
 
             ensureAuthenticated()
@@ -178,7 +178,7 @@ class ScombzRepository @Inject constructor(
                     term,
                     timetableTitle,
                     otkey,
-                    existingUserNote = userNoteMap[it.id],
+                    existingUserNote = null, // APIの値を正とするため、ローカルキャッシュは無視
                     existingCustomLinks = customLinksMap[it.id]
                 )
             }
@@ -186,6 +186,32 @@ class ScombzRepository @Inject constructor(
             classCellDao.removeTimetable(timetableTitle)
             dbClassCells.forEach { classCellDao.insertClassCell(it) }
             dbClassCells
+        }
+    }
+
+    // APIを通してメモを更新する
+    suspend fun updateClassNote(classCell: ClassCell, note: String) {
+        executeWithAuthHandling {
+            ensureAuthenticated()
+
+            val yearMonth = if (classCell.term == "1") "${classCell.year}01" else "${classCell.year}02"
+            val request = ApiUpdateClassRequest(
+                classId = classCell.classId,
+                note = note,
+                // 色などは現状維持またはnullを送る。必要に応じてClassCellから取得して設定
+                customizedNumberOfCredit = 0
+            )
+
+            val response = apiService.updateClass(yearMonth, listOf(request))
+            val result = validateResponse(response)
+
+            if (result?.status == "OK") {
+                // 成功したらローカルDBも更新（APIのnoteフィールドを更新）
+                val updatedCell = classCell.copy(note = note)
+                classCellDao.insertClassCell(updatedCell)
+            } else {
+                throw Exception("Failed to update note: Status not OK")
+            }
         }
     }
 

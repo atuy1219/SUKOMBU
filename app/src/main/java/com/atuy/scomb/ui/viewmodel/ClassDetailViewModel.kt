@@ -24,7 +24,8 @@ sealed interface ClassDetailUiState {
     data class Success(
         val classCell: ClassCell,
         val tasks: List<Task>,
-        val customLinks: List<CustomLink> = emptyList()
+        val customLinks: List<CustomLink> = emptyList(),
+        val isSaving: Boolean = false // 保存中状態を追加
     ) : ClassDetailUiState
 
     data class Error(val message: String) : ClassDetailUiState
@@ -87,13 +88,25 @@ class ClassDetailViewModel @Inject constructor(
         return adapter.toJson(links)
     }
 
+    // APIを通してメモを更新する
     fun updateUserNote(note: String) {
         val currentState = _uiState.value
         if (currentState is ClassDetailUiState.Success) {
-            val updatedClassCell = currentState.classCell.copy(userNote = note)
             viewModelScope.launch {
-                classCellDao.insertClassCell(updatedClassCell)
-                _uiState.value = currentState.copy(classCell = updatedClassCell)
+                // 保存中表示
+                _uiState.value = currentState.copy(isSaving = true)
+                try {
+                    // APIに送信してDB更新
+                    repository.updateClassNote(currentState.classCell, note)
+
+                    // 表示を更新
+                    val updatedClassCell = currentState.classCell.copy(note = note)
+                    _uiState.value = currentState.copy(classCell = updatedClassCell, isSaving = false)
+                } catch (e: Exception) {
+                    // エラーハンドリング（Toastなどを出すためのイベント送信などが望ましいが、今回はStateで戻す）
+                    _uiState.value = currentState.copy(isSaving = false)
+                    // エラー表示が必要であれば別途実装
+                }
             }
         }
     }

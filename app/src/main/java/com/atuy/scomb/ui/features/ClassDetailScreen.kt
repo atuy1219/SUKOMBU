@@ -1,6 +1,7 @@
 package com.atuy.scomb.ui.features
 
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -106,15 +107,11 @@ fun ClassDetailScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
-                // 親のScaffoldですでに余白が確保されているため、ここではTopAppBarのインセットを無効化する
                 windowInsets = WindowInsets(0.dp)
             )
         },
-        // Scaffold自体のコンテンツインセットも無効化する
         contentWindowInsets = WindowInsets(0.dp)
     ) { paddingValues ->
-        // 詳細画面全体のコンテンツをアニメーション対象とする
-        // classIdがnullでない場合のみアニメーションを適用
         with(sharedTransitionScope) {
             Box(
                 modifier = Modifier
@@ -123,7 +120,6 @@ fun ClassDetailScreen(
                     .then(
                         if (classId != null && dayOfWeek != -1 && period != -1) {
                             Modifier.sharedElement(
-                                // ホーム画面や時間割画面と一致するキー（ID + 曜日 + 時限）を使用
                                 sharedContentState = rememberSharedContentState(key = "class-$classId-$dayOfWeek-$period"),
                                 animatedVisibilityScope = animatedVisibilityScope
                             )
@@ -142,6 +138,7 @@ fun ClassDetailScreen(
                             classCell = state.classCell,
                             tasks = state.tasks,
                             customLinks = state.customLinks,
+                            isSaving = state.isSaving,
                             onClassPageClick = { viewModel.onClassPageClick() },
                             onUpdateUserNote = { viewModel.updateUserNote(it) },
                             onAddLink = { title, url -> viewModel.addCustomLink(title, url) },
@@ -166,6 +163,7 @@ fun ClassDetailContent(
     classCell: ClassCell,
     tasks: List<Task>,
     customLinks: List<CustomLink>,
+    isSaving: Boolean,
     onClassPageClick: () -> Unit = {},
     onUpdateUserNote: (String) -> Unit = {},
     onAddLink: (String, String) -> Unit = { _, _ -> },
@@ -197,7 +195,8 @@ fun ClassDetailContent(
 
     if (showEditNoteDialog) {
         EditNoteDialog(
-            initialNote = classCell.userNote ?: "",
+            // userNote(ローカル)ではなく note(API由来)を編集対象とする
+            initialNote = classCell.note ?: "",
             onDismiss = { showEditNoteDialog = false },
             onConfirm = { note ->
                 onUpdateUserNote(note)
@@ -310,39 +309,34 @@ fun ClassDetailContent(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        IconButton(
-                            onClick = { showEditNoteDialog = true },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.class_detail_edit_memo))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            AnimatedVisibility(visible = isSaving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp).padding(end = 8.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                            IconButton(
+                                onClick = { showEditNoteDialog = true },
+                                modifier = Modifier.size(24.dp),
+                                enabled = !isSaving
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.class_detail_edit_memo))
+                            }
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                    if (!classCell.userNote.isNullOrBlank()) {
+                    // API由来のnoteを表示 (ローカルのuserNoteは統合のため非表示)
+                    if (!classCell.note.isNullOrBlank()) {
                         Text(
-                            text = classCell.userNote,
+                            text = classCell.note,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     } else {
                         Text(
                             text = stringResource(R.string.class_detail_no_memo),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // API由来のメモがある場合も表示（区別して）
-                    if (!classCell.note.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(R.string.class_detail_university_note),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = classCell.note,
-                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -381,7 +375,7 @@ fun ClassDetailContent(
             }
         } else {
             items(tasks, key = { it.id }) { task ->
-                TaskCard( // TaskListScreenと同じコンポーネントを使用
+                TaskCard(
                     task = task,
                     onTaskClick = { openUrl(task.url) }
                 )
@@ -530,7 +524,6 @@ fun InfoGridCard(classCell: ClassCell) {
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // 修正: periodまたはdayOfWeekが8（API値9）の場合は空欄にする
             val dayPeriodValue = if (classCell.period == 8 || classCell.dayOfWeek == 8) {
                 ""
             } else {

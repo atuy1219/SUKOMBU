@@ -30,6 +30,13 @@ interface ScombzApiService {
         @Path("yearMonth") yearMonth: String
     ): Response<List<ApiClassCell>>
 
+    // メモ等の更新用API
+    @POST("timetable/{yearMonth}")
+    suspend fun updateClass(
+        @Path("yearMonth") yearMonth: String,
+        @Body request: List<ApiUpdateClassRequest>
+    ): Response<StatusResponse>
+
     @GET("home/{yearMonth}")
     suspend fun getHome(
         @Path("yearMonth") yearMonth: String
@@ -42,7 +49,4 @@ interface ScombzApiService {
 
     @GET("news")
     suspend fun getNews(): Response<List<ApiNewsItem>>
-
-
 }
-

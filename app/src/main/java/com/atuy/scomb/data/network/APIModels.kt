@@ -96,14 +96,23 @@ data class ApiClassCell(
             room = decodedRoom,
             customColorInt = null,
             url = "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course?idnumber=${this.id}",
-            note = note,
+            note = note, // APIからのメモをそのまま使用
             syllabusUrl = syllabusUrl,
             numberOfCredit = numberOfCredit,
-            userNote = existingUserNote,
+            userNote = existingUserNote, // 互換性のために残すが、基本は使用しない
             customLinksJson = existingCustomLinks
         )
     }
 }
+
+// メモ等の更新用リクエスト
+@JsonClass(generateAdapter = true)
+data class ApiUpdateClassRequest(
+    val classId: String,
+    val customizedNumberOfCredit: Int = 0,
+    val note: String?,
+    val customColor: String? = null
+)
 
 @JsonClass(generateAdapter = true)
 data class ApiTask(
