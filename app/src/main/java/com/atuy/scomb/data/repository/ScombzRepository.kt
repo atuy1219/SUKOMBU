@@ -194,6 +194,7 @@ class ScombzRepository @Inject constructor(
         executeWithAuthHandling {
             ensureAuthenticated()
 
+            // メモは平文で送信する
             val yearMonth = if (classCell.term == "1") "${classCell.year}01" else "${classCell.year}02"
             val request = ApiUpdateClassRequest(
                 classId = classCell.classId,

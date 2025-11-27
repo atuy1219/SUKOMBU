@@ -83,6 +83,9 @@ data class ApiClassCell(
 
         val appDayOfWeek = this.dayOfWeek - 1
 
+        // メモをデコード
+        val decodedNote = note.decodeBase64()
+
         return ClassCell(
             classId = this.id,
             period = this.period - 1,
@@ -96,10 +99,10 @@ data class ApiClassCell(
             room = decodedRoom,
             customColorInt = null,
             url = "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course?idnumber=${this.id}",
-            note = note, // APIからのメモをそのまま使用
+            note = decodedNote, // デコード済みのメモを使用
             syllabusUrl = syllabusUrl,
             numberOfCredit = numberOfCredit,
-            userNote = existingUserNote, // 互換性のために残すが、基本は使用しない
+            userNote = existingUserNote,
             customLinksJson = existingCustomLinks
         )
     }
