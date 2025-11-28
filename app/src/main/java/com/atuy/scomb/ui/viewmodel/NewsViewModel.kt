@@ -83,40 +83,33 @@ class NewsViewModel @Inject constructor(
     }
 
     fun markAsRead(newsItem: NewsItem) {
-        // 既に既読なら何もしない
         if (!newsItem.unread) return
 
         viewModelScope.launch {
+            val updatedItem = newsItem.copy(readTime = "Just now")
+            allNews = allNews.map { if (it.newsId == newsItem.newsId) updatedItem else it }
+            applyUiFilters()
+
             try {
                 repository.markAsRead(newsItem)
-                // 成功したらローカルのリストを更新して再描画
-                // readTimeが入った状態のオブジェクトを作成したいが、
-                // Repository側で生成したタイムスタンプを知るために再取得するか、
-                // 簡易的にここでフィルタリング対象から外れるように状態更新する
-                // RepositoryがDBを更新しているので、SingleSourceOfTruthとしてはDBを再監視するのが正しいが、
-                // 簡易実装としてメモリ上のリストを更新する。
-                // ただし、正確なreadTimeはRepository内でのみ生成されているため、UI上は「既読扱い」になればよい。
-                val updatedItem = newsItem.copy(readTime = "Just now") // 仮の値を入れることでunread=falseにする
-                allNews = allNews.map { if (it.newsId == newsItem.newsId) updatedItem else it }
-                applyUiFilters()
             } catch (e: Exception) {
-                // エラーハンドリング (必要に応じてエラーメッセージ表示など)
+                e.printStackTrace()
             }
         }
     }
 
     fun markAsUnread(newsItem: NewsItem) {
-        // 既に未読なら何もしない
         if (newsItem.unread) return
 
         viewModelScope.launch {
+            val updatedItem = newsItem.copy(readTime = null)
+            allNews = allNews.map { if (it.newsId == newsItem.newsId) updatedItem else it }
+            applyUiFilters()
+
             try {
                 repository.markAsUnread(newsItem)
-                val updatedItem = newsItem.copy(readTime = null)
-                allNews = allNews.map { if (it.newsId == newsItem.newsId) updatedItem else it }
-                applyUiFilters()
             } catch (e: Exception) {
-                // エラーハンドリング
+                e.printStackTrace()
             }
         }
     }
@@ -155,7 +148,7 @@ class NewsViewModel @Inject constructor(
                 item.title.contains(filter.searchQuery, ignoreCase = true)
             }
             val unreadMatch = if (filter.unreadOnly) {
-                item.unread // unreadプロパティはreadTime == nullを返す
+                item.unread
             } else {
                 true
             }
