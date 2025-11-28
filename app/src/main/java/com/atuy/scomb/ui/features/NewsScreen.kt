@@ -7,10 +7,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -116,10 +114,6 @@ fun NewsScreen(
                         onItemClick = { newsItem ->
                             viewModel.markAsRead(newsItem)
                             openUrlInCustomTab(context, newsItem.url)
-                        },
-                        onItemLongClick = { newsItem ->
-                            // 長押しで未読に戻す
-                            viewModel.markAsUnread(newsItem)
                         }
                     )
                 }
@@ -276,11 +270,7 @@ fun MultiSelectCategorySelector(
 
 
 @Composable
-fun NewsList(
-    newsItems: List<NewsItem>,
-    onItemClick: (NewsItem) -> Unit,
-    onItemLongClick: (NewsItem) -> Unit
-) {
+fun NewsList(newsItems: List<NewsItem>, onItemClick: (NewsItem) -> Unit) {
     if (newsItems.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
@@ -297,21 +287,15 @@ fun NewsList(
             items(newsItems) { news ->
                 NewsCard(
                     newsItem = news,
-                    onClick = { onItemClick(news) },
-                    onLongClick = { onItemLongClick(news) }
+                    onClick = { onItemClick(news) }
                 )
             }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun NewsCard(
-    newsItem: NewsItem,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
-) {
+fun NewsCard(newsItem: NewsItem, onClick: () -> Unit) {
     val alpha = if (newsItem.unread) 1.0f else 0.6f
     val containerColor = if (newsItem.unread)
         MaterialTheme.colorScheme.surfaceContainer
@@ -322,10 +306,7 @@ fun NewsCard(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(alpha)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            ),
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = if (newsItem.unread) 2.dp else 0.dp)

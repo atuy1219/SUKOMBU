@@ -13,10 +13,6 @@ data class NewsItem(
     val domain: String,
     val publishTime: String,
     val tags: String,
-    val readTime: String?, // 既読時刻。未読の場合はnull
+    var unread: Boolean,
     val url: String
-) {
-    // 互換性や利便性のためのヘルパープロパティ
-    val unread: Boolean
-        get() = readTime.isNullOrEmpty()
-}
+)

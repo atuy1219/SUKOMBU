@@ -49,10 +49,4 @@ interface ScombzApiService {
 
     @GET("news")
     suspend fun getNews(): Response<List<ApiNewsItem>>
-
-    // ニュース既読/未読更新用API (仮のエンドポイント)
-    @POST("news/read")
-    suspend fun updateNewsReadState(
-        @Body request: ApiUpdateNewsReadStateRequest
-    ): Response<StatusResponse>
 }

@@ -174,7 +174,7 @@ data class ApiNewsItem(
     fun toDbNewsItem(otkey: String , yearApiTerm: String): NewsItem {
         val decodedTags = this.tags
         val category = decodedTags?.split(",")?.getOrNull(0) ?: "その他"
-        // readTimeがnullなら未読と判定されるロジックはNewsItem側で行うため、そのまま渡す
+        val unread = readTime.isNullOrEmpty()
         val url = "https://mobile.scombz.shibaura-it.ac.jp/news/$yearApiTerm$newsId?"
 
         val decodedTitle = this.title.decodeBase64() ?: "タイトルなし"
@@ -188,15 +188,8 @@ data class ApiNewsItem(
             domain = decodedDomain,
             publishTime = this.publishTime ?: "",
             tags = decodedTags ?: "",
-            readTime = this.readTime,
+            unread = unread,
             url = url
         )
     }
 }
-
-// ニュース既読状態更新用リクエスト
-@JsonClass(generateAdapter = true)
-data class ApiUpdateNewsReadStateRequest(
-    val newsId: String,
-    val readTime: String? // nullなら未読に戻す
-)
