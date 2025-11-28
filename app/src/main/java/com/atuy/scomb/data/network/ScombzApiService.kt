@@ -30,6 +30,7 @@ interface ScombzApiService {
         @Path("yearMonth") yearMonth: String
     ): Response<List<ApiClassCell>>
 
+    // メモ等の更新用API
     @POST("timetable/{yearMonth}")
     suspend fun updateClass(
         @Path("yearMonth") yearMonth: String,
@@ -49,7 +50,8 @@ interface ScombzApiService {
     @GET("news")
     suspend fun getNews(): Response<List<ApiNewsItem>>
 
-    @POST("news")
+    // ニュース既読/未読更新用API (仮のエンドポイント)
+    @POST("news/read")
     suspend fun updateNewsReadState(
         @Body request: ApiUpdateNewsReadStateRequest
     ): Response<StatusResponse>
