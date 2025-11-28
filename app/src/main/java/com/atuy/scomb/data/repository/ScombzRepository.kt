@@ -11,6 +11,7 @@ import com.atuy.scomb.data.db.NewsItemDao
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.data.db.TaskDao
 import com.atuy.scomb.data.network.ApiUpdateClassRequest
+import com.atuy.scomb.data.network.ApiUpdateNewsReadStateRequest
 import com.atuy.scomb.data.network.ScombzApiService
 import com.atuy.scomb.util.ClientException
 import com.atuy.scomb.util.DateUtils
@@ -20,7 +21,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import retrofit2.Response
 import java.io.IOException
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 class ScombzRepository @Inject constructor(
@@ -234,15 +238,9 @@ class ScombzRepository @Inject constructor(
             val response = apiService.getNews()
             val apiNews = validateResponse(response) ?: emptyList()
 
-            val existingNewsMap = newsItemDao.getAllNews().associate { it.newsId to it.unread }
-
+            // 以前のunread情報を保持する必要はなくなる。サーバーのreadTimeを正とする。
             val dbNews = apiNews.map { apiItem ->
-                val newItem = apiItem.toDbNewsItem(otkey, currentTerm.yearApiTerm)
-                if (existingNewsMap[newItem.newsId] == false) {
-                    newItem.copy(unread = false)
-                } else {
-                    newItem
-                }
+                apiItem.toDbNewsItem(otkey, currentTerm.yearApiTerm)
             }
 
             newsItemDao.clearAll()
@@ -253,7 +251,46 @@ class ScombzRepository @Inject constructor(
 
     suspend fun markAsRead(newsItem: NewsItem) {
         executeWithAuthHandling {
-            newsItemDao.insertOrUpdateNewsItem(newsItem.copy(unread = false))
+            ensureAuthenticated()
+            // 現在時刻をフォーマットしてreadTimeとする
+            val currentReadTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.JAPAN).format(Date())
+
+            val request = ApiUpdateNewsReadStateRequest(
+                newsId = newsItem.newsId,
+                readTime = currentReadTime
+            )
+
+            val response = apiService.updateNewsReadState(request)
+            val result = validateResponse(response)
+
+            if (result?.status == "OK") {
+                newsItemDao.insertOrUpdateNewsItem(newsItem.copy(readTime = currentReadTime))
+            } else {
+                // APIエラーでもローカルだけ更新するか、例外を投げるか。
+                // ここではUIの整合性を保つため例外を投げてViewModelでハンドリングさせるか、
+                // あるいは楽観的更新を行う。ここでは安全に例外を投げる。
+                throw Exception("Failed to mark news as read")
+            }
+        }
+    }
+
+    suspend fun markAsUnread(newsItem: NewsItem) {
+        executeWithAuthHandling {
+            ensureAuthenticated()
+
+            val request = ApiUpdateNewsReadStateRequest(
+                newsId = newsItem.newsId,
+                readTime = null
+            )
+
+            val response = apiService.updateNewsReadState(request)
+            val result = validateResponse(response)
+
+            if (result?.status == "OK") {
+                newsItemDao.insertOrUpdateNewsItem(newsItem.copy(readTime = null))
+            } else {
+                throw Exception("Failed to mark news as unread")
+            }
         }
     }
 
