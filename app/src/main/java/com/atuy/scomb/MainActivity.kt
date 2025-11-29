@@ -1,5 +1,6 @@
 package com.atuy.scomb
 
+import android.content.BroadcastReceiver
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,6 +19,14 @@ class MainActivity : ComponentActivity() {
             ScombTheme {
                 ScombApp()
             }
+        }
+    }
+
+    override fun unregisterReceiver(receiver: BroadcastReceiver) {
+        try {
+            super.unregisterReceiver(receiver)
+        } catch (e: IllegalArgumentException) {
+            e.printStackTrace()
         }
     }
 }
