@@ -91,10 +91,9 @@ fun TimetableScreen(
                     TimetableGrid(
                         timetable = state.timetable,
                         otherClasses = state.otherClasses,
-                        undoneTaskClassIds = state.undoneTaskClassIds, // 追加
+                        undoneTaskClassIds = state.undoneTaskClassIds,
                         displayWeekDays = state.displayWeekDays,
                         periodCount = state.periodCount,
-                        // 授業IDだけでなく、曜日と時限も渡して遷移
                         onClassClick = { classCell ->
                             if (classCell.classId.isNotEmpty()) {
                                 navController.navigate("classDetail/${classCell.classId}?dayOfWeek=${classCell.dayOfWeek}&period=${classCell.period}")
@@ -127,7 +126,7 @@ fun TimetableScreen(
 fun TimetableGrid(
     timetable: List<List<ClassCell?>>,
     otherClasses: List<ClassCell>,
-    undoneTaskClassIds: Set<String>, // 追加
+    undoneTaskClassIds: Set<String>,
     displayWeekDays: Set<Int>,
     periodCount: Int,
     onClassClick: (ClassCell) -> Unit,
@@ -142,14 +141,12 @@ fun TimetableGrid(
         stringResource(R.string.day_fri),
         stringResource(R.string.day_sat)
     )
-    // 表示設定されている曜日のインデックスだけを抽出してソート（0=月...）
     val targetDayIndices = displayWeekDays.sorted().filter { it < allWeekDays.size }
 
     val displayPeriods = (1..periodCount).toList()
 
     val scrollState = rememberScrollState()
 
-    // 今日の曜日を取得 (月=0, ... 金=4, 土=5, 日=6)
     val calendar = Calendar.getInstance()
     val todayIndex = (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7
 
@@ -203,9 +200,7 @@ fun TimetableGrid(
             }
         }
 
-        // グリッド本体
         Row(Modifier.fillMaxWidth()) {
-            // 時限カラム
             Column(
                 modifier = Modifier.width(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -227,17 +222,14 @@ fun TimetableGrid(
                 }
             }
 
-            // 授業カラム
             Row(
                 Modifier
                     .weight(1f)
                     .padding(end = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // timetableは0(月)〜5(土)のリストと想定。
-                // 必要な曜日のカラムだけを取り出して表示する
+
                 targetDayIndices.forEach { dayIndex ->
-                    // データがない場合の安全策
                     val dayColumn = timetable.getOrNull(dayIndex) ?: emptyList()
 
                     Column(
@@ -246,9 +238,7 @@ fun TimetableGrid(
                             .weight(1f),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        // 指定時限数分だけループ
                         displayPeriods.forEach { period ->
-                            // periodは1始まり、リストインデックスは0始まり
                             val classCell = dayColumn.getOrNull(period - 1)
                             ClassCellView(
                                 classCell = classCell,
@@ -267,7 +257,6 @@ fun TimetableGrid(
             }
         }
 
-        // 「その他」セクションの表示
         if (otherClasses.isNotEmpty()) {
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -294,7 +283,6 @@ fun TimetableGrid(
                     )
                 }
             }
-            // 下部の余白
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -309,7 +297,7 @@ fun ClassCellView(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    val cellHeight = 106.dp // 間隔(4dp)を含めて110dpになるように調整
+    val cellHeight = 106.dp
 
     if (classCell == null) {
         Box(
@@ -318,8 +306,19 @@ fun ClassCellView(
                 .fillMaxWidth()
         )
     } else {
+        val containerColor = if (classCell.customColorInt != null) {
+            Color(classCell.customColorInt)
+        } else {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
+        }
+
+        val contentColor = if (classCell.customColorInt != null) {
+            Color.Black
+        } else {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        }
+
         with(sharedTransitionScope) {
-            // バッジ表示のためのBox
             Box(
                 modifier = Modifier
                     .height(cellHeight)
@@ -335,8 +334,8 @@ fun ClassCellView(
                         .clickable(onClick = onClick),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        containerColor = containerColor,
+                        contentColor = contentColor
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
@@ -363,9 +362,7 @@ fun ClassCellView(
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontSize = 9.sp
                                 ),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(
-                                    alpha = 0.8f
-                                ),
+                                color = contentColor.copy(alpha = 0.8f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.align(Alignment.End)
@@ -374,14 +371,13 @@ fun ClassCellView(
                     }
                 }
 
-                // 未完了課題がある場合のインジケーター
                 if (hasUndoneTasks) {
                     Box(
                         modifier = Modifier
                             .size(10.dp)
                             .background(MaterialTheme.colorScheme.error, CircleShape)
                             .align(Alignment.TopEnd)
-                            .offset(x = (-6).dp, y = 6.dp) // カードの内側に少し寄せる
+                            .offset(x = (-6).dp, y = 6.dp)
                     )
                 }
             }
@@ -389,7 +385,6 @@ fun ClassCellView(
     }
 }
 
-// その他の授業用のビュー
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun OtherClassCellView(
@@ -399,6 +394,18 @@ fun OtherClassCellView(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
+    val containerColor = if (classCell.customColorInt != null) {
+        Color(classCell.customColorInt)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerLow
+    }
+
+    val contentColor = if (classCell.customColorInt != null) {
+        Color.Black
+    } else {
+        Color.Unspecified
+    }
+
     with(sharedTransitionScope) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Card(
@@ -411,7 +418,8 @@ fun OtherClassCellView(
                     .clickable(onClick = onClick),
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    containerColor = containerColor,
+                    contentColor = contentColor
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
@@ -426,13 +434,14 @@ fun OtherClassCellView(
                         Text(
                             text = classCell.name ?: "",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = if (classCell.customColorInt != null) Color.Black else Color.Unspecified
                         )
                         if (!classCell.teachers.isNullOrBlank()) {
                             Text(
                                 text = classCell.teachers,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (classCell.customColorInt != null) Color.Black.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -442,13 +451,12 @@ fun OtherClassCellView(
                         Text(
                             text = classCell.room,
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = if (classCell.customColorInt != null) Color.Black else MaterialTheme.colorScheme.primary
                         )
                     }
                 }
             }
 
-            // 未完了課題がある場合のインジケーター
             if (hasUndoneTasks) {
                 Box(
                     modifier = Modifier

@@ -67,7 +67,8 @@ data class ApiClassCell(
     val dayOfWeek: Int,
     val syllabusUrl: String?,
     val numberOfCredit: Int?,
-    val note: String?
+    val note: String?,
+    val customColor: Long?
 ) {
     fun toDbClassCell(
         year: Int,
@@ -83,8 +84,9 @@ data class ApiClassCell(
 
         val appDayOfWeek = this.dayOfWeek - 1
 
-        // メモをデコード
         val decodedNote = note.decodeBase64()
+
+        val colorInt = customColor?.toInt()
 
         return ClassCell(
             classId = this.id,
@@ -97,9 +99,9 @@ data class ApiClassCell(
             name = decodedName,
             teachers = decodedTeachers,
             room = decodedRoom,
-            customColorInt = null,
+            customColorInt = colorInt,
             url = "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course?idnumber=${this.id}",
-            note = decodedNote, // デコード済みのメモを使用
+            note = decodedNote,
             syllabusUrl = syllabusUrl,
             numberOfCredit = numberOfCredit,
             userNote = existingUserNote,
@@ -108,7 +110,6 @@ data class ApiClassCell(
     }
 }
 
-// メモ等の更新用リクエスト
 @JsonClass(generateAdapter = true)
 data class ApiUpdateClassRequest(
     val classId: String,
