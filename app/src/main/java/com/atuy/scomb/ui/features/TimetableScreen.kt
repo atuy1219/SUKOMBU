@@ -156,13 +156,12 @@ fun TimetableGrid(
             .verticalScroll(scrollState)
             .padding(bottom = 16.dp)
     ) {
-        // 曜日ヘッダー
         Row(
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
         ) {
-            Spacer(modifier = Modifier.width(32.dp)) // 時限カラム分のスペース
+            Spacer(modifier = Modifier.width(32.dp))
 
             Row(
                 modifier = Modifier
@@ -228,7 +227,6 @@ fun TimetableGrid(
                     .padding(end = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-
                 targetDayIndices.forEach { dayIndex ->
                     val dayColumn = timetable.getOrNull(dayIndex) ?: emptyList()
 
@@ -306,13 +304,13 @@ fun ClassCellView(
                 .fillMaxWidth()
         )
     } else {
-        val containerColor = if (classCell.customColorInt != null) {
+        val containerColor = if (classCell.customColorInt != null && classCell.customColorInt != 0) {
             Color(classCell.customColorInt)
         } else {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
         }
 
-        val contentColor = if (classCell.customColorInt != null) {
+        val contentColor = if (classCell.customColorInt != null && classCell.customColorInt != 0) {
             Color.Black
         } else {
             MaterialTheme.colorScheme.onPrimaryContainer
@@ -394,13 +392,13 @@ fun OtherClassCellView(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    val containerColor = if (classCell.customColorInt != null) {
+    val containerColor = if (classCell.customColorInt != null && classCell.customColorInt != 0) {
         Color(classCell.customColorInt)
     } else {
         MaterialTheme.colorScheme.surfaceContainerLow
     }
 
-    val contentColor = if (classCell.customColorInt != null) {
+    val contentColor = if (classCell.customColorInt != null && classCell.customColorInt != 0) {
         Color.Black
     } else {
         Color.Unspecified
@@ -435,13 +433,13 @@ fun OtherClassCellView(
                             text = classCell.name ?: "",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = if (classCell.customColorInt != null) Color.Black else Color.Unspecified
+                            color = if (classCell.customColorInt != null && classCell.customColorInt != 0) Color.Black else Color.Unspecified
                         )
                         if (!classCell.teachers.isNullOrBlank()) {
                             Text(
                                 text = classCell.teachers,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (classCell.customColorInt != null) Color.Black.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (classCell.customColorInt != null && classCell.customColorInt != 0) Color.Black.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -451,7 +449,7 @@ fun OtherClassCellView(
                         Text(
                             text = classCell.room,
                             style = MaterialTheme.typography.labelMedium,
-                            color = if (classCell.customColorInt != null) Color.Black else MaterialTheme.colorScheme.primary
+                            color = if (classCell.customColorInt != null && classCell.customColorInt != 0) Color.Black else MaterialTheme.colorScheme.primary
                         )
                     }
                 }
