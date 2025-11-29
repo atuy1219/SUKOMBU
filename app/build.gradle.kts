@@ -21,8 +21,6 @@ fun getGitCommitHash(): String {
     }
 }
 
-// --- 追加: Gitコマンドを実行してバージョン情報を取得する処理 ---
-// Gitコマンドを実行する関数
 fun getGitCommandOutput(command: String): String {
     return try {
         val byteOut = ByteArrayOutputStream()
@@ -32,22 +30,17 @@ fun getGitCommandOutput(command: String): String {
         }
         byteOut.toString().trim()
     } catch (e: Exception) {
-        // Gitがない場合やエラー時はデフォルト値を返す
         "1.0.0-dev"
     }
 }
 
-// Gitのタグ名を取得 (例: v1.0.2)
-// タグがない、またはコミットが進んでいる場合は "v1.0.2-4-g9a..." のようになる
 val gitVersionName = getGitCommandOutput("git describe --tags --always")
 
-// コミット数を取得してversionCodeにする (常に増加する数値が必要なため)
 val gitCommitCount = try {
     getGitCommandOutput("git rev-list --count HEAD").toInt()
 } catch (e: Exception) {
     1
 }
-// -------------------------------------------------------
 
 android {
     namespace = "com.atuy.scomb"
@@ -91,7 +84,6 @@ android {
         versionCode = gitCommitCount
         versionName = gitVersionName
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "GIT_COMMIT_HASH", "\"${getGitCommitHash()}\"")
 
     }

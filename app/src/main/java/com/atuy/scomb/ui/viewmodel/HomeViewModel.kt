@@ -2,6 +2,7 @@ package com.atuy.scomb.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.atuy.scomb.data.AuthManager
 import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.NewsItem
@@ -23,7 +24,7 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
 
-data class LinkItem(val title: String, val url: String)
+data class LinkItem(val title: String, val url: String, val appendUsername: Boolean = false)
 
 data class HomeData(
     val upcomingTasks: List<Task>,
@@ -46,7 +47,8 @@ sealed interface HomeUiState {
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: ScombzRepository,
-    private val settingsManager: SettingsManager
+    private val settingsManager: SettingsManager,
+    private val authManager: AuthManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
@@ -54,13 +56,13 @@ class HomeViewModel @Inject constructor(
 
     private var loadJob: Job? = null
 
-    private val quickLinks = listOf(
+    private val baseQuickLinks = listOf(
         LinkItem("ScombZ", "https://scombz.shibaura-it.ac.jp/"),
         LinkItem("シラバス", "https://syllabus.sic.shibaura-it.ac.jp/"),
         LinkItem("時間割検索", "https://timetable.sic.shibaura-it.ac.jp/"),
         LinkItem("学年歴", "https://www.shibaura-it.ac.jp/campus_life/school_calendar"),
-        LinkItem("S*gsot", "https://sgsot.sic.shibaura-it.ac.jp"),
-        LinkItem("スーパー英語", "https://supereigo2.sic.shibaura-it.ac.jp/sso"),
+        LinkItem("S*gsot", "https://sgsot.sic.shibaura-it.ac.jp", appendUsername = true),
+        LinkItem("スーパー英語", "https://supereigo2.sic.shibaura-it.ac.jp/sso/"),
         LinkItem("図書館", "https://lib.shibaura-it.ac.jp")
     )
 
@@ -113,10 +115,13 @@ class HomeViewModel @Inject constructor(
 
                     val showNewsDeferred = async { settingsManager.showHomeNewsFlow.first() }
 
+                    val usernameDeferred = async { authManager.usernameFlow.first() }
+
                     val tasks = tasksDeferred.await()
                     val timetable = timetableDeferred.await()
                     val news = newsDeferred.await()
                     val showNews = showNewsDeferred.await()
+                    val username = usernameDeferred.await() ?: ""
 
                     val upcomingTasks = tasks
                         .filter { it.deadline > System.currentTimeMillis() && !it.done }
@@ -129,6 +134,14 @@ class HomeViewModel @Inject constructor(
                         .sortedBy { it.period }
 
                     val recentNews = news.take(3)
+
+                    val quickLinks = baseQuickLinks.map { link ->
+                        if (link.appendUsername && username.isNotEmpty()) {
+                            link.copy(url = link.url + username)
+                        } else {
+                            link
+                        }
+                    }
 
                     _uiState.value = HomeUiState.Success(
                         HomeData(
@@ -159,9 +172,6 @@ class HomeViewModel @Inject constructor(
                 _openUrlEvent.send(url)
             } catch (e: Exception) {
                 e.printStackTrace()
-                // 必要に応じてエラー処理を追加（トースト表示など）
-                // 今回はエラー時でも元のURLを開く、あるいは何もしない等の対応が考えられるが
-                // シンプルにログ出力のみとする
             }
         }
     }

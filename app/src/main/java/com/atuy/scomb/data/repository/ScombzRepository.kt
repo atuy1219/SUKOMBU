@@ -85,6 +85,7 @@ class ScombzRepository @Inject constructor(
                 val body = response.body()
                 if (body != null && body.status == "OK" && body.token != null) {
                     authManager.saveAuthToken(body.token)
+                    authManager.saveUsername(userId) // ログイン成功時にユーザー名（学籍番号）を保存
                     Result.success(Unit)
                 } else {
                     val statusMsg = body?.status ?: "Unknown status"

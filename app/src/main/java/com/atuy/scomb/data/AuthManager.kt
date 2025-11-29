@@ -17,6 +17,7 @@ class AuthManager @Inject constructor(@ApplicationContext private val context: C
     companion object {
         private const val PREF_FILE_NAME = "secure_auth_prefs"
         private const val KEY_AUTH_TOKEN = "auth_token"
+        private const val KEY_USERNAME = "username"
     }
 
     private val masterKey = MasterKey.Builder(context)
@@ -35,6 +36,10 @@ class AuthManager @Inject constructor(@ApplicationContext private val context: C
         sharedPreferences.edit().putString(KEY_AUTH_TOKEN, token).apply()
     }
 
+    fun saveUsername(username: String) {
+        sharedPreferences.edit().putString(KEY_USERNAME, username).apply()
+    }
+
     val authTokenFlow: Flow<String?> = callbackFlow {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
             if (key == KEY_AUTH_TOKEN) {
@@ -50,7 +55,25 @@ class AuthManager @Inject constructor(@ApplicationContext private val context: C
         }
     }
 
+    val usernameFlow: Flow<String?> = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (key == KEY_USERNAME) {
+                trySend(prefs.getString(KEY_USERNAME, null))
+            }
+        }
+        sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
+
+        trySend(sharedPreferences.getString(KEY_USERNAME, null))
+
+        awaitClose {
+            sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
     fun clearAuthToken() {
-        sharedPreferences.edit().remove(KEY_AUTH_TOKEN).apply()
+        sharedPreferences.edit()
+            .remove(KEY_AUTH_TOKEN)
+            .remove(KEY_USERNAME)
+            .apply()
     }
 }
