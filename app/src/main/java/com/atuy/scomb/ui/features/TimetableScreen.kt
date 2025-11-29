@@ -6,6 +6,7 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,10 +32,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -286,6 +289,35 @@ fun TimetableGrid(
     }
 }
 
+/**
+ * カスタムカラーをテーマ(ライト/ダーク)に合わせて調整し、背景色とコンテンツ色を返すヘルパー関数
+ */
+@Composable
+fun getDynamicClassColors(
+    customColorInt: Int?,
+    defaultContainerColor: Color,
+    defaultContentColor: Color
+): Pair<Color, Color> {
+    val isDarkTheme = isSystemInDarkTheme()
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+
+    return remember(customColorInt, isDarkTheme, defaultContainerColor, defaultContentColor) {
+        if (customColorInt != null && customColorInt != 0) {
+            val seedColor = Color(customColorInt)
+            if (isDarkTheme) {
+                val container = seedColor.copy(alpha = 0.3f).compositeOver(surfaceColor)
+                container to onSurfaceColor
+            } else {
+
+                seedColor to Color.Black
+            }
+        } else {
+            defaultContainerColor to defaultContentColor
+        }
+    }
+}
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ClassCellView(
@@ -304,17 +336,12 @@ fun ClassCellView(
                 .fillMaxWidth()
         )
     } else {
-        val containerColor = if (classCell.customColorInt != null && classCell.customColorInt != 0) {
-            Color(classCell.customColorInt)
-        } else {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
-        }
-
-        val contentColor = if (classCell.customColorInt != null && classCell.customColorInt != 0) {
-            Color.Black
-        } else {
-            MaterialTheme.colorScheme.onPrimaryContainer
-        }
+        // 色の決定ロジック呼び出し
+        val (containerColor, contentColor) = getDynamicClassColors(
+            customColorInt = classCell.customColorInt,
+            defaultContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
+            defaultContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        )
 
         with(sharedTransitionScope) {
             Box(
@@ -392,17 +419,11 @@ fun OtherClassCellView(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    val containerColor = if (classCell.customColorInt != null && classCell.customColorInt != 0) {
-        Color(classCell.customColorInt)
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerLow
-    }
-
-    val contentColor = if (classCell.customColorInt != null && classCell.customColorInt != 0) {
-        Color.Black
-    } else {
-        Color.Unspecified
-    }
+    val (containerColor, contentColor) = getDynamicClassColors(
+        customColorInt = classCell.customColorInt,
+        defaultContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        defaultContentColor = Color.Unspecified
+    )
 
     with(sharedTransitionScope) {
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -433,13 +454,12 @@ fun OtherClassCellView(
                             text = classCell.name ?: "",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = if (classCell.customColorInt != null && classCell.customColorInt != 0) Color.Black else Color.Unspecified
                         )
                         if (!classCell.teachers.isNullOrBlank()) {
                             Text(
                                 text = classCell.teachers,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (classCell.customColorInt != null && classCell.customColorInt != 0) Color.Black.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (contentColor != Color.Unspecified) contentColor.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -449,7 +469,7 @@ fun OtherClassCellView(
                         Text(
                             text = classCell.room,
                             style = MaterialTheme.typography.labelMedium,
-                            color = if (classCell.customColorInt != null && classCell.customColorInt != 0) Color.Black else MaterialTheme.colorScheme.primary
+                            color = if (contentColor != Color.Unspecified) contentColor else MaterialTheme.colorScheme.primary
                         )
                     }
                 }
