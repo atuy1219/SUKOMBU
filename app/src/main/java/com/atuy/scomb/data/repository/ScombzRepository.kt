@@ -202,9 +202,11 @@ class ScombzRepository @Inject constructor(
 
             val yearMonth = if (classCell.term == "1") "${classCell.year}01" else "${classCell.year}02"
 
-            // 色情報を16進数文字列に変換 (#RRGGBB)
-            val colorString = customColorInt?.let {
-                String.format("#%06X", 0xFFFFFF and it)
+
+            val colorString = if (customColorInt == null || customColorInt == 0) {
+                null
+            } else {
+                Integer.toUnsignedString(customColorInt)
             }
 
             val request = ApiUpdateClassRequest(
