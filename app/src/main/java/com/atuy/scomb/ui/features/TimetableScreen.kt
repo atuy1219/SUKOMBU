@@ -289,9 +289,6 @@ fun TimetableGrid(
     }
 }
 
-/**
- * カスタムカラーをテーマ(ライト/ダーク)に合わせて調整し、背景色とコンテンツ色を返すヘルパー関数
- */
 @Composable
 fun getDynamicClassColors(
     customColorInt: Int?,
