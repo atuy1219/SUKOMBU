@@ -566,7 +566,7 @@ fun ColorWheel(
             .aspectRatio(1f)
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
-                    // size.width / 2f で Float 除算を強制
+                    // size.width と size.height は Int なので、2f (Float) で割ることで Float 結果を得る
                     val center = Offset(size.width / 2f, size.height / 2f)
                     val radius = size.width / 2f
                     val distance = (offset - center).getDistance()
@@ -575,6 +575,7 @@ fun ColorWheel(
                         val angle = atan2(offset.y - center.y, offset.x - center.x) * (180 / PI).toFloat()
                         val hue = (angle + 360) % 360
 
+                        // 距離に応じて彩度を変えるなどの高度なことはせず、鮮やかな色を選択させる
                         val color = Color.hsv(hue, 1f, 1f)
                         selectedColor = color
                         onColorSelected(color)
@@ -583,10 +584,9 @@ fun ColorWheel(
             }
             .pointerInput(Unit) {
                 detectDragGestures { change, _ ->
-                    // size.width / 2f で Float 除算を強制
+                    // ここも同様に Float 除算を行う
                     val center = Offset(size.width / 2f, size.height / 2f)
                     val offset = change.position
-                    // radius も Float に統一
                     val radius = size.width / 2f
                     val distance = (offset - center).getDistance()
 
@@ -604,6 +604,8 @@ fun ColorWheel(
         val radius = size.width / 2
 
         if (!isInitialized && selectedColor != Color.White) {
+            // 初期カラーから位置を逆算するのは難しい（S/V固定ならHueから可能だが）
+            // ここでは中心に置いておく
             isInitialized = true
         }
 

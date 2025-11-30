@@ -68,7 +68,8 @@ data class ApiClassCell(
     val syllabusUrl: String?,
     val numberOfCredit: Int?,
     val note: String?,
-    val customColor: Long?
+    // 修正: APIから空文字や"null"文字列、数値文字列など不安定な値が返るためString?で受ける
+    val customColor: String?
 ) {
     fun toDbClassCell(
         year: Int,
@@ -86,7 +87,17 @@ data class ApiClassCell(
 
         val decodedNote = note.decodeBase64()
 
-        val colorInt = customColor?.toInt()
+        // 修正: 文字列として受け取った値をIntに変換する処理を強化
+        val colorInt = try {
+            if (customColor.isNullOrBlank() || customColor == "null") {
+                null
+            } else {
+                // "4292730333" のような Long 値の文字列をパースし、Int に変換 (色情報として扱うためビット溢れは許容)
+                customColor.toLongOrNull()?.toInt()
+            }
+        } catch (e: Exception) {
+            null
+        }
 
         return ClassCell(
             classId = this.id,
