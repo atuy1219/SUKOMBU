@@ -190,17 +190,27 @@ class ScombzRepository @Inject constructor(
         }
     }
 
-    // APIを通してメモを更新する
+    // APIを通してメモを更新する (後方互換性のため残すが、実質 updateClassInfo を呼ぶ)
     suspend fun updateClassNote(classCell: ClassCell, note: String) {
+        updateClassInfo(classCell, note, classCell.customColorInt)
+    }
+
+    // メモと色などの設定を更新する汎用メソッド
+    suspend fun updateClassInfo(classCell: ClassCell, note: String?, customColorInt: Int?) {
         executeWithAuthHandling {
             ensureAuthenticated()
 
-            // メモは平文で送信する
             val yearMonth = if (classCell.term == "1") "${classCell.year}01" else "${classCell.year}02"
+
+            // 色情報を16進数文字列に変換 (#RRGGBB)
+            val colorString = customColorInt?.let {
+                String.format("#%06X", 0xFFFFFF and it)
+            }
+
             val request = ApiUpdateClassRequest(
                 classId = classCell.classId,
                 note = note,
-                // 色などは現状維持またはnullを送る。必要に応じてClassCellから取得して設定
+                customColor = colorString,
                 customizedNumberOfCredit = 0
             )
 
@@ -208,11 +218,14 @@ class ScombzRepository @Inject constructor(
             val result = validateResponse(response)
 
             if (result?.status == "OK") {
-                // 成功したらローカルDBも更新（APIのnoteフィールドを更新）
-                val updatedCell = classCell.copy(note = note)
+                // 成功したらローカルDBも更新
+                val updatedCell = classCell.copy(
+                    note = note,
+                    customColorInt = customColorInt
+                )
                 classCellDao.insertClassCell(updatedCell)
             } else {
-                throw Exception("Failed to update note: Status not OK")
+                throw Exception("Failed to update class info: Status not OK")
             }
         }
     }

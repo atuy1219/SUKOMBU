@@ -97,15 +97,42 @@ class ClassDetailViewModel @Inject constructor(
                 _uiState.value = currentState.copy(isSaving = true)
                 try {
                     // APIに送信してDB更新
-                    repository.updateClassNote(currentState.classCell, note)
+                    // updateClassNoteではなく、汎用的なupdateClassInfoを使用
+                    repository.updateClassInfo(currentState.classCell, note, currentState.classCell.customColorInt)
 
                     // 表示を更新
                     val updatedClassCell = currentState.classCell.copy(note = note)
                     _uiState.value = currentState.copy(classCell = updatedClassCell, isSaving = false)
                 } catch (e: Exception) {
-                    // エラーハンドリング（Toastなどを出すためのイベント送信などが望ましいが、今回はStateで戻す）
                     _uiState.value = currentState.copy(isSaving = false)
-                    // エラー表示が必要であれば別途実装
+                }
+            }
+        }
+    }
+
+    // 色を更新する
+    fun updateClassColor(colorInt: Int) {
+        updateColorInternal(colorInt)
+    }
+
+    // 色をリセットする（nullにする）
+    fun resetClassColor() {
+        updateColorInternal(null)
+    }
+
+    private fun updateColorInternal(colorInt: Int?) {
+        val currentState = _uiState.value
+        if (currentState is ClassDetailUiState.Success) {
+            viewModelScope.launch {
+                _uiState.value = currentState.copy(isSaving = true)
+                try {
+                    // noteは既存の値を保持
+                    repository.updateClassInfo(currentState.classCell, currentState.classCell.note, colorInt)
+
+                    val updatedClassCell = currentState.classCell.copy(customColorInt = colorInt)
+                    _uiState.value = currentState.copy(classCell = updatedClassCell, isSaving = false)
+                } catch (e: Exception) {
+                    _uiState.value = currentState.copy(isSaving = false)
                 }
             }
         }
