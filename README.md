@@ -24,6 +24,14 @@ Material 3を採用。
 
 Chromeカスタムタブを使用することで気づかないうちにChromeのタブが大量に開いている問題を解決します。
 
+### 🛠️ 公式アプリのバグを修正
+
+公式アプリで放置されているバグを修正しました。
+・通知がこない
+・お知らせを押すと
+{ "status": "query Information failed" }
+が表示されることがある
+
 ## 📥 インストール方法
 
 <a href="https://github.com/atuy1219/SUKOMBU/releases">
