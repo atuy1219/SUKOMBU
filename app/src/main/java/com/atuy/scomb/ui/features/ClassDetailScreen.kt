@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -51,7 +50,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -100,6 +98,7 @@ fun ClassDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var showColorDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel) {
         viewModel.openUrlEvent.collect { url: String ->
@@ -112,6 +111,18 @@ fun ClassDetailScreen(
         }
     }
 
+    // ダイアログの表示
+    if (showColorDialog && uiState is ClassDetailUiState.Success) {
+        val state = uiState as ClassDetailUiState.Success
+        ColorPickerDialog(
+            currentColorInt = state.classCell.customColorInt,
+            onColorChange = { viewModel.updateClassColor(it) },
+            onResetColor = { viewModel.resetClassColor() },
+            onDismiss = { showColorDialog = false },
+            isSaving = state.isSaving
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -119,6 +130,18 @@ fun ClassDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                },
+                actions = {
+                    // 色設定ボタンを追加
+                    if (uiState is ClassDetailUiState.Success) {
+                        IconButton(onClick = { showColorDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.ColorLens,
+                                contentDescription = "表示カラー設定",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 },
                 windowInsets = WindowInsets(0.dp)
@@ -156,9 +179,7 @@ fun ClassDetailScreen(
                             onClassPageClick = { viewModel.onClassPageClick() },
                             onUpdateUserNote = { viewModel.updateUserNote(it) },
                             onAddLink = { title, url -> viewModel.addCustomLink(title, url) },
-                            onRemoveLink = { viewModel.removeCustomLink(it) },
-                            onUpdateColor = { viewModel.updateClassColor(it) },
-                            onResetColor = { viewModel.resetClassColor() }
+                            onRemoveLink = { viewModel.removeCustomLink(it) }
                         )
                     }
 
@@ -183,9 +204,7 @@ fun ClassDetailContent(
     onClassPageClick: () -> Unit = {},
     onUpdateUserNote: (String) -> Unit = {},
     onAddLink: (String, String) -> Unit = { _, _ -> },
-    onRemoveLink: (CustomLink) -> Unit = {},
-    onUpdateColor: (Int) -> Unit = {},
-    onResetColor: () -> Unit = {}
+    onRemoveLink: (CustomLink) -> Unit = {}
 ) {
     val context = LocalContext.current
     fun openUrl(url: String?) {
@@ -236,15 +255,7 @@ fun ClassDetailContent(
             InfoGridCard(classCell)
         }
 
-        // 表示設定 (色設定)
-        item(key = "settings") {
-            ColorSettingsCard(
-                currentColorInt = classCell.customColorInt,
-                onColorChange = onUpdateColor,
-                onResetColor = onResetColor,
-                isSaving = isSaving
-            )
-        }
+        // ColorSettingsCard は削除されました
 
         item(key = "links") {
             Card(
@@ -339,7 +350,9 @@ fun ClassDetailContent(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             AnimatedVisibility(visible = isSaving) {
                                 CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp).padding(end = 8.dp),
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .padding(end = 8.dp),
                                     strokeWidth = 2.dp
                                 )
                             }
@@ -474,78 +487,67 @@ fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
 }
 
 @Composable
-fun ColorSettingsCard(
+fun ColorPickerDialog(
     currentColorInt: Int?,
     onColorChange: (Int) -> Unit,
     onResetColor: () -> Unit,
+    onDismiss: () -> Unit,
     isSaving: Boolean
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.ColorLens,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "表示カラー設定",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // リセットボタン
-                OutlinedButton(
-                    onClick = onResetColor,
-                    enabled = !isSaving && currentColorInt != null && currentColorInt != 0
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("リセット")
-                }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.ColorLens,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("表示カラー設定")
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // カラーサークル（色相環）
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                ColorWheel(
-                    modifier = Modifier.size(200.dp),
-                    initialColor = currentColorInt?.let { Color(it) } ?: Color.White,
-                    onColorSelected = { color ->
-                        onColorChange(color.toArgb())
-                    }
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    ColorWheel(
+                        modifier = Modifier.size(200.dp),
+                        initialColor = currentColorInt?.let { Color(it) } ?: Color.White,
+                        onColorSelected = { color ->
+                            onColorChange(color.toArgb())
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "タップまたはドラッグで色を選択",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "タップまたはドラッグで色を選択",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onResetColor,
+                enabled = !isSaving && currentColorInt != null && currentColorInt != 0
+            ) {
+                Text("色をリセット")
+            }
         }
-    }
+    )
 }
 
 @Composable
@@ -554,11 +556,9 @@ fun ColorWheel(
     initialColor: Color,
     onColorSelected: (Color) -> Unit
 ) {
-    // HSV色空間での色選択を実装
-    // 色相(Hue)のみを変更可能とする簡易版
+
     var selectedColor by remember { mutableStateOf(initialColor) }
 
-    // 選択位置のインジケーター用
     var isInitialized by remember { mutableStateOf(false) }
 
     Canvas(
@@ -566,7 +566,6 @@ fun ColorWheel(
             .aspectRatio(1f)
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
-                    // size.width と size.height は Int なので、2f (Float) で割ることで Float 結果を得る
                     val center = Offset(size.width / 2f, size.height / 2f)
                     val radius = size.width / 2f
                     val distance = (offset - center).getDistance()
@@ -575,7 +574,6 @@ fun ColorWheel(
                         val angle = atan2(offset.y - center.y, offset.x - center.x) * (180 / PI).toFloat()
                         val hue = (angle + 360) % 360
 
-                        // 距離に応じて彩度を変えるなどの高度なことはせず、鮮やかな色を選択させる
                         val color = Color.hsv(hue, 1f, 1f)
                         selectedColor = color
                         onColorSelected(color)
@@ -584,13 +582,11 @@ fun ColorWheel(
             }
             .pointerInput(Unit) {
                 detectDragGestures { change, _ ->
-                    // ここも同様に Float 除算を行う
                     val center = Offset(size.width / 2f, size.height / 2f)
                     val offset = change.position
                     val radius = size.width / 2f
                     val distance = (offset - center).getDistance()
 
-                    // 円の外でもドラッグ中は角度で色を決定する
                     val angle = atan2(offset.y - center.y, offset.x - center.x) * (180 / PI).toFloat()
                     val hue = (angle + 360) % 360
 
@@ -604,25 +600,20 @@ fun ColorWheel(
         val radius = size.width / 2
 
         if (!isInitialized && selectedColor != Color.White) {
-            // 初期カラーから位置を逆算するのは難しい（S/V固定ならHueから可能だが）
-            // ここでは中心に置いておく
             isInitialized = true
         }
 
-        // 色相環の描画
         val colors = (0..360).map { Color.hsv(it.toFloat(), 1f, 1f) }
         drawCircle(
             brush = Brush.sweepGradient(colors, center),
             radius = radius
         )
 
-        // 中心に現在の選択色を表示
         drawCircle(
             color = selectedColor,
             radius = radius * 0.4f
         )
 
-        // 中心の枠線
         drawCircle(
             color = Color.White,
             radius = radius * 0.4f,
