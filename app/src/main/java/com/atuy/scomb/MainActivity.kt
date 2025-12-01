@@ -5,8 +5,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.ui.ScombApp
 import com.atuy.scomb.ui.theme.ScombTheme
+import com.atuy.scomb.ui.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -16,7 +22,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            ScombTheme {
+            val mainViewModel: MainViewModel = hiltViewModel()
+            val themeMode by mainViewModel.themeMode.collectAsState()
+
+            val darkTheme = when (themeMode) {
+                SettingsManager.THEME_MODE_LIGHT -> false
+                SettingsManager.THEME_MODE_DARK -> true
+                else -> isSystemInDarkTheme()
+            }
+
+            ScombTheme(darkTheme = darkTheme) {
                 ScombApp()
             }
         }

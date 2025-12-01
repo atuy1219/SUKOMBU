@@ -157,7 +157,6 @@ class ScombzRepository @Inject constructor(
                 if (cachedTimetable.isNotEmpty()) return@executeWithAuthHandling cachedTimetable
             }
 
-            // カスタムリンクのみ保持する (userNoteはAPI統合のため廃止/同期優先)
             val existingCells = classCellDao.getCells(timetableTitle)
             val customLinksMap = existingCells.associate { it.classId to it.customLinksJson }
 

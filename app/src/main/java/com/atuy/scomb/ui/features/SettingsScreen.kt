@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -62,6 +63,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.atuy.scomb.BuildConfig
 import com.atuy.scomb.R
+import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.ui.Screen
 import com.atuy.scomb.ui.viewmodel.SettingsViewModel
 
@@ -95,6 +97,15 @@ fun SettingsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        item {
+            SettingsGroupCard {
+                ThemeSettingsSection(
+                    currentMode = uiState.themeMode,
+                    onModeChange = { viewModel.updateThemeMode(it) }
+                )
+            }
+        }
+
         item {
             SettingsGroupCard {
                 HomeSettingsSection(
@@ -188,6 +199,38 @@ fun SectionHeader(title: String, icon: ImageVector) {
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemeSettingsSection(
+    currentMode: Int,
+    onModeChange: (Int) -> Unit
+) {
+    Column {
+        SectionHeader(
+            title = "テーマ設定",
+            icon = Icons.Default.DarkMode
+        )
+
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            val options = listOf(
+                SettingsManager.THEME_MODE_SYSTEM to "自動",
+                SettingsManager.THEME_MODE_LIGHT to "ライト",
+                SettingsManager.THEME_MODE_DARK to "ダーク"
+            )
+
+            options.forEachIndexed { index, (mode, label) ->
+                SegmentedButton(
+                    selected = currentMode == mode,
+                    onClick = { onModeChange(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
+                ) {
+                    Text(label)
+                }
+            }
+        }
     }
 }
 

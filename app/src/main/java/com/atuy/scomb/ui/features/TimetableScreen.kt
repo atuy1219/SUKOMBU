@@ -6,7 +6,6 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -295,19 +295,19 @@ fun getDynamicClassColors(
     defaultContainerColor: Color,
     defaultContentColor: Color
 ): Pair<Color, Color> {
-    val isDarkTheme = isSystemInDarkTheme()
+    // 現在のテーマ（アプリ設定含む）の背景輝度を取得してダーク判定
+    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val surfaceColor = MaterialTheme.colorScheme.surface
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
 
     return remember(customColorInt, isDarkTheme, defaultContainerColor, defaultContentColor) {
         if (customColorInt != null && customColorInt != 0) {
             val seedColor = Color(customColorInt)
             if (isDarkTheme) {
-                val container = seedColor.copy(alpha = 0.3f).compositeOver(surfaceColor)
-                container to onSurfaceColor
+                val container = seedColor.copy(alpha = 0.2f).compositeOver(surfaceColor)
+                container to seedColor
             } else {
-
-                seedColor to Color.Black
+                val container = seedColor.copy(alpha = 0.12f).compositeOver(surfaceColor)
+                container to seedColor
             }
         } else {
             defaultContainerColor to defaultContentColor

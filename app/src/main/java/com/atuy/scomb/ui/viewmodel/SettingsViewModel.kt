@@ -22,7 +22,8 @@ data class SettingsUiState(
     val showHomeNews: Boolean = true,
     val isDebugMode: Boolean = false,
     val displayWeekDays: Set<Int> = setOf(0, 1, 2, 3, 4, 5), // 0=月 ... 5=土
-    val timetablePeriodCount: Int = 7
+    val timetablePeriodCount: Int = 7,
+    val themeMode: Int = SettingsManager.THEME_MODE_SYSTEM
 )
 
 @HiltViewModel
@@ -38,14 +39,16 @@ class SettingsViewModel @Inject constructor(
         settingsManager.showHomeNewsFlow,
         settingsManager.debugModeFlow,
         settingsManager.displayWeekDaysFlow,
-        settingsManager.timetablePeriodCountFlow
-    ) { timings, showNews, debugMode, weekDays, periodCount ->
+        settingsManager.timetablePeriodCountFlow,
+        settingsManager.themeModeFlow
+    ) { timings, showNews, debugMode, weekDays, periodCount, themeMode ->
         SettingsUiState(
             notificationTimings = timings.mapNotNull { it.toIntOrNull() }.toSet(),
             showHomeNews = showNews,
             isDebugMode = debugMode,
             displayWeekDays = weekDays,
-            timetablePeriodCount = periodCount
+            timetablePeriodCount = periodCount,
+            themeMode = themeMode
         )
     }
         .stateIn(
@@ -77,6 +80,12 @@ class SettingsViewModel @Inject constructor(
     fun updateTimetablePeriodCount(count: Int) {
         viewModelScope.launch {
             settingsManager.setTimetablePeriodCount(count)
+        }
+    }
+
+    fun updateThemeMode(mode: Int) {
+        viewModelScope.launch {
+            settingsManager.setThemeMode(mode)
         }
     }
 

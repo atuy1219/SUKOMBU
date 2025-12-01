@@ -29,15 +29,16 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
         val DEBUG_MODE_KEY = booleanPreferencesKey("debug_mode")
         const val DEFAULT_DEBUG_MODE = false
 
-        // 時間割設定
-        // 移行用: 古いキーは削除せず、新しいキーがない場合のフォールバックなどに利用可能だが、
-        // 今回はシンプルに新しいキーを導入し、デフォルト値を「月〜土」とする。
         val DISPLAY_WEEK_DAYS_KEY = stringSetPreferencesKey("display_week_days")
-        // 0=月, 1=火, 2=水, 3=木, 4=金, 5=土
         val DEFAULT_DISPLAY_WEEK_DAYS = setOf("0", "1", "2", "3", "4", "5")
 
         val TIMETABLE_PERIOD_COUNT_KEY = intPreferencesKey("timetable_period_count")
         const val DEFAULT_TIMETABLE_PERIOD_COUNT = 7
+
+        val THEME_MODE_KEY = intPreferencesKey("theme_mode")
+        const val THEME_MODE_SYSTEM = 0
+        const val THEME_MODE_LIGHT = 1
+        const val THEME_MODE_DARK = 2
     }
 
     val notificationTimingsFlow: Flow<Set<String>> = context.settingsDataStore.data.map { preferences ->
@@ -70,7 +71,6 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
         }
     }
 
-    // 表示する曜日のFlowとSetter
     val displayWeekDaysFlow: Flow<Set<Int>> = context.settingsDataStore.data.map { preferences ->
         (preferences[DISPLAY_WEEK_DAYS_KEY] ?: DEFAULT_DISPLAY_WEEK_DAYS)
             .mapNotNull { it.toIntOrNull() }
@@ -90,6 +90,16 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
     suspend fun setTimetablePeriodCount(count: Int) {
         context.settingsDataStore.edit { preferences ->
             preferences[TIMETABLE_PERIOD_COUNT_KEY] = count
+        }
+    }
+
+    val themeModeFlow: Flow<Int> = context.settingsDataStore.data.map { preferences ->
+        preferences[THEME_MODE_KEY] ?: THEME_MODE_SYSTEM
+    }
+
+    suspend fun setThemeMode(mode: Int) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[THEME_MODE_KEY] = mode
         }
     }
 }

@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.atuy.scomb.data.AuthManager
+import com.atuy.scomb.data.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +19,11 @@ sealed interface AuthState {
 }
 
 @HiltViewModel
-class MainViewModel @Inject constructor(authManager: AuthManager) : ViewModel() {
+class MainViewModel @Inject constructor(
+    authManager: AuthManager,
+    settingsManager: SettingsManager
+) : ViewModel() {
+
     val authState: StateFlow<AuthState> = authManager.authTokenFlow
         .map { authToken ->
             if (authToken != null) {
@@ -33,5 +38,12 @@ class MainViewModel @Inject constructor(authManager: AuthManager) : ViewModel() 
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
             initialValue = AuthState.Loading
+        )
+
+    val themeMode: StateFlow<Int> = settingsManager.themeModeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = SettingsManager.THEME_MODE_SYSTEM
         )
 }
