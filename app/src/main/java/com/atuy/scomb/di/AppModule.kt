@@ -52,15 +52,22 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(authManager: AuthManager): OkHttpClient {
-        val loggingInterceptor = HttpLoggingInterceptor().apply {
+    fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor {
+        return HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
             } else {
                 HttpLoggingInterceptor.Level.NONE
             }
         }
+    }
 
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(
+        authManager: AuthManager,
+        loggingInterceptor: HttpLoggingInterceptor
+    ): OkHttpClient {
         val authInterceptor = okhttp3.Interceptor { chain ->
             val originalRequest = chain.request()
 
@@ -78,7 +85,7 @@ object AppModule {
 
         return OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
-            .addInterceptor(loggingInterceptor)
+            .addInterceptor(loggingInterceptor) // 常にInterceptorを追加しておく
             .build()
     }
 
@@ -124,4 +131,3 @@ object AppModule {
         return SettingsManager(context)
     }
 }
-
