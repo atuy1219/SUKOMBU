@@ -10,6 +10,7 @@ import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.domain.ScheduleNotificationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -34,6 +35,7 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
+    // 6つのFlowを結合するために、下部で定義した拡張combine関数を使用します
     val uiState: StateFlow<SettingsUiState> = combine(
         settingsManager.notificationTimingsFlow,
         settingsManager.showHomeNewsFlow,
@@ -126,4 +128,24 @@ class SettingsViewModel @Inject constructor(
             authManager.clearAuthToken()
         }
     }
+}
+
+@Suppress("UNCHECKED_CAST")
+fun <T1, T2, T3, T4, T5, T6, R> combine(
+    flow1: Flow<T1>,
+    flow2: Flow<T2>,
+    flow3: Flow<T3>,
+    flow4: Flow<T4>,
+    flow5: Flow<T5>,
+    flow6: Flow<T6>,
+    transform: suspend (T1, T2, T3, T4, T5, T6) -> R
+): Flow<R> = combine(listOf(flow1, flow2, flow3, flow4, flow5, flow6)) { args ->
+    transform(
+        args[0] as T1,
+        args[1] as T2,
+        args[2] as T3,
+        args[3] as T4,
+        args[4] as T5,
+        args[5] as T6
+    )
 }
