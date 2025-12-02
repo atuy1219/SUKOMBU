@@ -19,9 +19,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DateRange
@@ -29,6 +31,8 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -36,8 +40,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -55,6 +61,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -350,15 +357,26 @@ private fun NotificationSettingsSection(
     selectedTimings: Set<Int>,
     onTimingsChange: (Set<Int>) -> Unit
 ) {
-    val notificationOptions = mapOf(
-        10 to stringResource(R.string.settings_time_10min),
-        30 to stringResource(R.string.settings_time_30min),
-        60 to stringResource(R.string.settings_time_1hour),
-        120 to stringResource(R.string.settings_time_2hours),
-        1440 to stringResource(R.string.settings_time_1day),
-        2880 to stringResource(R.string.settings_time_2days),
-        4320 to stringResource(R.string.settings_time_3days)
-    )
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    // デフォルトの選択肢（表示順序のため）
+    val defaultOptions = listOf(10, 30, 60, 120, 1440, 2880, 4320)
+
+    // 表示する全てのタイミング（デフォルト + ユーザーが追加したもの）
+    // デフォルト値のリストに含まれていなくても、selectedTimingsにあるものは表示する
+    val allTimingsToDisplay = (defaultOptions + selectedTimings).distinct().sorted()
+
+    if (showAddDialog) {
+        AddNotificationTimingDialog(
+            onDismiss = { showAddDialog = false },
+            onConfirm = { minutes ->
+                val newSelection = selectedTimings.toMutableSet()
+                newSelection.add(minutes)
+                onTimingsChange(newSelection)
+                showAddDialog = false
+            }
+        )
+    }
 
     Column {
         SectionHeader(
@@ -376,8 +394,9 @@ private fun NotificationSettingsSection(
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            notificationOptions.forEach { (minutes, label) ->
+            allTimingsToDisplay.forEach { minutes ->
                 val isSelected = selectedTimings.contains(minutes)
                 FilterChip(
                     selected = isSelected,
@@ -390,10 +409,97 @@ private fun NotificationSettingsSection(
                         }
                         onTimingsChange(newSelection)
                     },
-                    label = { Text(label) }
+                    label = { Text(formatNotificationTime(minutes)) }
                 )
             }
+
+            // 追加ボタン
+            AssistChip(
+                onClick = { showAddDialog = true },
+                label = { Text("追加") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "時間を追加",
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    labelColor = MaterialTheme.colorScheme.primary
+                )
+            )
         }
+    }
+}
+
+@Composable
+fun AddNotificationTimingDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    var valueText by remember { mutableStateOf("") }
+    var selectedUnit by remember { mutableStateOf(0) } // 0: 分, 1: 時間, 2: 日
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("通知時間を追加") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = valueText,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) valueText = it },
+                    label = { Text("数値") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    listOf("分前", "時間前", "日前").forEachIndexed { index, label ->
+                        SegmentedButton(
+                            selected = selectedUnit == index,
+                            onClick = { selectedUnit = index },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 3)
+                        ) {
+                            Text(label)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val value = valueText.toIntOrNull()
+                    if (value != null && value > 0) {
+                        val minutes = when (selectedUnit) {
+                            0 -> value
+                            1 -> value * 60
+                            2 -> value * 24 * 60
+                            else -> value
+                        }
+                        onConfirm(minutes)
+                    }
+                },
+                enabled = valueText.isNotBlank() && valueText.toIntOrNull() != null && valueText.toInt() > 0
+            ) {
+                Text("追加")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+private fun formatNotificationTime(minutes: Int): String {
+    return when {
+        minutes % (24 * 60) == 0 -> "${minutes / (24 * 60)}日前"
+        minutes % 60 == 0 -> "${minutes / 60}時間前"
+        else -> "${minutes}分前"
     }
 }
 

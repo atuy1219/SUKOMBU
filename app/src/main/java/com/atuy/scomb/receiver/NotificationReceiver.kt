@@ -32,24 +32,28 @@ class NotificationReceiver : BroadcastReceiver() {
         if (scheduledTime > 0) {
             Log.d(TAG, "予定時刻: ${sdf.format(Date(scheduledTime))}")
             Log.d(TAG, "遅延時間: ${delay}ms (${delay / 1000}秒)")
-        } else {
-            Log.d(TAG, "予定時刻: 情報なし")
         }
 
-        val taskId = intent.getStringExtra("TASK_ID") ?: run {
-            Log.e(TAG, "onReceive: TASK_IDがありません。処理を中断します。")
-            return
-        }
+        val taskId = intent.getStringExtra("TASK_ID") ?: return
         val taskTitle = intent.getStringExtra("TASK_TITLE") ?: "課題"
+        val minutesBefore = intent.getIntExtra("NOTIFICATION_MINUTES_BEFORE", 0)
 
-        Log.d(TAG, "onReceive: 通知処理を開始します - Title: $taskTitle, ID: $taskId")
+        // メッセージの構築
+        val timeText = formatMinutes(minutesBefore)
+        val message = if (minutesBefore > 0) {
+            "${timeText}後に締め切りの課題があります"
+        } else {
+            "締め切りが近い課題があります"
+        }
+
+        Log.d(TAG, "onReceive: 通知処理を開始します - Title: $taskTitle, Message: $message")
 
         val channelId = "SCOMB_MOBILE_TASK_NOTIFICATION"
         val notificationId = taskId.hashCode()
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("締め切りが近い課題")
+            .setContentTitle(message)
             .setContentText(taskTitle)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
@@ -62,13 +66,21 @@ class NotificationReceiver : BroadcastReceiver() {
             ) {
                 try {
                     notify(notificationId, builder.build())
-                    Log.d(TAG, "notify: 通知表示APIを呼び出しました (ID: $notificationId)")
+                    Log.d(TAG, "notify: 通知表示APIを呼び出しました")
                 } catch (e: Exception) {
                     Log.e(TAG, "notify: 通知の表示に失敗しました", e)
                 }
             } else {
-                Log.w(TAG, "onReceive: 通知権限がありません (POST_NOTIFICATIONS denied)")
+                Log.w(TAG, "onReceive: 通知権限がありません")
             }
+        }
+    }
+
+    private fun formatMinutes(minutes: Int): String {
+        return when {
+            minutes % (24 * 60) == 0 -> "${minutes / (24 * 60)}日"
+            minutes % 60 == 0 -> "${minutes / 60}時間"
+            else -> "${minutes}分"
         }
     }
 }

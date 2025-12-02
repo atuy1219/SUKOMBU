@@ -54,7 +54,7 @@ class ScheduleNotificationsUseCase @Inject constructor(
                 val triggerAtMillis = task.deadline - (minutes * 60 * 1000L)
 
                 if (triggerAtMillis > System.currentTimeMillis()) {
-                    scheduleAlarm(task.id, task.title, task.url, triggerAtMillis, minutes)
+                    scheduleAlarm(task.id, task.title, task.url, task.deadline, triggerAtMillis, minutes)
                 }
             }
         }
@@ -62,25 +62,31 @@ class ScheduleNotificationsUseCase @Inject constructor(
 
     private fun cancelAllScheduledNotifications(tasks: List<Task>) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val allPossibleTimings = setOf(10, 30, 60, 120, 1440, 2880, 4320)
+
+        // 既存のプリセット値に対してキャンセルを試みる
+        val defaultTimings = setOf(10, 30, 60, 120, 1440, 2880, 4320)
 
         tasks.forEach { task ->
-            allPossibleTimings.forEach { minutes ->
-                val requestCode = (task.id + minutes.toString()).hashCode()
-                val intent = Intent(context, NotificationReceiver::class.java)
-                val pendingIntent = PendingIntent.getBroadcast(
-                    context,
-                    requestCode,
-                    intent,
-                    PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-                )
-
-                if (pendingIntent != null) {
-                    alarmManager.cancel(pendingIntent)
-                    pendingIntent.cancel()
-                    Log.d(TAG, "Cancelled old notification for ${task.title} (ID: $requestCode)")
-                }
+            defaultTimings.forEach { minutes ->
+                cancelAlarm(task.id, minutes, alarmManager)
             }
+        }
+    }
+
+    private fun cancelAlarm(taskId: String, minutes: Int, alarmManager: AlarmManager) {
+        val requestCode = (taskId + minutes.toString()).hashCode()
+        val intent = Intent(context, NotificationReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        if (pendingIntent != null) {
+            alarmManager.cancel(pendingIntent)
+            pendingIntent.cancel()
+            Log.d(TAG, "Cancelled old notification for task $taskId (ID: $requestCode)")
         }
     }
 
@@ -103,19 +109,37 @@ class ScheduleNotificationsUseCase @Inject constructor(
         }
 
         val triggerAtMillis = System.currentTimeMillis() + 60 * 1000L // 1分後
-        scheduleAlarm("test_notification_id", "これはテスト通知です", "https://scombz.shibaura-it.ac.jp/", triggerAtMillis, 0)
+        val testDeadline = System.currentTimeMillis() + 60 * 60 * 1000L
+
+        scheduleAlarm(
+            "test_notification_id",
+            "これはテスト通知です",
+            "https://scombz.shibaura-it.ac.jp/",
+            testDeadline,
+            triggerAtMillis,
+            1 // 1分前通知として扱う
+        )
 
         Toast.makeText(context, context.getString(R.string.settings_test_notification_scheduled), Toast.LENGTH_SHORT).show()
     }
 
-    private fun scheduleAlarm(taskId: String, title: String, url: String, triggerAtMillis: Long, minutes: Int) {
+    private fun scheduleAlarm(
+        taskId: String,
+        title: String,
+        url: String,
+        deadline: Long,
+        triggerAtMillis: Long,
+        minutes: Int
+    ) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, NotificationReceiver::class.java).apply {
             putExtra("TASK_ID", taskId)
             putExtra("TASK_TITLE", title)
             putExtra("TASK_URL", url)
+            putExtra("TASK_DEADLINE", deadline)
             putExtra("SCHEDULED_TIME", triggerAtMillis)
+            putExtra("NOTIFICATION_MINUTES_BEFORE", minutes) // 何分前通知かを追加
         }
 
         val requestCode = if(taskId == "test_notification_id") "test_notification".hashCode() else (taskId + minutes.toString()).hashCode()
