@@ -3,6 +3,7 @@ package com.atuy.scomb.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.atuy.scomb.data.db.NewsItem
+import com.atuy.scomb.data.manager.AutoRefreshManager
 import com.atuy.scomb.data.repository.ScombzRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -34,7 +35,8 @@ sealed interface NewsUiState {
 
 @HiltViewModel
 class NewsViewModel @Inject constructor(
-    private val repository: ScombzRepository
+    private val repository: ScombzRepository,
+    private val autoRefreshManager: AutoRefreshManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<NewsUiState>(NewsUiState.Loading)
@@ -45,6 +47,15 @@ class NewsViewModel @Inject constructor(
 
     init {
         fetchNews(forceRefresh = false)
+        observeAutoRefresh()
+    }
+
+    private fun observeAutoRefresh() {
+        viewModelScope.launch {
+            autoRefreshManager.refreshEvent.collect {
+                fetchNews(forceRefresh = true)
+            }
+        }
     }
 
     fun fetchNews(forceRefresh: Boolean) {
@@ -138,4 +149,3 @@ class NewsViewModel @Inject constructor(
         }
     }
 }
-

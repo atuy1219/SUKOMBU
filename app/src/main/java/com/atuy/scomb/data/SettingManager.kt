@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -39,6 +40,9 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
         const val THEME_MODE_SYSTEM = 0
         const val THEME_MODE_LIGHT = 1
         const val THEME_MODE_DARK = 2
+
+        // 最終更新時刻（フォアグラウンド全更新用）
+        val LAST_SYNC_TIME_KEY = longPreferencesKey("last_sync_time")
     }
 
     val notificationTimingsFlow: Flow<Set<String>> = context.settingsDataStore.data.map { preferences ->
@@ -100,6 +104,16 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
     suspend fun setThemeMode(mode: Int) {
         context.settingsDataStore.edit { preferences ->
             preferences[THEME_MODE_KEY] = mode
+        }
+    }
+
+    val lastSyncTimeFlow: Flow<Long> = context.settingsDataStore.data.map { preferences ->
+        preferences[LAST_SYNC_TIME_KEY] ?: 0L
+    }
+
+    suspend fun updateLastSyncTime(time: Long) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[LAST_SYNC_TIME_KEY] = time
         }
     }
 }

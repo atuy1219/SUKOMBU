@@ -1,4 +1,3 @@
-
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
@@ -80,7 +79,6 @@ android {
         minSdk = 34
         targetSdk = 36
 
-        // 変更: 自動取得した値をセット
         versionCode = gitCommitCount
         versionName = gitVersionName
 
@@ -101,16 +99,11 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
-            freeCompilerArgs.add("-Xannotation-default-target=param-property")
-        }
-    }
+    
 
     buildFeatures {
         compose = true
@@ -122,6 +115,13 @@ configurations.matching { config ->
     config.name.startsWith("hiltJavaCompile") && config.name.endsWith("AnnotationProcessor")
 }.configureEach {
     exclude(group = "com.squareup.moshi", module = "moshi-kotlin-codegen")
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+        freeCompilerArgs.add("-Xannotation-default-target=param-property")
+    }
 }
 
 dependencies {

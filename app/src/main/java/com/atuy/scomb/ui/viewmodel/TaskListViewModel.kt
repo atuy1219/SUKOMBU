@@ -3,6 +3,7 @@ package com.atuy.scomb.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.atuy.scomb.data.db.Task
+import com.atuy.scomb.data.manager.AutoRefreshManager
 import com.atuy.scomb.data.repository.ScombzRepository
 import com.atuy.scomb.domain.ScheduleNotificationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -39,7 +40,8 @@ sealed interface TaskListUiState {
 @HiltViewModel
 class TaskListViewModel @Inject constructor(
     private val repository: ScombzRepository,
-    private val scheduleNotificationsUseCase: ScheduleNotificationsUseCase
+    private val scheduleNotificationsUseCase: ScheduleNotificationsUseCase,
+    private val autoRefreshManager: AutoRefreshManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<TaskListUiState>(TaskListUiState.Loading)
@@ -53,6 +55,15 @@ class TaskListViewModel @Inject constructor(
 
     init {
         fetchTasks(forceRefresh = false)
+        observeAutoRefresh()
+    }
+
+    private fun observeAutoRefresh() {
+        viewModelScope.launch {
+            autoRefreshManager.refreshEvent.collect {
+                fetchTasks(forceRefresh = true)
+            }
+        }
     }
 
     fun fetchTasks(forceRefresh: Boolean) {

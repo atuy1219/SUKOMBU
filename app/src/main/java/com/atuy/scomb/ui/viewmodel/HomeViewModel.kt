@@ -7,6 +7,7 @@ import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.Task
+import com.atuy.scomb.data.manager.AutoRefreshManager
 import com.atuy.scomb.data.repository.ScombzRepository
 import com.atuy.scomb.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -48,7 +49,8 @@ sealed interface HomeUiState {
 class HomeViewModel @Inject constructor(
     private val repository: ScombzRepository,
     private val settingsManager: SettingsManager,
-    private val authManager: AuthManager
+    private val authManager: AuthManager,
+    private val autoRefreshManager: AutoRefreshManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
@@ -73,6 +75,7 @@ class HomeViewModel @Inject constructor(
     init {
         loadHomeData(forceRefresh = false)
         observeSettings()
+        observeAutoRefresh()
     }
 
     private fun observeSettings() {
@@ -82,6 +85,14 @@ class HomeViewModel @Inject constructor(
                 if (currentState is HomeUiState.Success) {
                     _uiState.value = currentState.copy(showNews = showNews)
                 }
+            }
+        }
+    }
+
+    private fun observeAutoRefresh() {
+        viewModelScope.launch {
+            autoRefreshManager.refreshEvent.collect {
+                loadHomeData(forceRefresh = true)
             }
         }
     }

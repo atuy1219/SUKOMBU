@@ -10,13 +10,19 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.atuy.scomb.data.SettingsManager
+import com.atuy.scomb.data.manager.AutoRefreshManager
 import com.atuy.scomb.ui.ScombApp
 import com.atuy.scomb.ui.theme.ScombTheme
 import com.atuy.scomb.ui.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var autoRefreshManager: AutoRefreshManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -35,6 +41,12 @@ class MainActivity : ComponentActivity() {
                 ScombApp()
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // フォアグラウンドに戻った時に更新チェック
+        autoRefreshManager.checkAndTriggerRefresh()
     }
 
     override fun unregisterReceiver(receiver: BroadcastReceiver) {
