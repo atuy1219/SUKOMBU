@@ -10,13 +10,15 @@ import com.atuy.scomb.data.db.ClassCellDao
 import com.atuy.scomb.data.db.NewsItemDao
 import com.atuy.scomb.data.db.TaskDao
 import com.atuy.scomb.data.network.ScombzApiService
+import com.squareup.moshi.Moshi
+// import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory // 依存関係エラー回避のためコメントアウト
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 
 // DataStoreの拡張プロパティを定義（ファイル名: auth_prefs.preferences_pb）
@@ -34,7 +36,7 @@ object AppModule {
             AppDatabase::class.java,
             "scomb_database"
         )
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }
 
@@ -55,10 +57,19 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideScombzApiService(): ScombzApiService {
+    @Suppress("unused")
+    fun provideMoshi(): Moshi {
+        return Moshi.Builder()
+            // .add(KotlinJsonAdapterFactory())
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideScombzApiService(moshi: Moshi): ScombzApiService {
         return Retrofit.Builder()
-            .baseUrl("https://scombz.shibaura-it.ac.jp/") // ベースURLは仮、実際のリクエストでフルURLを指定するなら無視されるか調整が必要
-            .addConverterFactory(GsonConverterFactory.create())
+            .baseUrl("https://scombz.shibaura-it.ac.jp/")
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(ScombzApiService::class.java)
     }

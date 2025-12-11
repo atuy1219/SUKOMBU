@@ -2,7 +2,6 @@ package com.atuy.scomb.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.atuy.scomb.data.manager.AuthManager
 import com.atuy.scomb.data.repository.ScombzRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,32 +19,28 @@ sealed class LoginUiState {
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val repository: ScombzRepository,
-    private val authManager: AuthManager
+    private val repository: ScombzRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    fun login(username: String, password: String, twoFaCode: String?) {
+    fun login(username: String, password: String) {
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
             try {
-                // 1. ログイン処理
-                val token = repository.login(username, password, twoFaCode)
+                // ログイン処理
+                val result = repository.login(username, password)
 
-                // 2. トークンとユーザー名を保存 (DataStoreへの保存はsuspend関数)
-                authManager.saveAuthToken(token)
-                authManager.saveUsername(username)
-
-                _uiState.value = LoginUiState.Success
+                if (result.isSuccess) {
+                    _uiState.value = LoginUiState.Success
+                } else {
+                    val exception = result.exceptionOrNull()
+                    _uiState.value = LoginUiState.Error(exception?.message ?: "ログインに失敗しました")
+                }
             } catch (e: Exception) {
                 _uiState.value = LoginUiState.Error(e.message ?: "ログインに失敗しました")
             }
         }
-    }
-
-    fun resetState() {
-        _uiState.value = LoginUiState.Idle
     }
 }

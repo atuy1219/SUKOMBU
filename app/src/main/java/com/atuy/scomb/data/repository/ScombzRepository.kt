@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.first
 import retrofit2.Response
 import java.io.IOException
 import java.util.Calendar
+import java.util.Locale
 import javax.inject.Inject
 
 class ScombzRepository @Inject constructor(
@@ -156,7 +157,8 @@ class ScombzRepository @Inject constructor(
             val calendar = Calendar.getInstance()
             val year = calendar.get(Calendar.YEAR)
             val month = calendar.get(Calendar.MONTH) + 1
-            val yearMonth = String.format("%d%02d", year, month)
+            // Localeを明示的に指定して警告を解消
+            val yearMonth = String.format(Locale.US, "%d%02d", year, month)
 
             val response = apiService.getTasks(yearMonth)
             val apiTasks = validateResponse(response) ?: emptyList()
@@ -206,11 +208,6 @@ class ScombzRepository @Inject constructor(
             dbClassCells.forEach { classCellDao.insertClassCell(it) }
             dbClassCells
         }
-    }
-
-    // APIを通してメモを更新する (後方互換性のため残すが、実質 updateClassInfo を呼ぶ)
-    suspend fun updateClassNote(classCell: ClassCell, note: String) {
-        updateClassInfo(classCell, note, classCell.customColorInt)
     }
 
     // メモと色などの設定を更新する汎用メソッド
