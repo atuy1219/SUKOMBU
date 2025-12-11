@@ -22,12 +22,9 @@ fun getGitCommitHash(): String {
 
 fun getGitCommandOutput(command: String): String {
     return try {
-        val byteOut = ByteArrayOutputStream()
-        project.exec {
-            commandLine = command.split(" ")
-            standardOutput = byteOut
-        }
-        byteOut.toString().trim()
+        providers.exec {
+            commandLine(command.split(" "))
+        }.standardOutput.asText.get().trim()
     } catch (e: Exception) {
         "1.0.0-dev"
     }
