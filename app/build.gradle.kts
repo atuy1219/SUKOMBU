@@ -1,5 +1,5 @@
+
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -155,6 +155,7 @@ dependencies {
     // --- Database (Room) ---
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.datastore.preferences)
     ksp(libs.androidx.room.room.compiler)
 
     // --- Dependency Injection (Hilt) ---

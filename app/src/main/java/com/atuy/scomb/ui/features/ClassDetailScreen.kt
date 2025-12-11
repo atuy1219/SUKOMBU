@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ColorLens
@@ -36,7 +37,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -129,7 +129,10 @@ fun ClassDetailScreen(
                 title = { Text(stringResource(R.string.screen_class_detail)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
+                        )
                     }
                 },
                 actions = {
@@ -165,7 +168,10 @@ fun ClassDetailScreen(
             ) {
                 when (val state = uiState) {
                     is ClassDetailUiState.Loading -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
                             CircularProgressIndicator()
                         }
                     }
@@ -278,7 +284,10 @@ fun ClassDetailContent(
                             onClick = { showAddLinkDialog = true },
                             modifier = Modifier.size(24.dp)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.class_detail_add_link_button))
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = stringResource(R.string.class_detail_add_link_button)
+                            )
                         }
                     }
 
@@ -361,7 +370,10 @@ fun ClassDetailContent(
                                 modifier = Modifier.size(24.dp),
                                 enabled = !isSaving
                             ) {
-                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.class_detail_edit_memo))
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = stringResource(R.string.class_detail_edit_memo)
+                                )
                             }
                         }
                     }
@@ -477,7 +489,7 @@ fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
                 Text(stringResource(R.string.class_detail_open_lms))
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
-                    Icons.Default.OpenInNew,
+                    Icons.AutoMirrored.Filled.OpenInNew,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
@@ -571,7 +583,8 @@ fun ColorWheel(
                     val distance = (offset - center).getDistance()
 
                     if (distance <= radius) {
-                        val angle = atan2(offset.y - center.y, offset.x - center.x) * (180 / PI).toFloat()
+                        val angle =
+                            atan2(offset.y - center.y, offset.x - center.x) * (180 / PI).toFloat()
                         val hue = (angle + 360) % 360
 
                         val color = Color.hsv(hue, 1f, 1f)
@@ -587,7 +600,8 @@ fun ColorWheel(
                     val radius = size.width / 2f
                     val distance = (offset - center).getDistance()
 
-                    val angle = atan2(offset.y - center.y, offset.x - center.x) * (180 / PI).toFloat()
+                    val angle =
+                        atan2(offset.y - center.y, offset.x - center.x) * (180 / PI).toFloat()
                     val hue = (angle + 360) % 360
 
                     val color = Color.hsv(hue, 1f, 1f)

@@ -8,8 +8,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.atuy.scomb.data.SettingsManager
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.atuy.scomb.data.manager.SettingsManager
 import com.atuy.scomb.data.manager.AutoRefreshManager
 import com.atuy.scomb.ui.ScombApp
 import com.atuy.scomb.ui.theme.ScombTheme
@@ -28,6 +28,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
+            // hiltViewModelのインポートを androidx.hilt.navigation.compose から
+            // androidx.hilt.lifecycle.viewmodel.compose に変更しました
             val mainViewModel: MainViewModel = hiltViewModel()
             val themeMode by mainViewModel.themeMode.collectAsState()
 

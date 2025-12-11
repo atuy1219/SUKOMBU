@@ -8,8 +8,8 @@ import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import com.atuy.scomb.R
-import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.data.db.Task
+import com.atuy.scomb.data.manager.SettingsManager
 import com.atuy.scomb.receiver.NotificationReceiver
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
@@ -43,8 +43,12 @@ class ScheduleNotificationsUseCase @Inject constructor(
 
         cancelAllScheduledNotifications(tasks)
 
-        val notificationTimingsMinutes = settingsManager.notificationTimingsFlow.first().mapNotNull { it.toIntOrNull() }
-        Log.d(TAG, "Scheduling notifications for ${tasks.size} tasks with timings: $notificationTimingsMinutes")
+        val notificationTimingsMinutes =
+            settingsManager.notificationTimingsFlow.first().mapNotNull { it.toIntOrNull() }
+        Log.d(
+            TAG,
+            "Scheduling notifications for ${tasks.size} tasks with timings: $notificationTimingsMinutes"
+        )
 
 
         tasks.forEach { task ->
@@ -54,7 +58,14 @@ class ScheduleNotificationsUseCase @Inject constructor(
                 val triggerAtMillis = task.deadline - (minutes * 60 * 1000L)
 
                 if (triggerAtMillis > System.currentTimeMillis()) {
-                    scheduleAlarm(task.id, task.title, task.url, task.deadline, triggerAtMillis, minutes)
+                    scheduleAlarm(
+                        task.id,
+                        task.title,
+                        task.url,
+                        task.deadline,
+                        triggerAtMillis,
+                        minutes
+                    )
                 }
             }
         }
@@ -120,7 +131,11 @@ class ScheduleNotificationsUseCase @Inject constructor(
             1 // 1分前通知として扱う
         )
 
-        Toast.makeText(context, context.getString(R.string.settings_test_notification_scheduled), Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            context,
+            context.getString(R.string.settings_test_notification_scheduled),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     private fun scheduleAlarm(
@@ -142,7 +157,8 @@ class ScheduleNotificationsUseCase @Inject constructor(
             putExtra("NOTIFICATION_MINUTES_BEFORE", minutes) // 何分前通知かを追加
         }
 
-        val requestCode = if(taskId == "test_notification_id") "test_notification".hashCode() else (taskId + minutes.toString()).hashCode()
+        val requestCode =
+            if (taskId == "test_notification_id") "test_notification".hashCode() else (taskId + minutes.toString()).hashCode()
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,

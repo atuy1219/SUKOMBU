@@ -1,7 +1,6 @@
 package com.atuy.scomb.data.manager
 
 import android.util.Log
-import com.atuy.scomb.data.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,7 +30,10 @@ class AutoRefreshManager @Inject constructor(
             val lastSyncTime = settingsManager.lastSyncTimeFlow.first()
             val currentTime = System.currentTimeMillis()
 
-            Log.d(TAG, "Checking refresh: Last=$lastSyncTime, Current=$currentTime, Diff=${currentTime - lastSyncTime}")
+            Log.d(
+                TAG,
+                "Checking refresh: Last=$lastSyncTime, Current=$currentTime, Diff=${currentTime - lastSyncTime}"
+            )
 
             if (currentTime - lastSyncTime > REFRESH_INTERVAL) {
                 Log.d(TAG, "Triggering auto refresh")

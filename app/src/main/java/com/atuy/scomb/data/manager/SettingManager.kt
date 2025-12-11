@@ -1,4 +1,4 @@
-package com.atuy.scomb.data
+package com.atuy.scomb.data.manager
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -45,9 +45,10 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
         val LAST_SYNC_TIME_KEY = longPreferencesKey("last_sync_time")
     }
 
-    val notificationTimingsFlow: Flow<Set<String>> = context.settingsDataStore.data.map { preferences ->
-        preferences[NOTIFICATION_TIMINGS_KEY] ?: DEFAULT_TIMINGS
-    }
+    val notificationTimingsFlow: Flow<Set<String>> =
+        context.settingsDataStore.data.map { preferences ->
+            preferences[NOTIFICATION_TIMINGS_KEY] ?: DEFAULT_TIMINGS
+        }
 
     suspend fun setNotificationTimings(timings: Set<String>) {
         context.settingsDataStore.edit { preferences ->
