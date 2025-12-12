@@ -17,7 +17,7 @@ import javax.inject.Inject
 data class SettingsUiState(
     val themeMode: Int = SettingsManager.THEME_MODE_SYSTEM,
     val showHomeNews: Boolean = SettingsManager.DEFAULT_SHOW_HOME_NEWS,
-    val displayWeekDays: Set<Int> = setOf(0, 1, 2, 3, 4, 5),
+    val displayWeekDays: Set<String> = SettingsManager.DEFAULT_DISPLAY_WEEK_DAYS,
     val timetablePeriodCount: Int = SettingsManager.DEFAULT_TIMETABLE_PERIOD_COUNT,
     val notificationTimings: Set<Int> = setOf(60),
     val isDebugMode: Boolean = SettingsManager.DEFAULT_DEBUG_MODE,
@@ -46,7 +46,7 @@ class SettingsViewModel @Inject constructor(
         val themeMode = params[0] as Int
         val showHomeNews = params[1] as Boolean
         @Suppress("UNCHECKED_CAST")
-        val displayWeekDays = params[2] as Set<Int>
+        val displayWeekDays = params[2] as Set<String>
         val timetablePeriodCount = params[3] as Int
         @Suppress("UNCHECKED_CAST")
         val notificationTimingsStrings = params[4] as Set<String>
