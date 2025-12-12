@@ -3,7 +3,7 @@ package com.atuy.scomb.ui.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.atuy.scomb.data.SettingsManager
+import com.atuy.scomb.data.manager.SettingsManager
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.manager.AutoRefreshManager
 import com.atuy.scomb.data.repository.ScombzRepository

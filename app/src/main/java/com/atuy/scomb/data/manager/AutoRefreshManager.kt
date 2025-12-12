@@ -1,7 +1,6 @@
 package com.atuy.scomb.data.manager
 
 import android.util.Log
-import com.atuy.scomb.data.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

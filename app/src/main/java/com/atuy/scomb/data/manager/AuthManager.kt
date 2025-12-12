@@ -1,4 +1,4 @@
-package com.atuy.scomb.data
+package com.atuy.scomb.data.manager
 
 import android.content.Context
 import android.content.SharedPreferences
