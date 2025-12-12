@@ -28,7 +28,9 @@ class AuthManager @Inject constructor(@ApplicationContext private val context: C
     private val sharedPreferences: SharedPreferences = EncryptedSharedPreferences.create(
         context,
         PREF_FILE_NAME,
-        masterKey
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
     fun saveAuthToken(token: String) {
