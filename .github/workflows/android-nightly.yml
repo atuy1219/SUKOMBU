@@ -50,7 +50,6 @@ jobs:
           body: |
             最新のコミットによるデバッグビルドです。
             Commit: ${{ github.sha }}
-            Date: ${{ steps.date.outputs.date }}
           files: app/build/outputs/apk/debug/app-debug.apk
           prerelease: true
         env:
