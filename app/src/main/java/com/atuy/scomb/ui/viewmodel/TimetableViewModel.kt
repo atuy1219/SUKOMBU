@@ -3,9 +3,9 @@ package com.atuy.scomb.ui.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.manager.AutoRefreshManager
-import com.atuy.scomb.data.manager.SettingsManager
 import com.atuy.scomb.data.repository.ScombzRepository
 import com.atuy.scomb.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -46,7 +46,6 @@ private sealed interface TimetableDataState {
         val undoneTaskClassIds: Set<String>,
         val isRefreshing: Boolean
     ) : TimetableDataState
-
     data class Error(val message: String, val isRefreshing: Boolean) : TimetableDataState
 }
 
@@ -84,7 +83,6 @@ class TimetableViewModel @Inject constructor(
                 displayWeekDays = displayWeekDays,
                 periodCount = periodCount
             )
-
             is TimetableDataState.Error -> TimetableUiState.Error(
                 message = dataState.message,
                 isRefreshing = dataState.isRefreshing
@@ -152,8 +150,7 @@ class TimetableViewModel @Inject constructor(
                     // 課題情報の取得 (キャッシュ優先)
                     val tasksDeferred = async { repository.getTasksAndSurveys(false) }
                     // 時間割の取得
-                    val timetableDeferred =
-                        async { repository.getTimetable(year, term, forceRefresh) }
+                    val timetableDeferred = async { repository.getTimetable(year, term, forceRefresh) }
 
                     val tasks = tasksDeferred.await()
                     val classCells = timetableDeferred.await()

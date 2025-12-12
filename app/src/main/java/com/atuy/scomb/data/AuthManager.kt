@@ -1,10 +1,7 @@
-@file:Suppress("DEPRECATION")
-
-package com.atuy.scomb.data.manager
+package com.atuy.scomb.data
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,12 +20,10 @@ class AuthManager @Inject constructor(@ApplicationContext private val context: C
         private const val KEY_USERNAME = "username"
     }
 
-    // MasterKeyの生成
     private val masterKey = MasterKey.Builder(context)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
-    // EncryptedSharedPreferencesの作成
     private val sharedPreferences: SharedPreferences = EncryptedSharedPreferences.create(
         context,
         PREF_FILE_NAME,
@@ -38,15 +33,11 @@ class AuthManager @Inject constructor(@ApplicationContext private val context: C
     )
 
     fun saveAuthToken(token: String) {
-        sharedPreferences.edit {
-            putString(KEY_AUTH_TOKEN, token)
-        }
+        sharedPreferences.edit().putString(KEY_AUTH_TOKEN, token).apply()
     }
 
     fun saveUsername(username: String) {
-        sharedPreferences.edit {
-            putString(KEY_USERNAME, username)
-        }
+        sharedPreferences.edit().putString(KEY_USERNAME, username).apply()
     }
 
     val authTokenFlow: Flow<String?> = callbackFlow {
@@ -80,9 +71,9 @@ class AuthManager @Inject constructor(@ApplicationContext private val context: C
     }
 
     fun clearAuthToken() {
-        sharedPreferences.edit {
-            remove(KEY_AUTH_TOKEN)
-            remove(KEY_USERNAME)
-        }
+        sharedPreferences.edit()
+            .remove(KEY_AUTH_TOKEN)
+            .remove(KEY_USERNAME)
+            .apply()
     }
 }

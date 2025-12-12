@@ -3,8 +3,8 @@ package com.atuy.scomb.ui.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.atuy.scomb.data.manager.AuthManager
-import com.atuy.scomb.data.manager.SettingsManager
+import com.atuy.scomb.data.AuthManager
+import com.atuy.scomb.data.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

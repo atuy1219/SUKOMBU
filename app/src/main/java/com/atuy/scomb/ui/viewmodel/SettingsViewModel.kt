@@ -1,12 +1,16 @@
 package com.atuy.scomb.ui.viewmodel
 
+import android.content.Context
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.atuy.scomb.data.manager.AuthManager
-import com.atuy.scomb.data.manager.AutoRefreshManager
-import com.atuy.scomb.data.manager.SettingsManager
+import com.atuy.scomb.R
+import com.atuy.scomb.data.AuthManager
+import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.domain.ScheduleNotificationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -15,66 +19,51 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SettingsUiState(
-    val themeMode: Int = SettingsManager.THEME_MODE_SYSTEM,
-    val showHomeNews: Boolean = SettingsManager.DEFAULT_SHOW_HOME_NEWS,
-    val displayWeekDays: Set<String> = SettingsManager.DEFAULT_DISPLAY_WEEK_DAYS,
-    val timetablePeriodCount: Int = SettingsManager.DEFAULT_TIMETABLE_PERIOD_COUNT,
-    val notificationTimings: Set<Int> = setOf(60),
-    val isDebugMode: Boolean = SettingsManager.DEFAULT_DEBUG_MODE,
-    val autoRefreshInterval: Long = SettingsManager.DEFAULT_AUTO_REFRESH_INTERVAL,
-    val username: String = ""
+    val notificationTimings: Set<Int> = emptySet(),
+    val showHomeNews: Boolean = true,
+    val isDebugMode: Boolean = false,
+    val displayWeekDays: Set<Int> = setOf(0, 1, 2, 3, 4, 5), // 0=月 ... 5=土
+    val timetablePeriodCount: Int = 7,
+    val themeMode: Int = SettingsManager.THEME_MODE_SYSTEM
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsManager: SettingsManager,
     private val authManager: AuthManager,
-    private val autoRefreshManager: AutoRefreshManager,
-    private val scheduleNotificationsUseCase: ScheduleNotificationsUseCase
+    private val settingsManager: SettingsManager,
+    private val scheduleNotificationsUseCase: ScheduleNotificationsUseCase,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
+    // 6つのFlowを結合するために、下部で定義した拡張combine関数を使用します
     val uiState: StateFlow<SettingsUiState> = combine(
-        settingsManager.themeModeFlow,
+        settingsManager.notificationTimingsFlow,
         settingsManager.showHomeNewsFlow,
+        settingsManager.debugModeFlow,
         settingsManager.displayWeekDaysFlow,
         settingsManager.timetablePeriodCountFlow,
-        settingsManager.notificationTimingsFlow,
-        settingsManager.debugModeFlow,
-        settingsManager.autoRefreshIntervalFlow,
-        authManager.usernameFlow
-    ) { params ->
-        val themeMode = params[0] as Int
-        val showHomeNews = params[1] as Boolean
-        @Suppress("UNCHECKED_CAST")
-        val displayWeekDays = params[2] as Set<String>
-        val timetablePeriodCount = params[3] as Int
-        @Suppress("UNCHECKED_CAST")
-        val notificationTimingsStrings = params[4] as Set<String>
-        val isDebugMode = params[5] as Boolean
-        val autoRefreshInterval = params[6] as Long
-        val username = params[7] as? String ?: "未ログイン"
-
-        val notificationTimings = notificationTimingsStrings.mapNotNull { it.toIntOrNull() }.toSet()
-
+        settingsManager.themeModeFlow
+    ) { timings, showNews, debugMode, weekDays, periodCount, themeMode ->
         SettingsUiState(
-            themeMode = themeMode,
-            showHomeNews = showHomeNews,
-            displayWeekDays = displayWeekDays,
-            timetablePeriodCount = timetablePeriodCount,
-            notificationTimings = notificationTimings,
-            isDebugMode = isDebugMode,
-            autoRefreshInterval = autoRefreshInterval,
-            username = username
+            notificationTimings = timings.mapNotNull { it.toIntOrNull() }.toSet(),
+            showHomeNews = showNews,
+            isDebugMode = debugMode,
+            displayWeekDays = weekDays,
+            timetablePeriodCount = periodCount,
+            themeMode = themeMode
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = SettingsUiState()
-    )
+    }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = SettingsUiState()
+        )
 
-    fun updateThemeMode(mode: Int) {
+    private var versionTapCount = 0
+
+    fun updateNotificationTimings(timings: Set<Int>) {
         viewModelScope.launch {
-            settingsManager.setThemeMode(mode)
+            settingsManager.setNotificationTimings(timings.map { it.toString() }.toSet())
         }
     }
 
@@ -96,10 +85,37 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun updateNotificationTimings(timings: Set<Int>) {
+    fun updateThemeMode(mode: Int) {
         viewModelScope.launch {
-            val timingsStrings = timings.map { it.toString() }.toSet()
-            settingsManager.setNotificationTimings(timingsStrings)
+            settingsManager.setThemeMode(mode)
+        }
+    }
+
+    fun onVersionClick() {
+        if (uiState.value.isDebugMode) return
+
+        versionTapCount++
+        if (versionTapCount >= 7) {
+            viewModelScope.launch {
+                settingsManager.setDebugMode(true)
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.settings_debug_mode_enabled),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            versionTapCount = 0
+        }
+    }
+
+    fun disableDebugMode() {
+        viewModelScope.launch {
+            settingsManager.setDebugMode(false)
+            Toast.makeText(
+                context,
+                context.getString(R.string.settings_debug_mode_disabled),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
@@ -107,33 +123,29 @@ class SettingsViewModel @Inject constructor(
         scheduleNotificationsUseCase.scheduleTestNotification()
     }
 
-    fun disableDebugMode() {
-        viewModelScope.launch {
-            settingsManager.setDebugMode(false)
-        }
-    }
-
-    @Suppress("MemberVisibilityCanBePrivate", "unused")
-    fun setAutoRefreshInterval(minutes: Long) {
-        viewModelScope.launch {
-            settingsManager.setAutoRefreshInterval(minutes)
-            autoRefreshManager.scheduleAutoRefresh(minutes)
-        }
-    }
-
-    fun onVersionClick() {
-        val currentDebug = uiState.value.isDebugMode
-        if (!currentDebug) {
-            viewModelScope.launch {
-                settingsManager.setDebugMode(true)
-            }
-        }
-    }
-
     fun logout() {
         viewModelScope.launch {
             authManager.clearAuthToken()
-            autoRefreshManager.cancelAutoRefresh()
         }
     }
+}
+
+@Suppress("UNCHECKED_CAST")
+fun <T1, T2, T3, T4, T5, T6, R> combine(
+    flow1: Flow<T1>,
+    flow2: Flow<T2>,
+    flow3: Flow<T3>,
+    flow4: Flow<T4>,
+    flow5: Flow<T5>,
+    flow6: Flow<T6>,
+    transform: suspend (T1, T2, T3, T4, T5, T6) -> R
+): Flow<R> = combine(listOf(flow1, flow2, flow3, flow4, flow5, flow6)) { args ->
+    transform(
+        args[0] as T1,
+        args[1] as T2,
+        args[2] as T3,
+        args[3] as T4,
+        args[4] as T5,
+        args[5] as T6
+    )
 }

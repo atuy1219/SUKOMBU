@@ -3,13 +3,13 @@ package com.atuy.scomb.data.repository
 import android.content.Context
 import android.util.Log
 import com.atuy.scomb.R
+import com.atuy.scomb.data.AuthManager
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.ClassCellDao
 import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.NewsItemDao
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.data.db.TaskDao
-import com.atuy.scomb.data.manager.AuthManager
 import com.atuy.scomb.data.network.ApiUpdateClassRequest
 import com.atuy.scomb.data.network.ScombzApiService
 import com.atuy.scomb.util.ClientException
@@ -44,19 +44,15 @@ class ScombzRepository @Inject constructor(
                     authManager.clearAuthToken()
                     throw Exception(context.getString(R.string.error_session_expired), e)
                 }
-
                 is IOException -> {
                     throw Exception(context.getString(R.string.error_network), e)
                 }
-
                 is ServerException -> {
                     throw Exception(context.getString(R.string.error_server, e.code), e)
                 }
-
                 is ClientException -> {
                     throw Exception(context.getString(R.string.error_client, e.code), e)
                 }
-
                 else -> {
                     throw e
                 }
@@ -84,8 +80,7 @@ class ScombzRepository @Inject constructor(
 
     suspend fun login(userId: String, userPw: String): Result<Unit> {
         return try {
-            val response =
-                apiService.login(com.atuy.scomb.data.network.LoginRequest(userId, userPw))
+            val response = apiService.login(com.atuy.scomb.data.network.LoginRequest(userId, userPw))
 
             if (response.isSuccessful) {
                 val body = response.body()
@@ -95,24 +90,10 @@ class ScombzRepository @Inject constructor(
                     Result.success(Unit)
                 } else {
                     val statusMsg = body?.status ?: "Unknown status"
-                    Result.failure(
-                        Exception(
-                            context.getString(
-                                R.string.error_login_failed,
-                                statusMsg
-                            )
-                        )
-                    )
+                    Result.failure(Exception(context.getString(R.string.error_login_failed, statusMsg)))
                 }
             } else {
-                Result.failure(
-                    Exception(
-                        context.getString(
-                            R.string.error_login_failed,
-                            "Code: ${response.code()}"
-                        )
-                    )
-                )
+                Result.failure(Exception(context.getString(R.string.error_login_failed, "Code: ${response.code()}")))
             }
         } catch (e: IOException) {
             Result.failure(Exception(context.getString(R.string.error_network), e))
@@ -215,8 +196,7 @@ class ScombzRepository @Inject constructor(
         executeWithAuthHandling {
             ensureAuthenticated()
 
-            val yearMonth =
-                if (classCell.term == "1") "${classCell.year}01" else "${classCell.year}02"
+            val yearMonth = if (classCell.term == "1") "${classCell.year}01" else "${classCell.year}02"
 
 
             val colorString = if (customColorInt == null || customColorInt == 0) {
