@@ -24,6 +24,9 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: wrapper
+          cache-read-only: false
 
       - name: Decode Keystore
         run: |
@@ -33,7 +36,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Signed Release APK
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --parallel --org.gradle.jvmargs="-Xmx2048m"
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/release.jks
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}

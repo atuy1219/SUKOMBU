@@ -79,7 +79,10 @@ android {
         versionName = gitVersionName
 
         buildConfigField("String", "GIT_COMMIT_HASH", "\"${getGitCommitHash()}\"")
-
+        
+        ndk {
+            abiFilters.add("arm64-v8a")
+        }
     }
 
     buildTypes {
