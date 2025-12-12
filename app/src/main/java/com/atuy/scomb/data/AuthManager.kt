@@ -1,79 +1,51 @@
 package com.atuy.scomb.data
 
 import android.content.Context
-import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private val Context.dataStore by preferencesDataStore(name = "secure_auth_prefs")
 
 @Singleton
 class AuthManager @Inject constructor(@ApplicationContext private val context: Context) {
 
     companion object {
-        private const val PREF_FILE_NAME = "secure_auth_prefs"
-        private const val KEY_AUTH_TOKEN = "auth_token"
-        private const val KEY_USERNAME = "username"
+        private val KEY_AUTH_TOKEN = stringPreferencesKey("auth_token")
+        private val KEY_USERNAME = stringPreferencesKey("username")
     }
 
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
-
-    private val sharedPreferences: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        PREF_FILE_NAME,
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
-
-    fun saveAuthToken(token: String) {
-        sharedPreferences.edit().putString(KEY_AUTH_TOKEN, token).apply()
-    }
-
-    fun saveUsername(username: String) {
-        sharedPreferences.edit().putString(KEY_USERNAME, username).apply()
-    }
-
-    val authTokenFlow: Flow<String?> = callbackFlow {
-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-            if (key == KEY_AUTH_TOKEN) {
-                trySend(prefs.getString(KEY_AUTH_TOKEN, null))
-            }
-        }
-        sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
-
-        trySend(sharedPreferences.getString(KEY_AUTH_TOKEN, null))
-
-        awaitClose {
-            sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener)
+    suspend fun saveAuthToken(token: String) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_AUTH_TOKEN] = token
         }
     }
 
-    val usernameFlow: Flow<String?> = callbackFlow {
-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-            if (key == KEY_USERNAME) {
-                trySend(prefs.getString(KEY_USERNAME, null))
-            }
-        }
-        sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
-
-        trySend(sharedPreferences.getString(KEY_USERNAME, null))
-
-        awaitClose {
-            sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener)
+    suspend fun saveUsername(username: String) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_USERNAME] = username
         }
     }
 
-    fun clearAuthToken() {
-        sharedPreferences.edit()
-            .remove(KEY_AUTH_TOKEN)
-            .remove(KEY_USERNAME)
-            .apply()
+    val authTokenFlow: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[KEY_AUTH_TOKEN]
+        }
+
+    val usernameFlow: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[KEY_USERNAME]
+        }
+
+    suspend fun clearAuthToken() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(KEY_AUTH_TOKEN)
+            preferences.remove(KEY_USERNAME)
+        }
     }
 }

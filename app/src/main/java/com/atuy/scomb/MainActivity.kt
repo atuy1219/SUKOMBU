@@ -9,6 +9,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atuy.scomb.data.SettingsManager
 import com.atuy.scomb.data.manager.AutoRefreshManager
 import com.atuy.scomb.ui.ScombApp

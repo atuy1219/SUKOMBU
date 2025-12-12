@@ -477,7 +477,7 @@ fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
                 Text(stringResource(R.string.class_detail_open_lms))
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
-                    Icons.Default.OpenInNew,
+                    Icons.AutoMirrored.Filled.OpenInNew,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
