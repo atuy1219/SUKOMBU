@@ -2,8 +2,8 @@ package com.atuy.scomb.di
 
 import android.content.Context
 import com.atuy.scomb.BuildConfig
-import com.atuy.scomb.data.AuthManager
-import com.atuy.scomb.data.SettingsManager
+import com.atuy.scomb.data.manager.AuthManager
+import com.atuy.scomb.data.manager.SettingsManager
 import com.atuy.scomb.data.db.AppDatabase
 import com.atuy.scomb.data.network.ScombzApiService
 import com.atuy.scomb.data.repository.ScombzRepository

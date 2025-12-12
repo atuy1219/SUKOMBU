@@ -3,7 +3,7 @@ package com.atuy.scomb.data.repository
 import android.content.Context
 import android.util.Log
 import com.atuy.scomb.R
-import com.atuy.scomb.data.AuthManager
+import com.atuy.scomb.data.manager.AuthManager
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.ClassCellDao
 import com.atuy.scomb.data.db.NewsItem
@@ -138,7 +138,6 @@ class ScombzRepository @Inject constructor(
             val calendar = Calendar.getInstance()
             val year = calendar.get(Calendar.YEAR)
             val month = calendar.get(Calendar.MONTH) + 1
-            // Localeを明示的に指定して警告を解消
             val yearMonth = String.format(Locale.US, "%d%02d", year, month)
 
             val response = apiService.getTasks(yearMonth)

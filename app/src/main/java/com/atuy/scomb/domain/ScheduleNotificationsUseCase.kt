@@ -8,7 +8,7 @@ import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import com.atuy.scomb.R
-import com.atuy.scomb.data.SettingsManager
+import com.atuy.scomb.data.manager.SettingsManager
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.receiver.NotificationReceiver
 import dagger.hilt.android.qualifiers.ApplicationContext

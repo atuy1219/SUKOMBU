@@ -5,8 +5,8 @@ import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.atuy.scomb.R
-import com.atuy.scomb.data.AuthManager
-import com.atuy.scomb.data.SettingsManager
+import com.atuy.scomb.data.manager.AuthManager
+import com.atuy.scomb.data.manager.SettingsManager
 import com.atuy.scomb.domain.ScheduleNotificationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext

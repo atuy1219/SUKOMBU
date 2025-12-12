@@ -9,7 +9,7 @@ import androidx.work.Configuration
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.atuy.scomb.data.SettingsManager
+import com.atuy.scomb.data.manager.SettingsManager
 import com.atuy.scomb.util.AppLogger
 import com.atuy.scomb.worker.BackgroundSyncWorker
 import dagger.hilt.android.HiltAndroidApp
