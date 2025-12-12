@@ -108,9 +108,7 @@ android {
     }
 }
 
-configurations.matching { config ->
-    config.name.startsWith("hiltJavaCompile") && config.name.endsWith("AnnotationProcessor")
-}.configureEach {
+configurations.all {
     exclude(group = "com.squareup.moshi", module = "moshi-kotlin-codegen")
 }
 
