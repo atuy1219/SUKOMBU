@@ -2,6 +2,7 @@ package com.atuy.scomb.ui.features
 
 import android.content.Intent
 import android.net.Uri
+import androidx.core.net.toUri
 import android.widget.ImageView
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -529,8 +530,8 @@ private fun AppInfoSection(
         ) {
             AndroidView(
                 modifier = Modifier.size(56.dp),
-                factory = { context ->
-                    ImageView(context).apply {
+                factory = { ctx ->
+                    ImageView(ctx).apply {
                         setImageResource(R.mipmap.ic_launcher)
                     }
                 }
@@ -559,8 +560,7 @@ private fun AppInfoSection(
 
         OutlinedButton(
             onClick = {
-                val intent =
-                    Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/atuy1219/SUKOMBU"))
+                val intent = Intent(Intent.ACTION_VIEW, "https://github.com/atuy1219/SUKOMBU".toUri())
                 context.startActivity(intent)
             },
             modifier = Modifier.fillMaxWidth()
