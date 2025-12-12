@@ -65,12 +65,10 @@ class AuthManager @Inject constructor(@ApplicationContext private val context: C
         try {
             val key = getOrCreateSecretKey(KEY_ALIAS)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            val iv = ByteArray(IV_LENGTH)
-            Random.nextBytes(iv)
-            val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
-            cipher.init(Cipher.ENCRYPT_MODE, key, gcmSpec)
+            cipher.init(Cipher.ENCRYPT_MODE, key)
             val cipherText = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
-
+            
+            val iv = cipher.iv
             val combined = ByteBuffer.allocate(iv.size + cipherText.size)
                 .put(iv)
                 .put(cipherText)
