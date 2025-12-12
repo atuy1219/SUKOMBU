@@ -21,16 +21,14 @@ class AuthManager @Inject constructor(@ApplicationContext private val context: C
         private const val KEY_USERNAME = "username"
     }
 
-    private val masterKey = MasterKey.Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
+    private val masterKey = MasterKey.Builder(context)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
     private val sharedPreferences: SharedPreferences = EncryptedSharedPreferences.create(
         context,
         PREF_FILE_NAME,
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        masterKey
     )
 
     fun saveAuthToken(token: String) {

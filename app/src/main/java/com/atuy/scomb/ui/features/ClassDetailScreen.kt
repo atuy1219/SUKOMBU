@@ -36,7 +36,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -73,7 +73,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.atuy.scomb.R
@@ -476,11 +476,11 @@ fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
             ) {
                 Text(stringResource(R.string.class_detail_open_lms))
                 Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    Icons.Default.OpenInNew,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
+                        Icon(
+                            Icons.AutoMirrored.Filled.OpenInNew,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
             }
         }
     }
