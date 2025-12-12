@@ -190,11 +190,6 @@ class ScombzRepository @Inject constructor(
         }
     }
 
-    // APIを通してメモを更新する (後方互換性のため残すが、実質 updateClassInfo を呼ぶ)
-    suspend fun updateClassNote(classCell: ClassCell, note: String) {
-        updateClassInfo(classCell, note, classCell.customColorInt)
-    }
-
     // メモと色などの設定を更新する汎用メソッド
     suspend fun updateClassInfo(classCell: ClassCell, note: String?, customColorInt: Int?) {
         executeWithAuthHandling {

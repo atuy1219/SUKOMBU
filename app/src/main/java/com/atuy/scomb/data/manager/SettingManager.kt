@@ -41,6 +41,10 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
         const val THEME_MODE_LIGHT = 1
         const val THEME_MODE_DARK = 2
 
+        // 自動更新間隔（分）
+        val AUTO_REFRESH_INTERVAL_KEY = longPreferencesKey("auto_refresh_interval")
+        const val DEFAULT_AUTO_REFRESH_INTERVAL = 60L
+
         // 最終更新時刻（フォアグラウンド全更新用）
         val LAST_SYNC_TIME_KEY = longPreferencesKey("last_sync_time")
     }
@@ -104,6 +108,17 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
     suspend fun setThemeMode(mode: Int) {
         context.settingsDataStore.edit { preferences ->
             preferences[THEME_MODE_KEY] = mode
+        }
+    }
+
+    // 自動更新間隔のFlow
+    val autoRefreshIntervalFlow: Flow<Long> = context.settingsDataStore.data.map { preferences ->
+        preferences[AUTO_REFRESH_INTERVAL_KEY] ?: DEFAULT_AUTO_REFRESH_INTERVAL
+    }
+
+    suspend fun setAutoRefreshInterval(minutes: Long) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[AUTO_REFRESH_INTERVAL_KEY] = minutes
         }
     }
 
