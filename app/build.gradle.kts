@@ -109,7 +109,6 @@ android {
 }
 
 configurations.all {
-    exclude(group = "com.squareup.moshi", module = "moshi-kotlin-codegen")
 }
 
 kotlin {
