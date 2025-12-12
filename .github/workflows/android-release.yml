@@ -36,7 +36,9 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Signed Release APK
-        run: ./gradlew assembleRelease --parallel --org.gradle.jvmargs="-Xmx2048m"
+        run: ./gradlew assembleRelease --parallel
+        env:
+          GRADLE_OPTS: -Xmx2048m
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/release.jks
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}

@@ -31,7 +31,9 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --parallel -x lint --org.gradle.jvmargs="-Xmx2048m"
+        run: ./gradlew assembleDebug --parallel -x lint
+        env:
+          GRADLE_OPTS: -Xmx2048m
 
       - name: Delete existing nightly tag
         uses: dev-drprasad/delete-tag-and-release@v1.1

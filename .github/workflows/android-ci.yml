@@ -32,7 +32,9 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew assembleDebug testDebugUnitTest --parallel -x lint --org.gradle.jvmargs="-Xmx2048m"
+        run: ./gradlew assembleDebug testDebugUnitTest --parallel -x lint
+        env:
+          GRADLE_OPTS: -Xmx2048m
 
       - name: Upload APK
         uses: actions/upload-artifact@v5
