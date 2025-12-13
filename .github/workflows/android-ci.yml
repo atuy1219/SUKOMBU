@@ -30,9 +30,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew assembleDebug testDebugUnitTest --parallel -x lint
-        env:
-          GRADLE_OPTS: -Xmx2048m
+        run: ./gradlew assembleDebug testDebugUnitTest -x lint
 
       - name: Upload APK
         uses: actions/upload-artifact@v5
