@@ -14,9 +14,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.rememberSharedContentState
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.sharedElement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -35,7 +33,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -252,9 +249,7 @@ private fun StudentDashboard(
             ) {
                 HeroStageCard(
                     classes = homeData.todaysClasses,
-                    onClassClick = onClassClick,
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope
+                    onClassClick = onClassClick
                 )
             }
         }
@@ -288,9 +283,7 @@ private fun StudentDashboard(
             item {
                 ClassLineup(
                     classes = homeData.todaysClasses,
-                    onClassClick = onClassClick,
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope
+                    onClassClick = onClassClick
                 )
             }
         }
@@ -320,9 +313,7 @@ private fun StudentDashboard(
 @Composable
 private fun HeroStageCard(
     classes: List<ClassCell>,
-    onClassClick: (String, Int, Int) -> Unit,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    onClassClick: (String, Int, Int) -> Unit
 ) {
     val currentPeriod = DateUtils.getCurrentPeriod()
     val stageClass = classes.firstOrNull { it.period == currentPeriod }
@@ -342,21 +333,8 @@ private fun HeroStageCard(
         } ?: Unit
     }
 
-    val sharedModifier = if (stageClass != null) {
-        with(sharedTransitionScope) {
-            Modifier.sharedElement(
-                sharedContentState = rememberSharedContentState(
-                    key = "hero-${stageClass.classId}-${stageClass.dayOfWeek}-${stageClass.period}"
-                ),
-                animatedVisibilityScope = animatedVisibilityScope
-            )
-        }
-    } else {
-        Modifier
-    }
-
     Card(
-        modifier = sharedModifier
+        modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer {
                 scaleX = heroScale
@@ -427,12 +405,12 @@ private fun ActionCardsRow(
         AssignmentsCard(
             tasks = tasks,
             onTaskClick = onTaskClick,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.fillMaxWidth().weight(1f)
         )
         WeeklyScheduleCard(
             todaysClasses = todaysClasses,
             onClick = onScheduleClick,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.fillMaxWidth().weight(1f)
         )
     }
 }
@@ -555,9 +533,7 @@ private fun NewsPeekCard(news: List<NewsItem>, onNewsClick: (String) -> Unit) {
 @Composable
 private fun ClassLineup(
     classes: List<ClassCell>,
-    onClassClick: (String, Int, Int) -> Unit,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    onClassClick: (String, Int, Int) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         DashboardSectionHeader(title = stringResource(R.string.home_todays_classes), icon = Icons.Default.Class)
@@ -566,8 +542,7 @@ private fun ClassLineup(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            with(sharedTransitionScope) {
-                classes.forEach { classCell ->
+            classes.forEach { classCell ->
                     val interactionSource = remember { MutableInteractionSource() }
                     val pressed by interactionSource.collectIsPressedAsState()
                     val scale by animateFloatAsState(
@@ -582,10 +557,6 @@ private fun ClassLineup(
                                 scaleX = scale
                                 scaleY = scale
                             }
-                            .sharedElement(
-                                sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
-                                animatedVisibilityScope = animatedVisibilityScope
-                            )
                             .clickable(
                                 interactionSource = interactionSource,
                                 indication = null
