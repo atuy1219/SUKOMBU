@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -24,11 +25,13 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,8 +40,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -48,6 +53,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.NavController
 import com.atuy.scomb.R
 import com.atuy.scomb.ui.features.ClassDetailScreen
 import com.atuy.scomb.ui.features.HomeScreen
@@ -134,14 +140,22 @@ fun ScombApp(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            if (currentDestination?.route != Screen.Home.route && currentDestination?.route != Screen.Login.route) {
+            if (currentDestination?.route != Screen.Home.route &&
+                currentDestination?.route != Screen.Login.route &&
+                currentDestination?.route != Screen.ClassDetail.route
+            ) {
                 AppTopBar(
+                    navController = navController,
                     currentRoute = currentDestination?.route,
                     timetableViewModel = timetableViewModel,
                     newsViewModel = newsViewModel,
-                    taskListViewModel = taskListViewModel
+                    taskListViewModel = taskListViewModel,
+                    scrollBehavior = scrollBehavior
                 )
             }
         }
@@ -223,10 +237,12 @@ fun ScombApp(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppTopBar(
+    navController: NavController,
     currentRoute: String?,
     timetableViewModel: TimetableViewModel,
     newsViewModel: NewsViewModel,
-    taskListViewModel: TaskListViewModel
+    taskListViewModel: TaskListViewModel,
+    scrollBehavior: TopAppBarScrollBehavior
 ) {
     AnimatedContent(
         targetState = currentRoute,
@@ -237,19 +253,31 @@ fun AppTopBar(
     ) { targetRoute ->
         when (targetRoute) {
             Screen.Timetable.route -> {
-                TimetableTopBar(viewModel = timetableViewModel)
+                TimetableTopBar(
+                    navController = navController,
+                    viewModel = timetableViewModel,
+                    scrollBehavior = scrollBehavior
+                )
             }
 
             Screen.News.route -> {
-                NewsTopBar(viewModel = newsViewModel)
+                NewsTopBar(
+                    navController = navController,
+                    viewModel = newsViewModel,
+                    scrollBehavior = scrollBehavior
+                )
             }
 
             Screen.Tasks.route -> {
-                TasksTopBar(viewModel = taskListViewModel)
+                TasksTopBar(
+                    navController = navController,
+                    viewModel = taskListViewModel,
+                    scrollBehavior = scrollBehavior
+                )
             }
 
             else -> {
-                TopAppBar(
+                LargeTopAppBar(
                     title = {
                         Text(
                             stringResource(
@@ -258,12 +286,23 @@ fun AppTopBar(
                                     Screen.Settings.route -> R.string.screen_settings
                                     else -> R.string.app_name // デフォルト
                                 }
-                            )
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back)
+                            )
+                        }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background
-                    )
+                    ),
+                    scrollBehavior = scrollBehavior
                 )
             }
         }
@@ -272,9 +311,27 @@ fun AppTopBar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewsTopBar(viewModel: NewsViewModel) {
-    TopAppBar(
-        title = { Text(stringResource(R.string.screen_news)) },
+fun NewsTopBar(
+    navController: NavController,
+    viewModel: NewsViewModel,
+    scrollBehavior: TopAppBarScrollBehavior
+) {
+    LargeTopAppBar(
+        title = {
+            Text(
+                stringResource(R.string.screen_news),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back)
+                )
+            }
+        },
         actions = {
             IconButton(onClick = { viewModel.toggleSearchActive() }) {
                 Icon(
@@ -285,15 +342,34 @@ fun NewsTopBar(viewModel: NewsViewModel) {
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.background
-        )
+        ),
+        scrollBehavior = scrollBehavior
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TasksTopBar(viewModel: TaskListViewModel) {
-    TopAppBar(
-        title = { Text(stringResource(R.string.screen_tasks)) },
+fun TasksTopBar(
+    navController: NavController,
+    viewModel: TaskListViewModel,
+    scrollBehavior: TopAppBarScrollBehavior
+) {
+    LargeTopAppBar(
+        title = {
+            Text(
+                stringResource(R.string.screen_tasks),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back)
+                )
+            }
+        },
         actions = {
             IconButton(onClick = { viewModel.toggleSearchActive() }) {
                 Icon(
@@ -304,7 +380,8 @@ fun TasksTopBar(viewModel: TaskListViewModel) {
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.background
-        )
+        ),
+        scrollBehavior = scrollBehavior
     )
 }
 
@@ -312,7 +389,9 @@ fun TasksTopBar(viewModel: TaskListViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimetableTopBar(
-    viewModel: TimetableViewModel
+    navController: NavController,
+    viewModel: TimetableViewModel,
+    scrollBehavior: TopAppBarScrollBehavior
 ) {
     val currentYear by viewModel.currentYear.collectAsStateWithLifecycle()
     val currentTerm by viewModel.currentTerm.collectAsStateWithLifecycle()
@@ -320,7 +399,7 @@ fun TimetableTopBar(
 
     var menuExpanded by remember { mutableStateOf(false) }
 
-    TopAppBar(
+    LargeTopAppBar(
         title = {
             Box {
                 Row(
@@ -328,7 +407,11 @@ fun TimetableTopBar(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // ここは動的な値なのでそのままですが、読み込み中などはリソース化可能
-                    Text(if (current.year != 0) current.getDisplayName() else stringResource(R.string.loading))
+                    Text(
+                        if (current.year != 0) current.getDisplayName() else stringResource(R.string.loading),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Icon(Icons.Default.ArrowDropDown, contentDescription = "学期選択")
                 }
                 DropdownMenu(
@@ -356,6 +439,14 @@ fun TimetableTopBar(
                 }
             }
         },
+        navigationIcon = {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back)
+                )
+            }
+        },
         actions = {
             IconButton(onClick = { viewModel.refresh() }) {
                 Icon(
@@ -366,6 +457,7 @@ fun TimetableTopBar(
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.background
-        )
+        ),
+        scrollBehavior = scrollBehavior
     )
 }
