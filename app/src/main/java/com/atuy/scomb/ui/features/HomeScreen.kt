@@ -40,7 +40,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Book
@@ -54,6 +53,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
@@ -65,7 +65,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -111,7 +110,6 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val permissionDeniedMessage = stringResource(R.string.permission_notification_denied)
-    val _ = paddingValues
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -162,6 +160,7 @@ fun HomeScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(paddingValues)
                 .padding(contentPadding)
         ) {
             when (val state = uiState) {
@@ -297,7 +296,7 @@ private fun StudentDashboard(
         }
 
         item {
-            SectionHeader(
+            DashboardSectionHeader(
                 title = stringResource(R.string.home_quick_links),
                 icon = Icons.Default.Link
             )
@@ -335,12 +334,12 @@ private fun HeroStageCard(
         label = "hero-scale"
     )
 
-    val onHeroClick = {
+    val onHeroClick: () -> Unit = {
         stageClass?.let { classCell ->
             if (classCell.classId.isNotEmpty()) {
                 onClassClick(classCell.classId, classCell.dayOfWeek, classCell.period)
             }
-        }
+        } ?: Unit
     }
 
     val sharedModifier = if (stageClass != null) {
@@ -421,11 +420,9 @@ private fun ActionCardsRow(
     onTaskClick: (Task) -> Unit,
     onScheduleClick: () -> Unit
 ) {
-    FlowRow(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        maxItemsInEachRow = 2
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         AssignmentsCard(
             tasks = tasks,
@@ -455,7 +452,7 @@ private fun AssignmentsCard(
         subtitle = remainingLabel,
         icon = Icons.Default.AccessTime,
         highlight = stringResource(R.string.home_due_in_two_days),
-        onClick = { nextTask?.let(onTaskClick) },
+        onClick = { nextTask?.let(onTaskClick) ?: Unit },
         modifier = modifier
     ) {
         if (nextTask != null) {
@@ -529,7 +526,7 @@ private fun NewsPeekCard(news: List<NewsItem>, onNewsClick: (String) -> Unit) {
         subtitle = latest?.category ?: stringResource(R.string.home_no_new_news),
         icon = Icons.Default.Notifications,
         highlight = stringResource(R.string.home_news_pulse_label),
-        onClick = { latest?.let { onNewsClick(it.url) } }
+        onClick = { latest?.let { onNewsClick(it.url) } ?: Unit }
     ) {
         if (latest != null) {
             Text(
@@ -563,7 +560,7 @@ private fun ClassLineup(
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader(title = stringResource(R.string.home_todays_classes), icon = Icons.Default.Class)
+        DashboardSectionHeader(title = stringResource(R.string.home_todays_classes), icon = Icons.Default.Class)
 
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -591,7 +588,7 @@ private fun ClassLineup(
                             )
                             .clickable(
                                 interactionSource = interactionSource,
-                                indication = rememberRipple(bounded = true)
+                                indication = null
                             ) {
                                 if (classCell.classId.isNotEmpty()) {
                                     onClassClick(classCell.classId, classCell.dayOfWeek, classCell.period)
@@ -627,7 +624,7 @@ private fun ClassLineup(
 }
 
 @Composable
-private fun SectionHeader(title: String, icon: ImageVector) {
+private fun DashboardSectionHeader(title: String, icon: ImageVector) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
@@ -661,7 +658,7 @@ private fun LinkCard(link: LinkItem, onClick: () -> Unit) {
             modifier = Modifier
                 .clickable(
                     interactionSource = interactionSource,
-                    indication = rememberRipple(bounded = true),
+                    indication = null,
                     onClick = onClick
                 )
                 .padding(vertical = 16.dp, horizontal = 20.dp),
@@ -733,7 +730,7 @@ private fun PressableCard(
                 .fillMaxWidth()
                 .clickable(
                     interactionSource = interactionSource,
-                    indication = rememberRipple(bounded = true),
+                    indication = null,
                     onClick = onClick
                 )
                 .padding(16.dp)

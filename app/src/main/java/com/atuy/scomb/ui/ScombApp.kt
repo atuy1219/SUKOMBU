@@ -146,7 +146,7 @@ fun ScombApp(
     val bottomBarScreens =
         listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
     val shouldShowBottomBar = currentDestination?.route in bottomBarScreens.map { it.route }
-    val homeScrollBehavior = remember { TopAppBarDefaults.exitUntilCollapsedScrollBehavior() }
+    val homeScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val scaffoldModifier = if (shouldShowBottomBar && currentDestination?.route == Screen.Home.route) {
         Modifier.nestedScroll(homeScrollBehavior.nestedScrollConnection)
     } else {
