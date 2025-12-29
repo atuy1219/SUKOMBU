@@ -5,11 +5,22 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.rememberSharedContentState
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.sharedElement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,8 +35,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Book
@@ -33,29 +48,31 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Class
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -70,11 +87,13 @@ import com.atuy.scomb.R
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.Task
+import com.atuy.scomb.ui.Screen
 import com.atuy.scomb.ui.viewmodel.HomeData
 import com.atuy.scomb.ui.viewmodel.HomeUiState
 import com.atuy.scomb.ui.viewmodel.HomeViewModel
 import com.atuy.scomb.ui.viewmodel.LinkItem
 import com.atuy.scomb.util.DateUtils
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
@@ -92,6 +111,7 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val permissionDeniedMessage = stringResource(R.string.permission_notification_denied)
+    val _ = paddingValues
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -112,8 +132,7 @@ fun HomeScreen(
             val builder = CustomTabsIntent.Builder()
             val customTabsIntent = builder.build()
             customTabsIntent.launchUrl(context, url.toUri())
-        } catch (e: Exception) {
-            // Handle error
+        } catch (_: Exception) {
         }
     }
 
@@ -127,354 +146,266 @@ fun HomeScreen(
         }
     }
 
-    // ViewModelからのURLオープンイベントを監視
     LaunchedEffect(viewModel) {
         viewModel.openUrlEvent.collect { url ->
             openUrl(url)
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        when (val state = uiState) {
-            is HomeUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        containerColor = Color.Black,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { contentPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(contentPadding)
+        ) {
+            when (val state = uiState) {
+                is HomeUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-            }
 
-            is HomeUiState.Success -> {
-                PullToRefreshBox(
-                    isRefreshing = state.isRefreshing,
-                    onRefresh = {
-                        viewModel.loadHomeData(forceRefresh = true)
-                    },
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Dashboard(
-                        homeData = state.homeData,
-                        showNews = state.showNews,
-                        // 授業IDだけでなく、曜日と時限も渡して遷移
-                        onClassClick = { classId, day, period ->
-                            navController.navigate("classDetail/$classId?dayOfWeek=$day&period=$period")
+                is HomeUiState.Success -> {
+                    PullToRefreshBox(
+                        isRefreshing = state.isRefreshing,
+                        onRefresh = {
+                            viewModel.loadHomeData(forceRefresh = true)
                         },
-                        onTaskClick = { task -> viewModel.onTaskClick(task) },
-                        onNewsClick = { url -> openUrl(url) },
-                        onLinkClick = { url -> openUrl(url) },
-                        sharedTransitionScope = sharedTransitionScope,
-                        animatedVisibilityScope = animatedVisibilityScope
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        StudentDashboard(
+                            homeData = state.homeData,
+                            showNews = state.showNews,
+                            onClassClick = { classId, day, period ->
+                                navController.navigate("classDetail/$classId?dayOfWeek=$day&period=$period")
+                            },
+                            onTaskClick = { task -> viewModel.onTaskClick(task) },
+                            onNewsClick = { url -> openUrl(url) },
+                            onLinkClick = { url -> openUrl(url) },
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            onScheduleClick = { navController.navigate(Screen.Timetable.route) }
+                        )
+                    }
+                }
+
+                is HomeUiState.Error -> {
+                    ErrorState(
+                        message = state.message,
+                        onRetry = { viewModel.loadHomeData(forceRefresh = true) }
                     )
                 }
-            }
-
-            is HomeUiState.Error -> {
-                ErrorState(
-                    message = state.message,
-                    onRetry = { viewModel.loadHomeData(forceRefresh = true) }
-                )
             }
         }
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun Dashboard(
+private fun StudentDashboard(
     homeData: HomeData,
     showNews: Boolean,
-    onClassClick: (String, Int, Int) -> Unit, // 引数を変更
+    onClassClick: (String, Int, Int) -> Unit,
     onTaskClick: (Task) -> Unit,
     onNewsClick: (String) -> Unit,
     onLinkClick: (String) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    onScheduleClick: () -> Unit
 ) {
+    val stagedVisibility = remember { mutableStateListOf(false, false, false) }
+    LaunchedEffect(homeData) {
+        stagedVisibility.indices.forEach { index ->
+            delay(80L * index)
+            stagedVisibility[index] = true
+        }
+    }
+
+    val linkVisibility = remember(homeData.quickLinks) {
+        mutableStateListOf<Boolean>().apply {
+            repeat(homeData.quickLinks.size) { add(false) }
+        }
+    }
+    LaunchedEffect(homeData.quickLinks) {
+        homeData.quickLinks.indices.forEach { index ->
+            delay(70L * index)
+            linkVisibility[index] = true
+        }
+    }
+
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item {
-            TodaysClassesSection(
-                classes = homeData.todaysClasses,
-                onClassClick = onClassClick,
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope
-            )
-        }
-        item {
-            UpcomingTasksSection(
-                tasks = homeData.upcomingTasks,
-                onTaskClick = onTaskClick
-            )
-        }
-
-        if (showNews) {
-            item {
-                RecentNewsSection(
-                    news = homeData.recentNews,
-                    onNewsClick = onNewsClick
+            AnimatedVisibility(
+                visible = stagedVisibility.getOrElse(0) { true },
+                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 })
+            ) {
+                HeroStageCard(
+                    classes = homeData.todaysClasses,
+                    onClassClick = onClassClick,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
                 )
             }
         }
 
         item {
-            QuickLinksSection(
-                links = homeData.quickLinks,
-                onLinkClick = onLinkClick
-            )
+            AnimatedVisibility(
+                visible = stagedVisibility.getOrElse(1) { true },
+                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 })
+            ) {
+                ActionCardsRow(
+                    tasks = homeData.upcomingTasks,
+                    todaysClasses = homeData.todaysClasses,
+                    onTaskClick = onTaskClick,
+                    onScheduleClick = onScheduleClick
+                )
+            }
+        }
+
+        if (showNews) {
+            item {
+                AnimatedVisibility(
+                    visible = stagedVisibility.getOrElse(2) { true },
+                    enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 })
+                ) {
+                    NewsPeekCard(news = homeData.recentNews, onNewsClick = onNewsClick)
+                }
+            }
+        }
+
+        if (homeData.todaysClasses.isNotEmpty()) {
+            item {
+                ClassLineup(
+                    classes = homeData.todaysClasses,
+                    onClassClick = onClassClick,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
+            }
         }
 
         item {
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-    }
-}
-
-@Composable
-fun DashboardSection(
-    title: String,
-    icon: ImageVector,
-    content: @Composable () -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+            SectionHeader(
+                title = stringResource(R.string.home_quick_links),
+                icon = Icons.Default.Link
             )
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column {
-                content()
+        itemsIndexed(homeData.quickLinks) { index, link ->
+            AnimatedVisibility(
+                visible = linkVisibility.getOrElse(index) { true },
+                enter = fadeIn(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                    slideInVertically(initialOffsetY = { it / 3 }, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
+            ) {
+                LinkCard(link = link, onClick = { onLinkClick(link.url) })
             }
         }
+
+        item { Spacer(modifier = Modifier.height(32.dp)) }
     }
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun TodaysClassesSection(
+private fun HeroStageCard(
     classes: List<ClassCell>,
-    onClassClick: (String, Int, Int) -> Unit, // 引数を変更
+    onClassClick: (String, Int, Int) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val currentPeriod = DateUtils.getCurrentPeriod()
+    val stageClass = classes.firstOrNull { it.period == currentPeriod }
+        ?: classes.firstOrNull()
 
-    DashboardSection(
-        title = stringResource(R.string.home_todays_classes),
-        icon = Icons.Default.Class
-    ) {
-        if (classes.isEmpty()) {
-            EmptyStateItem(text = stringResource(R.string.home_no_classes_today))
-        } else {
-            with(sharedTransitionScope) {
-                classes.forEachIndexed { index, classCell ->
-                    val isCurrent = classCell.period == currentPeriod
+    val heroScale by animateFloatAsState(
+        targetValue = if (stageClass != null) 1f else 0.97f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+        label = "hero-scale"
+    )
 
-                    // 現在の授業の場合は背景色を変えて強調する
-                    val backgroundColor = if (isCurrent)
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                    else
-                        Color.Transparent
-
-                    ListItem(
-                        colors = ListItemDefaults.colors(containerColor = backgroundColor),
-                        headlineContent = {
-                            Text(
-                                text = classCell.name ?: "",
-                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                                maxLines = 1,
-                                color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                        },
-                        supportingContent = {
-                            Text(
-                                text = classCell.room ?: stringResource(R.string.home_room_unset),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        leadingContent = {
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "${classCell.period + 1}",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        },
-                        modifier = Modifier
-                            .sharedElement(
-                                // キーに曜日と時限を含めて一致させる
-                                sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
-                                animatedVisibilityScope = animatedVisibilityScope
-                            )
-                            .clickable {
-                                if (classCell.classId.isNotEmpty()) {
-                                    onClassClick(classCell.classId, classCell.dayOfWeek, classCell.period)
-                                }
-                            }
-                    )
-                    if (index < classes.size - 1) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                    }
-                }
+    val onHeroClick = {
+        stageClass?.let { classCell ->
+            if (classCell.classId.isNotEmpty()) {
+                onClassClick(classCell.classId, classCell.dayOfWeek, classCell.period)
             }
         }
     }
-}
 
-@Composable
-fun UpcomingTasksSection(
-    tasks: List<Task>,
-    onTaskClick: (Task) -> Unit
-) {
-    DashboardSection(
-        title = stringResource(R.string.home_upcoming_tasks),
-        icon = Icons.Default.AccessTime
+    val sharedModifier = if (stageClass != null) {
+        with(sharedTransitionScope) {
+            Modifier.sharedElement(
+                sharedContentState = rememberSharedContentState(
+                    key = "hero-${stageClass.classId}-${stageClass.dayOfWeek}-${stageClass.period}"
+                ),
+                animatedVisibilityScope = animatedVisibilityScope
+            )
+        }
+    } else {
+        Modifier
+    }
+
+    Card(
+        modifier = sharedModifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = heroScale
+                scaleY = heroScale
+            },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+        ),
+        shape = ShapeDefaults.ExtraLarge,
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        onClick = onHeroClick
     ) {
-        if (tasks.isEmpty()) {
-            EmptyStateItem(text = stringResource(R.string.home_no_upcoming_tasks))
-        } else {
-            tasks.forEachIndexed { index, task ->
-                val isOverdue = task.deadline < System.currentTimeMillis()
-                val timeColor =
-                    if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                text = stringResource(R.string.home_todays_classes),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold
+            )
 
-                ListItem(
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = {
-                        Text(
-                            text = task.title,
-                            maxLines = 1,
-                            fontWeight = FontWeight.Medium
-                        )
-                    },
-                    supportingContent = {
-                        Text(
-                            text = task.className,
-                            maxLines = 1,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    },
-                    trailingContent = {
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = DateUtils.timeToString(task.deadline),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = timeColor
-                            )
-                            Text(
-                                text = DateUtils.formatRemainingTime(task.deadline),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = timeColor
-                            )
-                        }
-                    },
-                    modifier = Modifier.clickable { onTaskClick(task) }
-                )
-                if (index < tasks.size - 1) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(96.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.08f),
+                            shape = ShapeDefaults.Medium
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = (stageClass?.period?.plus(1) ?: 0).takeIf { it > 0 }?.toString() ?: "-",
+                        style = MaterialTheme.typography.displayLarge,
+                        fontWeight = FontWeight.ExtraBold
                     )
                 }
-            }
-        }
-    }
-}
 
-
-@Composable
-fun RecentNewsSection(
-    news: List<NewsItem>,
-    onNewsClick: (String) -> Unit
-) {
-    DashboardSection(
-        title = stringResource(R.string.home_recent_news),
-        icon = Icons.Default.Notifications
-    ) {
-        if (news.isEmpty()) {
-            EmptyStateItem(text = stringResource(R.string.home_no_new_news))
-        } else {
-            news.forEachIndexed { index, newsItem ->
-                ListItem(
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = {
-                        Text(
-                            text = newsItem.title,
-                            maxLines = 2,
-                            fontWeight = if (newsItem.unread) FontWeight.Bold else FontWeight.Normal
-                        )
-                    },
-                    supportingContent = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 4.dp)
-                        ) {
-                            if (newsItem.unread) {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(end = 8.dp)
-                                        .size(8.dp)
-                                        .background(
-                                            MaterialTheme.colorScheme.primary,
-                                            androidx.compose.foundation.shape.CircleShape
-                                        )
-                                )
-                            }
-                            Text(
-                                text = newsItem.category,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = newsItem.publishTime,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    },
-                    modifier = Modifier.clickable { onNewsClick(newsItem.url) }
-                )
-                if (index < news.size - 1) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = stageClass?.name ?: stringResource(R.string.home_no_classes_today),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2
+                    )
+                    Text(
+                        text = stageClass?.room ?: stringResource(R.string.home_room_unset),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
                     )
                 }
             }
@@ -484,31 +415,283 @@ fun RecentNewsSection(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun QuickLinksSection(
-    links: List<LinkItem>,
-    onLinkClick: (String) -> Unit
+private fun ActionCardsRow(
+    tasks: List<Task>,
+    todaysClasses: List<ClassCell>,
+    onTaskClick: (Task) -> Unit,
+    onScheduleClick: () -> Unit
 ) {
-    DashboardSection(title = stringResource(R.string.home_quick_links), icon = Icons.Default.Link) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        maxItemsInEachRow = 2
+    ) {
+        AssignmentsCard(
+            tasks = tasks,
+            onTaskClick = onTaskClick,
+            modifier = Modifier.weight(1f)
+        )
+        WeeklyScheduleCard(
+            todaysClasses = todaysClasses,
+            onClick = onScheduleClick,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun AssignmentsCard(
+    tasks: List<Task>,
+    onTaskClick: (Task) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val nextTask = tasks.firstOrNull()
+    val remainingLabel = nextTask?.let { DateUtils.formatRemainingTime(it.deadline) }
+        ?: stringResource(R.string.home_no_upcoming_tasks)
+
+    PressableCard(
+        title = stringResource(R.string.home_upcoming_tasks),
+        subtitle = remainingLabel,
+        icon = Icons.Default.AccessTime,
+        highlight = stringResource(R.string.home_due_in_two_days),
+        onClick = { nextTask?.let(onTaskClick) },
+        modifier = modifier
+    ) {
+        if (nextTask != null) {
+            Text(
+                text = nextTask.title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            Text(
+                text = nextTask.className,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.home_no_upcoming_tasks),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun WeeklyScheduleCard(
+    todaysClasses: List<ClassCell>,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val classCount = todaysClasses.size
+    val nextClass = todaysClasses.firstOrNull()
+
+    PressableCard(
+        title = stringResource(R.string.screen_timetable),
+        subtitle = stringResource(R.string.home_weekly_schedule_subtitle, classCount),
+        icon = Icons.Default.CalendarToday,
+        highlight = stringResource(R.string.home_view_schedule_cta),
+        onClick = onClick,
+        modifier = modifier
+    ) {
+        if (nextClass != null) {
+            Text(
+                text = nextClass.name ?: "",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            Text(
+                text = nextClass.room ?: stringResource(R.string.home_room_unset),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.home_no_classes_today),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun NewsPeekCard(news: List<NewsItem>, onNewsClick: (String) -> Unit) {
+    val latest = news.firstOrNull()
+    PressableCard(
+        title = stringResource(R.string.home_recent_news),
+        subtitle = latest?.category ?: stringResource(R.string.home_no_new_news),
+        icon = Icons.Default.Notifications,
+        highlight = stringResource(R.string.home_news_pulse_label),
+        onClick = { latest?.let { onNewsClick(it.url) } }
+    ) {
+        if (latest != null) {
+            Text(
+                text = latest.title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (latest.unread) FontWeight.Bold else FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            Text(
+                text = latest.publishTime,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.home_no_new_news),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+private fun ClassLineup(
+    classes: List<ClassCell>,
+    onClassClick: (String, Int, Int) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader(title = stringResource(R.string.home_todays_classes), icon = Icons.Default.Class)
+
         FlowRow(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            links.forEach { link ->
-                AssistChip(
-                    onClick = { onLinkClick(link.url) },
-                    label = { Text(link.title) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = if (link.title.contains("シラバス")) Icons.Default.Class else if (link.title.contains("図書館")) Icons.Default.Book else Icons.Default.CalendarToday,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        labelColor = MaterialTheme.colorScheme.onSurface
+            with(sharedTransitionScope) {
+                classes.forEach { classCell ->
+                    val interactionSource = remember { MutableInteractionSource() }
+                    val pressed by interactionSource.collectIsPressedAsState()
+                    val scale by animateFloatAsState(
+                        targetValue = if (pressed) 0.95f else 1f,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+                        label = "class-scale"
                     )
+
+                    Card(
+                        modifier = Modifier
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                            }
+                            .sharedElement(
+                                sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
+                                animatedVisibilityScope = animatedVisibilityScope
+                            )
+                            .clickable(
+                                interactionSource = interactionSource,
+                                indication = rememberRipple(bounded = true)
+                            ) {
+                                if (classCell.classId.isNotEmpty()) {
+                                    onClassClick(classCell.classId, classCell.dayOfWeek, classCell.period)
+                                }
+                            },
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = stringResource(R.string.home_period_label, classCell.period + 1),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = classCell.name ?: "",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = classCell.room ?: stringResource(R.string.home_room_unset),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, icon: ImageVector) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+    }
+}
+
+@Composable
+private fun LinkCard(link: LinkItem, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.95f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+        label = "link-scale"
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = rememberRipple(bounded = true),
+                    onClick = onClick
+                )
+                .padding(vertical = 16.dp, horizontal = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = link.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = link.url,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Link,
+                    contentDescription = null,
+                    modifier = Modifier.padding(10.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -516,17 +699,76 @@ fun QuickLinksSection(
 }
 
 @Composable
-fun EmptyStateItem(text: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
+private fun PressableCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    highlight: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.95f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+        label = "card-press"
+    )
+
+    Card(
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        shape = RoundedCornerShape(22.dp)
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = rememberRipple(bounded = true),
+                    onClick = onClick
+                )
+                .padding(16.dp)
+                .animateContentSize(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
+                Column {
+                    Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Text(
+                    text = highlight,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+
+            content()
+        }
     }
 }

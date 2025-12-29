@@ -45,8 +45,13 @@
     <string name="home_recent_news">最新のお知らせ</string>
     <string name="home_no_new_news">新しいお知らせはありません。</string>
     <string name="home_period_format">%1$d限: %2$s</string>
+    <string name="home_period_label">%1$d限</string>
     <string name="home_room_unset">未設定</string>
     <string name="home_quick_links">リンク集</string>
+    <string name="home_due_in_two_days">2日後に締切</string>
+    <string name="home_weekly_schedule_subtitle">今日の授業: %1$d件</string>
+    <string name="home_view_schedule_cta">時間割を見る</string>
+    <string name="home_news_pulse_label">最新をチェック</string>
     <string name="permission_notification_denied">通知権限が拒否されました。課題の通知を受け取れません。</string>
 
     <!-- Timetable Screen -->

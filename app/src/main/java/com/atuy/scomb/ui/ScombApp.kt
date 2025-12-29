@@ -26,6 +26,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -33,6 +34,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,6 +45,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -142,12 +146,20 @@ fun ScombApp(
     val bottomBarScreens =
         listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
     val shouldShowBottomBar = currentDestination?.route in bottomBarScreens.map { it.route }
+    val homeScrollBehavior = remember { TopAppBarDefaults.exitUntilCollapsedScrollBehavior() }
+    val scaffoldModifier = if (shouldShowBottomBar && currentDestination?.route == Screen.Home.route) {
+        Modifier.nestedScroll(homeScrollBehavior.nestedScrollConnection)
+    } else {
+        Modifier
+    }
 
     Scaffold(
+        modifier = scaffoldModifier,
         topBar = {
             if (shouldShowBottomBar) {
                 AppTopBar(
                     currentRoute = currentDestination?.route,
+                    homeScrollBehavior = if (currentDestination?.route == Screen.Home.route) homeScrollBehavior else null,
                     timetableViewModel = timetableViewModel,
                     newsViewModel = newsViewModel,
                     taskListViewModel = taskListViewModel
@@ -284,6 +296,7 @@ fun ScombApp(
 @Composable
 fun AppTopBar(
     currentRoute: String?,
+    homeScrollBehavior: TopAppBarScrollBehavior?,
     timetableViewModel: TimetableViewModel,
     newsViewModel: NewsViewModel,
     taskListViewModel: TaskListViewModel
@@ -309,22 +322,38 @@ fun AppTopBar(
             }
 
             else -> {
-                TopAppBar(
-                    title = {
-                        Text(
-                            stringResource(
-                                when (targetRoute) {
-                                    Screen.Home.route -> R.string.screen_home
-                                    Screen.Settings.route -> R.string.screen_settings
-                                    else -> R.string.app_name // デフォルト
-                                }
-                            )
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    )
+                val defaultTitle = stringResource(
+                    when (targetRoute) {
+                        Screen.Home.route -> R.string.screen_home
+                        Screen.Settings.route -> R.string.screen_settings
+                        else -> R.string.app_name
+                    }
                 )
+
+                if (targetRoute == Screen.Home.route) {
+                    LargeTopAppBar(
+                        title = {
+                            Text(
+                                text = defaultTitle,
+                                style = MaterialTheme.typography.headlineLarge
+                            )
+                        },
+                        scrollBehavior = homeScrollBehavior
+                            ?: TopAppBarDefaults.exitUntilCollapsedScrollBehavior(),
+                        colors = TopAppBarDefaults.largeTopAppBarColors(
+                            containerColor = Color.Black,
+                            scrolledContainerColor = Color.Black,
+                            titleContentColor = MaterialTheme.colorScheme.onBackground
+                        )
+                    )
+                } else {
+                    TopAppBar(
+                        title = { Text(defaultTitle) },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background
+                        )
+                    )
+                }
             }
         }
     }
