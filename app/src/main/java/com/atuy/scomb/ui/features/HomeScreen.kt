@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
@@ -33,20 +35,20 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Class
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,11 +57,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -68,8 +70,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.atuy.scomb.R
 import com.atuy.scomb.data.db.ClassCell
-import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.Task
+import com.atuy.scomb.ui.Screen
 import com.atuy.scomb.ui.viewmodel.HomeData
 import com.atuy.scomb.ui.viewmodel.HomeUiState
 import com.atuy.scomb.ui.viewmodel.HomeViewModel
@@ -82,7 +84,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     navController: NavController,
-    paddingValues: PaddingValues,
     viewModel: HomeViewModel = hiltViewModel(),
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
@@ -112,7 +113,7 @@ fun HomeScreen(
             val builder = CustomTabsIntent.Builder()
             val customTabsIntent = builder.build()
             customTabsIntent.launchUrl(context, url.toUri())
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Handle error
         }
     }
@@ -134,43 +135,58 @@ fun HomeScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        when (val state = uiState) {
-            is HomeUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.app_name)) },
+                actions = {
+                    IconButton(onClick = { navController.navigate(Screen.News.route) }) {
+                        Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.screen_news))
+                    }
+                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.screen_settings))
+                    }
                 }
-            }
+            )
+        }
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            when (val state = uiState) {
+                is HomeUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
 
-            is HomeUiState.Success -> {
-                PullToRefreshBox(
-                    isRefreshing = state.isRefreshing,
-                    onRefresh = {
-                        viewModel.loadHomeData(forceRefresh = true)
-                    },
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Dashboard(
-                        homeData = state.homeData,
-                        showNews = state.showNews,
-                        // 授業IDだけでなく、曜日と時限も渡して遷移
-                        onClassClick = { classId, day, period ->
-                            navController.navigate("classDetail/$classId?dayOfWeek=$day&period=$period")
+                is HomeUiState.Success -> {
+                    PullToRefreshBox(
+                        isRefreshing = state.isRefreshing,
+                        onRefresh = {
+                            viewModel.loadHomeData(forceRefresh = true)
                         },
-                        onTaskClick = { task -> viewModel.onTaskClick(task) },
-                        onNewsClick = { url -> openUrl(url) },
-                        onLinkClick = { url -> openUrl(url) },
-                        sharedTransitionScope = sharedTransitionScope,
-                        animatedVisibilityScope = animatedVisibilityScope
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Dashboard(
+                            homeData = state.homeData,
+                            onClassClick = { classId, day, period ->
+                                navController.navigate("classDetail/$classId?dayOfWeek=$day&period=$period")
+                            },
+                            onTaskClick = { task -> viewModel.onTaskClick(task) },
+                            onLinkClick = { url -> openUrl(url) },
+                            onTaskListClick = { navController.navigate(Screen.Tasks.route) },
+                            onTimetableClick = { navController.navigate(Screen.Timetable.route) },
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope
+                        )
+                    }
+                }
+
+                is HomeUiState.Error -> {
+                    ErrorState(
+                        message = state.message,
+                        onRetry = { viewModel.loadHomeData(forceRefresh = true) }
                     )
                 }
-            }
-
-            is HomeUiState.Error -> {
-                ErrorState(
-                    message = state.message,
-                    onRetry = { viewModel.loadHomeData(forceRefresh = true) }
-                )
             }
         }
     }
@@ -180,18 +196,18 @@ fun HomeScreen(
 @Composable
 fun Dashboard(
     homeData: HomeData,
-    showNews: Boolean,
-    onClassClick: (String, Int, Int) -> Unit, // 引数を変更
+    onClassClick: (String, Int, Int) -> Unit,
     onTaskClick: (Task) -> Unit,
-    onNewsClick: (String) -> Unit,
     onLinkClick: (String) -> Unit,
+    onTaskListClick: () -> Unit,
+    onTimetableClick: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         item {
             TodaysClassesSection(
@@ -201,27 +217,30 @@ fun Dashboard(
                 animatedVisibilityScope = animatedVisibilityScope
             )
         }
-        item {
-            UpcomingTasksSection(
-                tasks = homeData.upcomingTasks,
-                onTaskClick = onTaskClick
-            )
-        }
 
-        if (showNews) {
-            item {
-                RecentNewsSection(
-                    news = homeData.recentNews,
-                    onNewsClick = onNewsClick
+        item {
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                UpcomingTaskSection(
+                    tasks = homeData.upcomingTasks,
+                    onTaskClick = onTaskClick,
+                    onTaskListClick = onTaskListClick
                 )
             }
         }
 
         item {
-            QuickLinksSection(
-                links = homeData.quickLinks,
-                onLinkClick = onLinkClick
-            )
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                TimetableButton(onClick = onTimetableClick)
+            }
+        }
+
+        item {
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                QuickLinksSection(
+                    links = homeData.quickLinks,
+                    onLinkClick = onLinkClick
+                )
+            }
         }
 
         item {
@@ -231,41 +250,28 @@ fun Dashboard(
 }
 
 @Composable
-fun DashboardSection(
+fun SectionHeader(
     title: String,
     icon: ImageVector,
-    content: @Composable () -> Unit
+    modifier: Modifier = Modifier
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column {
-                content()
-            }
-        }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.padding(bottom = 8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
@@ -273,83 +279,97 @@ fun DashboardSection(
 @Composable
 fun TodaysClassesSection(
     classes: List<ClassCell>,
-    onClassClick: (String, Int, Int) -> Unit, // 引数を変更
+    onClassClick: (String, Int, Int) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val currentPeriod = DateUtils.getCurrentPeriod()
 
-    DashboardSection(
-        title = stringResource(R.string.home_todays_classes),
-        icon = Icons.Default.Class
-    ) {
+    Column {
+        SectionHeader(
+            title = stringResource(R.string.home_todays_classes),
+            icon = Icons.Default.Class,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+
         if (classes.isEmpty()) {
-            EmptyStateItem(text = stringResource(R.string.home_no_classes_today))
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                EmptyStateItem(text = stringResource(R.string.home_no_classes_today))
+            }
         } else {
-            with(sharedTransitionScope) {
-                classes.forEachIndexed { index, classCell ->
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(classes) { classCell ->
                     val isCurrent = classCell.period == currentPeriod
 
-                    // 現在の授業の場合は背景色を変えて強調する
-                    val backgroundColor = if (isCurrent)
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                    else
-                        Color.Transparent
-
-                    ListItem(
-                        colors = ListItemDefaults.colors(containerColor = backgroundColor),
-                        headlineContent = {
-                            Text(
-                                text = classCell.name ?: "",
-                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                                maxLines = 1,
-                                color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                        },
-                        supportingContent = {
-                            Text(
-                                text = classCell.room ?: stringResource(R.string.home_room_unset),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        leadingContent = {
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "${classCell.period + 1}",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        },
-                        modifier = Modifier
-                            .sharedElement(
-                                // キーに曜日と時限を含めて一致させる
-                                sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
-                                animatedVisibilityScope = animatedVisibilityScope
-                            )
-                            .clickable {
+                    with(sharedTransitionScope) {
+                        Card(
+                            onClick = {
                                 if (classCell.classId.isNotEmpty()) {
                                     onClassClick(classCell.classId, classCell.dayOfWeek, classCell.period)
                                 }
+                            },
+                            modifier = Modifier
+                                .width(160.dp)
+                                .height(120.dp)
+                                .sharedElement(
+                                    sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
+                                    animatedVisibilityScope = animatedVisibilityScope
+                                ),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isCurrent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
+                            ),
+                            shape = RoundedCornerShape(24.dp) // 錠剤型っぽく
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .background(
+                                                if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                                                androidx.compose.foundation.shape.CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "${classCell.period + 1}",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                    }
+
+                                    if (classCell.room?.isNotEmpty() == true) {
+                                        Text(
+                                            text = classCell.room,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = classCell.name ?: "",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
-                    )
-                    if (index < classes.size - 1) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
+                        }
                     }
                 }
             }
@@ -358,126 +378,123 @@ fun TodaysClassesSection(
 }
 
 @Composable
-fun UpcomingTasksSection(
+fun UpcomingTaskSection(
     tasks: List<Task>,
-    onTaskClick: (Task) -> Unit
+    onTaskClick: (Task) -> Unit,
+    onTaskListClick: () -> Unit
 ) {
-    DashboardSection(
+    SectionHeader(
         title = stringResource(R.string.home_upcoming_tasks),
         icon = Icons.Default.AccessTime
-    ) {
-        if (tasks.isEmpty()) {
-            EmptyStateItem(text = stringResource(R.string.home_no_upcoming_tasks))
-        } else {
-            tasks.forEachIndexed { index, task ->
-                val isOverdue = task.deadline < System.currentTimeMillis()
-                val timeColor =
-                    if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+    )
 
-                ListItem(
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = {
-                        Text(
-                            text = task.title,
-                            maxLines = 1,
-                            fontWeight = FontWeight.Medium
-                        )
-                    },
-                    supportingContent = {
-                        Text(
-                            text = task.className,
-                            maxLines = 1,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    },
-                    trailingContent = {
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = DateUtils.timeToString(task.deadline),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = timeColor
-                            )
-                            Text(
-                                text = DateUtils.formatRemainingTime(task.deadline),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = timeColor
-                            )
-                        }
-                    },
-                    modifier = Modifier.clickable { onTaskClick(task) }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            if (tasks.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.home_no_upcoming_tasks),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
-                if (index < tasks.size - 1) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            } else {
+                // 最も期限が近いタスクを取得
+                val nearestTask = tasks.minByOrNull { it.deadline }!!
+                val isOverdue = nearestTask.deadline < System.currentTimeMillis()
+                val timeColor = if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onTaskClick(nearestTask) }
+                ) {
+                    Text(
+                        text = nearestTask.className,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = nearestTask.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Text(
+                            text = "残り",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = DateUtils.formatRemainingTime(nearestTask.deadline),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = timeColor
+                        )
+                    }
+                    Text(
+                        text = DateUtils.timeToString(nearestTask.deadline),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onTaskListClick() }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "全ての課題を表示",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
 }
 
-
 @Composable
-fun RecentNewsSection(
-    news: List<NewsItem>,
-    onNewsClick: (String) -> Unit
-) {
-    DashboardSection(
-        title = stringResource(R.string.home_recent_news),
-        icon = Icons.Default.Notifications
+fun TimetableButton(onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        if (news.isEmpty()) {
-            EmptyStateItem(text = stringResource(R.string.home_no_new_news))
-        } else {
-            news.forEachIndexed { index, newsItem ->
-                ListItem(
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = {
-                        Text(
-                            text = newsItem.title,
-                            maxLines = 2,
-                            fontWeight = if (newsItem.unread) FontWeight.Bold else FontWeight.Normal
-                        )
-                    },
-                    supportingContent = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 4.dp)
-                        ) {
-                            if (newsItem.unread) {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(end = 8.dp)
-                                        .size(8.dp)
-                                        .background(
-                                            MaterialTheme.colorScheme.primary,
-                                            androidx.compose.foundation.shape.CircleShape
-                                        )
-                                )
-                            }
-                            Text(
-                                text = newsItem.category,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = newsItem.publishTime,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    },
-                    modifier = Modifier.clickable { onNewsClick(newsItem.url) }
-                )
-                if (index < news.size - 1) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                }
-            }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.CalendarToday,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "時間割を確認する",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
         }
     }
 }
@@ -488,28 +505,39 @@ fun QuickLinksSection(
     links: List<LinkItem>,
     onLinkClick: (String) -> Unit
 ) {
-    DashboardSection(title = stringResource(R.string.home_quick_links), icon = Icons.Default.Link) {
-        FlowRow(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            links.forEach { link ->
-                AssistChip(
-                    onClick = { onLinkClick(link.url) },
-                    label = { Text(link.title) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = if (link.title.contains("シラバス")) Icons.Default.Class else if (link.title.contains("図書館")) Icons.Default.Book else Icons.Default.CalendarToday,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        labelColor = MaterialTheme.colorScheme.onSurface
+    SectionHeader(title = stringResource(R.string.home_quick_links), icon = Icons.Default.Link)
+
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        links.forEach { link ->
+            Card(
+                onClick = { onLinkClick(link.url) },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.height(80.dp).weight(1f).fillMaxWidth() // 均等配置を試みる
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(12.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = if (link.title.contains("シラバス")) Icons.Default.Class else if (link.title.contains("図書館")) Icons.Default.Book else Icons.Default.Link,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
-                )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = link.title,
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
@@ -517,16 +545,22 @@ fun QuickLinksSection(
 
 @Composable
 fun EmptyStateItem(text: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }

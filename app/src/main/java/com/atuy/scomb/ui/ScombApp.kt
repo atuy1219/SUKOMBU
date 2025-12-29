@@ -8,8 +8,6 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -27,8 +25,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -45,7 +41,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -139,41 +134,15 @@ fun ScombApp(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    val bottomBarScreens =
-        listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
-    val shouldShowBottomBar = currentDestination?.route in bottomBarScreens.map { it.route }
-
     Scaffold(
         topBar = {
-            if (shouldShowBottomBar) {
+            if (currentDestination?.route != Screen.Home.route && currentDestination?.route != Screen.Login.route) {
                 AppTopBar(
                     currentRoute = currentDestination?.route,
                     timetableViewModel = timetableViewModel,
                     newsViewModel = newsViewModel,
                     taskListViewModel = taskListViewModel
                 )
-            }
-        },
-        bottomBar = {
-            if (shouldShowBottomBar && authState is AuthState.Authenticated) {
-                NavigationBar {
-                    bottomBarScreens.forEach { screen ->
-                        NavigationBarItem(
-                            icon = { Icon(screen.icon, contentDescription = null) },
-                            label = { Text(stringResource(screen.resourceId)) },
-                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        )
-                    }
-                }
             }
         }
     ) { innerPadding ->
@@ -191,38 +160,10 @@ fun ScombApp(
                     startDestination = startDestination,
                     modifier = Modifier.padding(innerPadding),
                     enterTransition = {
-                        val initialIndex =
-                            bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
-                        val targetIndex =
-                            bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
-
-                        if (initialIndex == -1 || targetIndex == -1) {
-                            fadeIn(animationSpec = tween(75))
-                        } else if (initialIndex < targetIndex) {
-                            slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(75))
-                        } else {
-                            slideInHorizontally(
-                                initialOffsetX = { -it },
-                                animationSpec = tween(75)
-                            )
-                        }
+                        fadeIn(animationSpec = tween(300))
                     },
                     exitTransition = {
-                        val initialIndex =
-                            bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
-                        val targetIndex =
-                            bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
-
-                        if (initialIndex == -1 || targetIndex == -1) {
-                            fadeOut(animationSpec = tween(75))
-                        } else if (initialIndex < targetIndex) {
-                            slideOutHorizontally(
-                                targetOffsetX = { -it },
-                                animationSpec = tween(75)
-                            )
-                        } else {
-                            slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(75))
-                        }
+                        fadeOut(animationSpec = tween(300))
                     }
                 ) {
                     composable(Screen.Login.route) {
@@ -231,7 +172,6 @@ fun ScombApp(
                     composable(Screen.Home.route) {
                         HomeScreen(
                             navController = navController,
-                            paddingValues = innerPadding,
                             sharedTransitionScope = this@SharedTransitionLayout,
                             animatedVisibilityScope = this@composable
                         )
