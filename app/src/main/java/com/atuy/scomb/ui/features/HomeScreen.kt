@@ -72,6 +72,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -150,8 +154,8 @@ fun HomeScreen(
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
-        containerColor = Color.Black,
+            .background(MaterialTheme.colorScheme.background),
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { contentPadding ->
         Box(
@@ -238,13 +242,13 @@ private fun StudentDashboard(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item {
             AnimatedVisibility(
-                visible = stagedVisibility.getOrElse(0) { true },
+                visible = stagedVisibility.getOrElse(0) { false },
                 enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 })
             ) {
                 HeroStageCard(
@@ -256,7 +260,7 @@ private fun StudentDashboard(
 
         item {
             AnimatedVisibility(
-                visible = stagedVisibility.getOrElse(1) { true },
+                visible = stagedVisibility.getOrElse(1) { false },
                 enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 })
             ) {
                 ActionCardsRow(
@@ -271,7 +275,7 @@ private fun StudentDashboard(
         if (showNews) {
             item {
                 AnimatedVisibility(
-                    visible = stagedVisibility.getOrElse(2) { true },
+                    visible = stagedVisibility.getOrElse(2) { false },
                     enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 })
                 ) {
                     NewsPeekCard(news = homeData.recentNews, onNewsClick = onNewsClick)
@@ -630,6 +634,10 @@ private fun LinkCard(link: LinkItem, onClick: () -> Unit) {
                     indication = null,
                     onClick = onClick
                 )
+                .semantics {
+                    role = Role.Button
+                    contentDescription = link.title
+                }
                 .padding(vertical = 16.dp, horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -738,3 +746,4 @@ private fun PressableCard(
         }
     }
 }
+

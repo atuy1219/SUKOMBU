@@ -18,8 +18,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -28,13 +30,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,7 +50,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -143,11 +143,12 @@ fun ScombApp(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    val bottomBarScreens =
-        listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
-    val shouldShowBottomBar = currentDestination?.route in bottomBarScreens.map { it.route }
-    val homeScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    val scaffoldModifier = if (shouldShowBottomBar && currentDestination?.route == Screen.Home.route) {
+    val appScreens = listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
+    val shouldShowTopBar = authState is AuthState.Authenticated && currentDestination?.route != Screen.Login.route
+    val isHome = currentDestination?.route == Screen.Home.route
+    val homeTopAppBarState = rememberTopAppBarState()
+    val homeScrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(homeTopAppBarState)
+    val scaffoldModifier = if (shouldShowTopBar && isHome) {
         Modifier.nestedScroll(homeScrollBehavior.nestedScrollConnection)
     } else {
         Modifier
@@ -156,36 +157,32 @@ fun ScombApp(
     Scaffold(
         modifier = scaffoldModifier,
         topBar = {
-            if (shouldShowBottomBar) {
+            if (shouldShowTopBar) {
                 AppTopBar(
                     currentRoute = currentDestination?.route,
-                    homeScrollBehavior = if (currentDestination?.route == Screen.Home.route) homeScrollBehavior else null,
+                    homeScrollBehavior = if (isHome) homeScrollBehavior else null,
                     timetableViewModel = timetableViewModel,
                     newsViewModel = newsViewModel,
-                    taskListViewModel = taskListViewModel
-                )
-            }
-        },
-        bottomBar = {
-            if (shouldShowBottomBar && authState is AuthState.Authenticated) {
-                NavigationBar {
-                    bottomBarScreens.forEach { screen ->
-                        NavigationBarItem(
-                            icon = { Icon(screen.icon, contentDescription = null) },
-                            label = { Text(stringResource(screen.resourceId)) },
-                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+                    taskListViewModel = taskListViewModel,
+                    onNavigateToNews = {
+                        navController.navigate(Screen.News.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
                             }
-                        )
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(Screen.Settings.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
+                )
             }
         }
     ) { innerPadding ->
@@ -204,9 +201,9 @@ fun ScombApp(
                     modifier = Modifier.padding(innerPadding),
                     enterTransition = {
                         val initialIndex =
-                            bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
+                            appScreens.indexOfFirst { it.route == initialState.destination.route }
                         val targetIndex =
-                            bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
+                            appScreens.indexOfFirst { it.route == targetState.destination.route }
 
                         if (initialIndex == -1 || targetIndex == -1) {
                             fadeIn(animationSpec = tween(75))
@@ -221,9 +218,9 @@ fun ScombApp(
                     },
                     exitTransition = {
                         val initialIndex =
-                            bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
+                            appScreens.indexOfFirst { it.route == initialState.destination.route }
                         val targetIndex =
-                            bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
+                            appScreens.indexOfFirst { it.route == targetState.destination.route }
 
                         if (initialIndex == -1 || targetIndex == -1) {
                             fadeOut(animationSpec = tween(75))
@@ -299,7 +296,9 @@ fun AppTopBar(
     homeScrollBehavior: TopAppBarScrollBehavior?,
     timetableViewModel: TimetableViewModel,
     newsViewModel: NewsViewModel,
-    taskListViewModel: TaskListViewModel
+    taskListViewModel: TaskListViewModel,
+    onNavigateToNews: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     AnimatedContent(
         targetState = currentRoute,
@@ -340,11 +339,25 @@ fun AppTopBar(
                         },
                         scrollBehavior = homeScrollBehavior
                             ?: TopAppBarDefaults.exitUntilCollapsedScrollBehavior(),
-                        colors = TopAppBarDefaults.largeTopAppBarColors(
+                        colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = Color.Black,
                             scrolledContainerColor = Color.Black,
                             titleContentColor = MaterialTheme.colorScheme.onBackground
-                        )
+                        ),
+                        actions = {
+                            IconButton(onClick = { onNavigateToNews() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = stringResource(R.string.screen_news)
+                                )
+                            }
+                            IconButton(onClick = { onNavigateToSettings() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = stringResource(R.string.screen_settings)
+                                )
+                            }
+                        }
                     )
                 } else {
                     TopAppBar(
