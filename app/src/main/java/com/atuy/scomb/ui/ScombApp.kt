@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -140,13 +141,14 @@ fun ScombApp(
     val currentDestination = navBackStackEntry?.destination
 
     val bottomBarScreens =
-        listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
+        listOf(Screen.Home, Screen.Timetable, Screen.Tasks)
     val shouldShowBottomBar = currentDestination?.route in bottomBarScreens.map { it.route }
 
     Scaffold(
         topBar = {
             if (shouldShowBottomBar) {
                 AppTopBar(
+                    navController = navController,
                     currentRoute = currentDestination?.route,
                     timetableViewModel = timetableViewModel,
                     newsViewModel = newsViewModel,
@@ -283,6 +285,7 @@ fun ScombApp(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppTopBar(
+    navController: NavController,
     currentRoute: String?,
     timetableViewModel: TimetableViewModel,
     newsViewModel: NewsViewModel,
@@ -308,13 +311,35 @@ fun AppTopBar(
                 TasksTopBar(viewModel = taskListViewModel)
             }
 
+            Screen.Home.route -> {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.screen_home)) },
+                    actions = {
+                        IconButton(onClick = { navController.navigate(Screen.News.route) }) {
+                            Icon(
+                                imageVector = Screen.News.icon,
+                                contentDescription = stringResource(Screen.News.resourceId)
+                            )
+                        }
+                        IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
+                            Icon(
+                                imageVector = Screen.Settings.icon,
+                                contentDescription = stringResource(Screen.Settings.resourceId)
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    )
+                )
+            }
+
             else -> {
                 TopAppBar(
                     title = {
                         Text(
                             stringResource(
                                 when (targetRoute) {
-                                    Screen.Home.route -> R.string.screen_home
                                     Screen.Settings.route -> R.string.screen_settings
                                     else -> R.string.app_name // デフォルト
                                 }
