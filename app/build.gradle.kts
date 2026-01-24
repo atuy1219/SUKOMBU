@@ -13,7 +13,7 @@ fun getGitCommitHash(): String {
     return try {
         val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD").start()
         process.inputStream.bufferedReader().use { it.readText().trim() }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         "unknown"
     }
 }
@@ -23,7 +23,7 @@ fun getGitCommandOutput(command: String): String {
         providers.exec {
             commandLine(command.split(" "))
         }.standardOutput.asText.get().trim()
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         "1.0.0-dev"
     }
 }
@@ -32,7 +32,7 @@ val gitVersionName = getGitCommandOutput("git describe --tags --always")
 
 val gitCommitCount = try {
     getGitCommandOutput("git rev-list --count HEAD").toInt()
-} catch (e: Exception) {
+} catch (_: Exception) {
     1
 }
 
@@ -170,4 +170,9 @@ dependencies {
 
     // R8ビルドエラー対策
     implementation(libs.error.prone.annotations)
+
+    // --- Firebase (FCM Spoofing) ---
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+    implementation(libs.firebase.common)
 }

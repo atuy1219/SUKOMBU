@@ -283,4 +283,25 @@ class ScombzRepository @Inject constructor(
             "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course?idnumber=$classId"
         }
     }
+
+    suspend fun registerFcmToken(token: String) {
+        executeWithAuthHandling {
+            // FCM登録は認証が必要かどうか確認が必要ですが、おそらく必要でしょう。
+            // しかし、ログイン前でも登録できる場合があるかもしれません。
+            // ここでは他のメソッド同様 ensureAuthenticated() を呼んでおきます。
+            ensureAuthenticated()
+
+            val requestBody = mapOf("fcm_token" to token)
+            val response = apiService.registerFcm(requestBody)
+
+            val result = validateResponse(response)
+
+            if (result?.status != "OK") {
+                Log.e("ScombzRepository", "Failed to register FCM token: Status not OK")
+                // 必要であれば例外を投げたり、ユーザーに通知したりする
+            } else {
+                Log.d("ScombzRepository", "FCM token registered successfully")
+            }
+        }
+    }
 }
