@@ -23,6 +23,7 @@ data class ClassCell(
     val note: String?,
     val syllabusUrl: String?,
     val numberOfCredit: Int?,
+    val otkey: String?,
     val userNote: String? = null,
     val customLinksJson: String? = null
 )

@@ -17,6 +17,7 @@ data class Task(
     val classId: String,
     val reportId: String,
     val customColor: Int?,
+    val otkey: String?,
     val addManually: Boolean,
     var done: Boolean
 )

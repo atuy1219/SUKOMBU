@@ -3,13 +3,13 @@ package com.atuy.scomb.data.repository
 import android.content.Context
 import android.util.Log
 import com.atuy.scomb.R
-import com.atuy.scomb.data.manager.AuthManager
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.ClassCellDao
 import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.NewsItemDao
 import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.data.db.TaskDao
+import com.atuy.scomb.data.manager.AuthManager
 import com.atuy.scomb.data.network.ApiUpdateClassRequest
 import com.atuy.scomb.data.network.ScombzApiService
 import com.atuy.scomb.util.ClientException
@@ -269,6 +269,16 @@ class ScombzRepository @Inject constructor(
     }
 
     suspend fun getTaskUrl(task: Task): String {
+        // 保存されたotkeyがある場合はそれを使用
+        if (!task.otkey.isNullOrBlank()) {
+            return when (task.taskType) {
+                0 -> "https://mobile.scombz.shibaura-it.ac.jp/${task.otkey}/lms/course/report/submission?idnumber=${task.classId}&reportId=${task.reportId}"
+                1 -> "https://mobile.scombz.shibaura-it.ac.jp/${task.otkey}/lms/course/examination/taketop?idnumber=${task.classId}&examinationId=${task.reportId}"
+                2 -> "https://mobile.scombz.shibaura-it.ac.jp/${task.otkey}/lms/course/surveys/take?idnumber=${task.classId}&surveyId=${task.reportId}"
+                else -> "https://mobile.scombz.shibaura-it.ac.jp/${task.otkey}/lms/course?idnumber=${task.classId}"
+            }
+        }
+
         return executeWithAuthHandling {
             ensureAuthenticated()
             val otkeyResult = getOtkey()
@@ -276,6 +286,10 @@ class ScombzRepository @Inject constructor(
                 if (otkeyResult.exceptionOrNull() is SessionExpiredException) throw SessionExpiredException()
                 throw Exception(context.getString(R.string.error_otkey_failed))
             }
+
+            // 保存もしようとするとTaskDaoの更新が必要になるが、ここではURLを返すことを優先
+            // 本来は再取得したotkeyを保存すべきだが、ここでは簡易的な対応とする
+            // 次回のリスト更新時に保存されるはず
 
             when (task.taskType) {
                 0 -> "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course/report/submission?idnumber=${task.classId}&reportId=${task.reportId}"
@@ -287,6 +301,14 @@ class ScombzRepository @Inject constructor(
     }
 
     suspend fun getClassUrl(classId: String): String {
+        // DBからClassCellを取得してotkeyを確認
+        val cachedClassCells = classCellDao.getClassCellsById(classId)
+        val cachedOtkey = cachedClassCells.firstOrNull()?.otkey
+
+        if (!cachedOtkey.isNullOrBlank()) {
+            return "https://mobile.scombz.shibaura-it.ac.jp/$cachedOtkey/lms/course?idnumber=$classId"
+        }
+
         return executeWithAuthHandling {
             ensureAuthenticated()
             val otkeyResult = getOtkey()

@@ -68,7 +68,6 @@ data class ApiClassCell(
     val syllabusUrl: String?,
     val numberOfCredit: Int?,
     val note: String?,
-    // 修正: APIから空文字や"null"文字列、数値文字列など不安定な値が返るためString?で受ける
     val customColor: String?
 ) {
     fun toDbClassCell(
@@ -79,20 +78,18 @@ data class ApiClassCell(
         existingUserNote: String? = null,
         existingCustomLinks: String? = null
     ): ClassCell {
-        val decodedName = if (name.isNullOrBlank()) "授業名なし" else name
+        val decodedName = name.ifBlank { "授業名なし" }
         val decodedRoom = room
-        val decodedTeachers = if (teachers.isNullOrBlank()) "" else teachers
+        val decodedTeachers = teachers.ifBlank { "" }
 
         val appDayOfWeek = this.dayOfWeek - 1
 
         val decodedNote = note.decodeBase64()
 
-        // 修正: 文字列として受け取った値をIntに変換する処理を強化
         val colorInt = try {
             if (customColor.isNullOrBlank() || customColor == "null") {
                 null
             } else {
-                // "4292730333" のような Long 値の文字列をパースし、Int に変換 (色情報として扱うためビット溢れは許容)
                 customColor.toLongOrNull()?.toInt()
             }
         } catch (e: Exception) {
@@ -115,6 +112,7 @@ data class ApiClassCell(
             note = decodedNote,
             syllabusUrl = syllabusUrl,
             numberOfCredit = numberOfCredit,
+            otkey = otkey,
             userNote = existingUserNote,
             customLinksJson = existingCustomLinks
         )
@@ -166,6 +164,7 @@ data class ApiTask(
             classId = classId,
             reportId = id,
             customColor = null,
+            otkey = otkey,
             addManually = false,
             done = (done ?: 0) == 1
         )
