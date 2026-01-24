@@ -182,4 +182,18 @@ class ClassDetailViewModel @Inject constructor(
             }
         }
     }
+
+    fun onTaskClick(task: Task) {
+        viewModelScope.launch {
+            try {
+                val url = repository.getTaskUrl(task)
+                _openUrlEvent.send(url)
+            } catch (e: Exception) {
+                // エラー時はトーストなどで通知したいが、ここではUI Stateのエラーにはしない（画面全体がエラーになるため）
+                // 簡易的にコンソールに出力し、失敗したらtask.urlをフォールバックとして開くようイベントを送る手もあるが
+                // ここではエラーメッセージを表示せずに既存のURLを試すようにする
+                 _openUrlEvent.send(task.url)
+            }
+        }
+    }
 }

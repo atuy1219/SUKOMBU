@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ColorLens
@@ -36,7 +37,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -179,7 +179,8 @@ fun ClassDetailScreen(
                             onClassPageClick = { viewModel.onClassPageClick() },
                             onUpdateUserNote = { viewModel.updateUserNote(it) },
                             onAddLink = { title, url -> viewModel.addCustomLink(title, url) },
-                            onRemoveLink = { viewModel.removeCustomLink(it) }
+                            onRemoveLink = { viewModel.removeCustomLink(it) },
+                            onTaskClick = { viewModel.onTaskClick(it) }
                         )
                     }
 
@@ -204,16 +205,18 @@ fun ClassDetailContent(
     onClassPageClick: () -> Unit = {},
     onUpdateUserNote: (String) -> Unit = {},
     onAddLink: (String, String) -> Unit = { _, _ -> },
-    onRemoveLink: (CustomLink) -> Unit = {}
+    onRemoveLink: (CustomLink) -> Unit = {},
+    onTaskClick: (Task) -> Unit
 ) {
-    val context = LocalContext.current
-    fun openUrl(url: String?) {
-        if (url.isNullOrEmpty()) return
-        try {
-            val builder = CustomTabsIntent.Builder()
-            val customTabsIntent = builder.build()
-            customTabsIntent.launchUrl(context, url.toUri())
-        } catch (e: Exception) {
+    val openUrl = LocalContext.current.let { context ->
+        { url: String? ->
+            if (url.isNullOrEmpty()) return@let
+            try {
+                val builder = CustomTabsIntent.Builder()
+                val customTabsIntent = builder.build()
+                customTabsIntent.launchUrl(context, url.toUri())
+            } catch (e: Exception) {
+            }
         }
     }
 
@@ -416,7 +419,7 @@ fun ClassDetailContent(
             items(tasks, key = { it.id }) { task ->
                 TaskCard(
                     task = task,
-                    onTaskClick = { openUrl(task.url) }
+                    onTaskClick = { onTaskClick(task) }
                 )
             }
         }
