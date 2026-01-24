@@ -106,7 +106,7 @@ fun ClassDetailScreen(
                 val builder = CustomTabsIntent.Builder()
                 val customTabsIntent = builder.build()
                 customTabsIntent.launchUrl(context, url.toUri())
-            } catch (e: Exception) {
+            } catch (_: Exception) {
             }
         }
     }
@@ -215,7 +215,7 @@ fun ClassDetailContent(
                 val builder = CustomTabsIntent.Builder()
                 val customTabsIntent = builder.build()
                 customTabsIntent.launchUrl(context, url.toUri())
-            } catch (e: Exception) {
+            } catch (_: Exception) {
             }
         }
     }
@@ -562,7 +562,6 @@ fun ColorWheel(
 
     var selectedColor by remember { mutableStateOf(initialColor) }
 
-    var isInitialized by remember { mutableStateOf(false) }
 
     Canvas(
         modifier = modifier
@@ -587,8 +586,6 @@ fun ColorWheel(
                 detectDragGestures { change, _ ->
                     val center = Offset(size.width / 2f, size.height / 2f)
                     val offset = change.position
-                    val radius = size.width / 2f
-                    val distance = (offset - center).getDistance()
 
                     val angle = atan2(offset.y - center.y, offset.x - center.x) * (180 / PI).toFloat()
                     val hue = (angle + 360) % 360
@@ -602,9 +599,6 @@ fun ColorWheel(
         val center = Offset(size.width / 2, size.height / 2)
         val radius = size.width / 2
 
-        if (!isInitialized && selectedColor != Color.White) {
-            isInitialized = true
-        }
 
         val colors = (0..360).map { Color.hsv(it.toFloat(), 1f, 1f) }
         drawCircle(

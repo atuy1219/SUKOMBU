@@ -1,8 +1,6 @@
 package com.atuy.scomb.ui.features
 
 import android.content.Intent
-import android.net.Uri
-import androidx.core.net.toUri
 import android.widget.ImageView
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -52,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -64,6 +63,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -80,12 +80,12 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var showLogoutDialog by remember { mutableStateOf(false) }
+    val (showLogoutDialog, setShowLogoutDialog) = remember { mutableStateOf(false) }
 
     if (showLogoutDialog) {
         LogoutDialog(
             onConfirm = {
-                showLogoutDialog = false
+                setShowLogoutDialog(false)
                 viewModel.logout()
                 navController.navigate(Screen.Login.route) {
                     popUpTo(navController.graph.findStartDestination().id) {
@@ -94,7 +94,7 @@ fun SettingsScreen(
                     launchSingleTop = true
                 }
             },
-            onDismiss = { showLogoutDialog = false }
+            onDismiss = { setShowLogoutDialog(false) }
         )
     }
 
@@ -163,7 +163,7 @@ fun SettingsScreen(
 
         item {
             LogoutSection(
-                onLogoutClick = { showLogoutDialog = true }
+                onLogoutClick = { setShowLogoutDialog(true) }
             )
         }
 
@@ -357,7 +357,7 @@ private fun NotificationSettingsSection(
     selectedTimings: Set<Int>,
     onTimingsChange: (Set<Int>) -> Unit
 ) {
-    var showAddDialog by remember { mutableStateOf(false) }
+    val (showAddDialog, setShowAddDialog) = remember { mutableStateOf(false) }
 
     // デフォルトの選択肢（表示順序のため）
     val defaultOptions = listOf(10, 30, 60, 120, 1440, 2880, 4320)
@@ -368,12 +368,12 @@ private fun NotificationSettingsSection(
 
     if (showAddDialog) {
         AddNotificationTimingDialog(
-            onDismiss = { showAddDialog = false },
+            onDismiss = { setShowAddDialog(false) },
             onConfirm = { minutes ->
                 val newSelection = selectedTimings.toMutableSet()
                 newSelection.add(minutes)
                 onTimingsChange(newSelection)
-                showAddDialog = false
+                setShowAddDialog(false)
             }
         )
     }
@@ -415,7 +415,7 @@ private fun NotificationSettingsSection(
 
             // 追加ボタン
             AssistChip(
-                onClick = { showAddDialog = true },
+                onClick = { setShowAddDialog(true) },
                 label = { Text("追加") },
                 leadingIcon = {
                     Icon(
@@ -439,7 +439,7 @@ fun AddNotificationTimingDialog(
     onConfirm: (Int) -> Unit
 ) {
     var valueText by remember { mutableStateOf("") }
-    var selectedUnit by remember { mutableStateOf(0) } // 0: 分, 1: 時間, 2: 日
+    var selectedUnit by remember { mutableIntStateOf(0) } // 0: 分, 1: 時間, 2: 日
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -504,6 +504,7 @@ private fun formatNotificationTime(minutes: Int): String {
 }
 
 @Composable
+@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 private fun AppInfoSection(
     onVersionClick: () -> Unit
 ) {

@@ -129,8 +129,6 @@ class ScombzRepository @Inject constructor(
             }
 
             ensureAuthenticated()
-            // ここでgetOtkey()を呼ぶ必要はない。各タスクにotkeyが含まれているため。
-            // しかし、セッション切れチェックはensureAuthenticated()で行っている。
 
             val calendar = Calendar.getInstance()
             val year = calendar.get(Calendar.YEAR)
@@ -159,7 +157,6 @@ class ScombzRepository @Inject constructor(
             val customLinksMap = existingCells.associate { it.classId to it.customLinksJson }
 
             ensureAuthenticated()
-            // otkey取得処理削除
 
             val yearMonth = if (term == "1") "${year}01" else "${year}02"
 
@@ -228,7 +225,6 @@ class ScombzRepository @Inject constructor(
 
             ensureAuthenticated()
             val currentTerm = DateUtils.getCurrentScombTerm()
-            // otkey取得処理削除
 
             val response = apiService.getNews()
             val apiNews = validateResponse(response) ?: emptyList()
@@ -257,16 +253,6 @@ class ScombzRepository @Inject constructor(
     }
 
     suspend fun getTaskUrl(task: Task): String {
-        // 保存されたotkeyがある場合はそれを使用
-        if (!task.otkey.isNullOrBlank()) {
-            return when (task.taskType) {
-                0 -> "https://mobile.scombz.shibaura-it.ac.jp/${task.otkey}/lms/course/report/submission?idnumber=${task.classId}&reportId=${task.reportId}"
-                1 -> "https://mobile.scombz.shibaura-it.ac.jp/${task.otkey}/lms/course/examination/taketop?idnumber=${task.classId}&examinationId=${task.reportId}"
-                2 -> "https://mobile.scombz.shibaura-it.ac.jp/${task.otkey}/lms/course/surveys/take?idnumber=${task.classId}&surveyId=${task.reportId}"
-                else -> "https://mobile.scombz.shibaura-it.ac.jp/${task.otkey}/lms/course?idnumber=${task.classId}"
-            }
-        }
-
         return executeWithAuthHandling {
             ensureAuthenticated()
             val otkeyResult = getOtkey()
@@ -274,10 +260,6 @@ class ScombzRepository @Inject constructor(
                 if (otkeyResult.exceptionOrNull() is SessionExpiredException) throw SessionExpiredException()
                 throw Exception(context.getString(R.string.error_otkey_failed))
             }
-
-            // 保存もしようとするとTaskDaoの更新が必要になるが、ここではURLを返すことを優先
-            // 本来は再取得したotkeyを保存すべきだが、ここでは簡易的な対応とする
-            // 次回のリスト更新時に保存されるはず
 
             when (task.taskType) {
                 0 -> "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course/report/submission?idnumber=${task.classId}&reportId=${task.reportId}"
@@ -289,13 +271,6 @@ class ScombzRepository @Inject constructor(
     }
 
     suspend fun getClassUrl(classId: String): String {
-        // DBからClassCellを取得してotkeyを確認
-        val cachedClassCells = classCellDao.getClassCellsById(classId)
-        val cachedOtkey = cachedClassCells.firstOrNull()?.otkey
-
-        if (!cachedOtkey.isNullOrBlank()) {
-            return "https://mobile.scombz.shibaura-it.ac.jp/$cachedOtkey/lms/course?idnumber=$classId"
-        }
 
         return executeWithAuthHandling {
             ensureAuthenticated()

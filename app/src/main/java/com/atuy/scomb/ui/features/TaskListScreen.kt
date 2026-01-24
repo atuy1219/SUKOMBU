@@ -73,13 +73,14 @@ fun TaskListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val customTabsIntent = remember { CustomTabsIntent.Builder().build() }
+    val errorMessage = stringResource(R.string.error_url_fetch_failed)
 
     LaunchedEffect(viewModel) {
         viewModel.openUrlEvent.collect { url ->
             try {
                 customTabsIntent.launchUrl(context, url.toUri())
-            } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.error_url_fetch_failed), Toast.LENGTH_SHORT).show()
+            } catch (_: Exception) {
+                Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -301,7 +302,7 @@ fun TaskCard(
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = stringResource(R.string.task_list_done),
-                            tint = MaterialTheme.colorScheme.green,
+                            tint = green,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -339,5 +340,5 @@ fun TaskCard(
     }
 }
 
-val androidx.compose.material3.ColorScheme.green: androidx.compose.ui.graphics.Color
+val green: androidx.compose.ui.graphics.Color
     get() = androidx.compose.ui.graphics.Color(0xFF4CAF50)
