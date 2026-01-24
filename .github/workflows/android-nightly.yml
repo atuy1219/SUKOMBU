@@ -27,11 +27,20 @@ jobs:
           gradle-version: wrapper
           cache-read-only: false
 
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.SIGNING_KEY_STORE_BASE64 }}" | base64 -d > release.jks
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug -x lint
+      - name: Build Release and Debug APKs
+        run: ./gradlew assembleRelease assembleDebug -x lint
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/release.jks
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          ALIAS: ${{ secrets.ALIAS }}
 
       - name: Delete existing nightly tag
         uses: dev-drprasad/delete-tag-and-release@v1.1
@@ -44,11 +53,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly
-          name: Nightly Debug Build
+          name: Nightly Build (Debug & Release)
           body: |
-            最新のコミットによるデバッグビルドです。
+            最新のコミットによるデバッグおよびリリースビルドです。
             Commit: ${{ github.sha }}
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/release/app-release.apk
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
