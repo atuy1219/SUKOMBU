@@ -68,13 +68,13 @@ data class ApiClassCell(
     val syllabusUrl: String?,
     val numberOfCredit: Int?,
     val note: String?,
-    val customColor: String?
+    val customColor: String?,
+    val otkey: String?
 ) {
     fun toDbClassCell(
         year: Int,
         term: String,
         timetableTitle: String,
-        otkey: String,
         existingUserNote: String? = null,
         existingCustomLinks: String? = null
     ): ClassCell {
@@ -135,9 +135,10 @@ data class ApiTask(
     val from: String?,
     val title: String?,
     val done: Int?,
-    @Json(name = "submitTimeTo") val submitTimeTo: String?
+    @Json(name = "submitTimeTo") val submitTimeTo: String?,
+    val otkey: String?
 ) {
-    fun toDbTask(otkey: String): Task? {
+    fun toDbTask(): Task? {
         if (id == null || classId == null || title == null || submitTimeTo == null || taskType == null) {
             return null
         }
@@ -180,9 +181,10 @@ data class ApiNewsItem(
     val author: String?,
     @Json(name = "publishTime") val publishTime: String?,
     val tags: String?,
-    @Json(name = "readTime") val readTime: String?
+    @Json(name = "readTime") val readTime: String?,
+    val otkey: String?
 ) {
-    fun toDbNewsItem(otkey: String , yearApiTerm: String): NewsItem {
+    fun toDbNewsItem(yearApiTerm: String): NewsItem {
         val decodedTags = this.tags
         val category = decodedTags?.split(",")?.getOrNull(0) ?: "その他"
         val unread = readTime.isNullOrEmpty()
@@ -200,7 +202,8 @@ data class ApiNewsItem(
             publishTime = this.publishTime ?: "",
             tags = decodedTags ?: "",
             unread = unread,
-            url = url
+            url = url,
+            otkey = otkey
         )
     }
 }

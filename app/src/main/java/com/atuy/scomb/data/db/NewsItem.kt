@@ -14,5 +14,6 @@ data class NewsItem(
     val publishTime: String,
     val tags: String,
     var unread: Boolean,
-    val url: String
+    val url: String,
+    val otkey: String?
 )

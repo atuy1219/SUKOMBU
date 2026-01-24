@@ -129,11 +129,8 @@ class ScombzRepository @Inject constructor(
             }
 
             ensureAuthenticated()
-            val otkeyResult = getOtkey()
-            val otkey = otkeyResult.getOrNull() ?: run {
-                if (otkeyResult.exceptionOrNull() is SessionExpiredException) throw SessionExpiredException()
-                throw Exception(context.getString(R.string.error_otkey_failed))
-            }
+            // ここでgetOtkey()を呼ぶ必要はない。各タスクにotkeyが含まれているため。
+            // しかし、セッション切れチェックはensureAuthenticated()で行っている。
 
             val calendar = Calendar.getInstance()
             val year = calendar.get(Calendar.YEAR)
@@ -143,7 +140,7 @@ class ScombzRepository @Inject constructor(
             val response = apiService.getTasks(yearMonth)
             val apiTasks = validateResponse(response) ?: emptyList()
 
-            val dbTasks = apiTasks.mapNotNull { it.toDbTask(otkey) }
+            val dbTasks = apiTasks.mapNotNull { it.toDbTask() }
 
             dbTasks.forEach { taskDao.insertOrUpdateTask(it) }
             dbTasks
@@ -162,11 +159,7 @@ class ScombzRepository @Inject constructor(
             val customLinksMap = existingCells.associate { it.classId to it.customLinksJson }
 
             ensureAuthenticated()
-            val otkeyResult = getOtkey()
-            val otkey = otkeyResult.getOrNull() ?: run {
-                if (otkeyResult.exceptionOrNull() is SessionExpiredException) throw SessionExpiredException()
-                throw Exception(context.getString(R.string.error_otkey_failed))
-            }
+            // otkey取得処理削除
 
             val yearMonth = if (term == "1") "${year}01" else "${year}02"
 
@@ -178,7 +171,6 @@ class ScombzRepository @Inject constructor(
                     year,
                     term,
                     timetableTitle,
-                    otkey,
                     existingUserNote = null, // APIの値を正とするため、ローカルキャッシュは無視
                     existingCustomLinks = customLinksMap[it.id]
                 )
@@ -236,11 +228,7 @@ class ScombzRepository @Inject constructor(
 
             ensureAuthenticated()
             val currentTerm = DateUtils.getCurrentScombTerm()
-            val otkeyResult = getOtkey()
-            val otkey = otkeyResult.getOrNull() ?: run {
-                if (otkeyResult.exceptionOrNull() is SessionExpiredException) throw SessionExpiredException()
-                throw Exception(context.getString(R.string.error_otkey_failed))
-            }
+            // otkey取得処理削除
 
             val response = apiService.getNews()
             val apiNews = validateResponse(response) ?: emptyList()
@@ -248,7 +236,7 @@ class ScombzRepository @Inject constructor(
             val existingNewsMap = newsItemDao.getAllNews().associate { it.newsId to it.unread }
 
             val dbNews = apiNews.map { apiItem ->
-                val newItem = apiItem.toDbNewsItem(otkey, currentTerm.yearApiTerm)
+                val newItem = apiItem.toDbNewsItem(currentTerm.yearApiTerm)
                 if (existingNewsMap[newItem.newsId] == false) {
                     newItem.copy(unread = false)
                 } else {
