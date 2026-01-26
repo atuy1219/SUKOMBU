@@ -2,6 +2,7 @@ package com.atuy.scomb.ui
 
 import android.app.Activity
 import android.util.Log
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
@@ -38,11 +39,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -81,14 +84,23 @@ fun ScombApp(
     val taskListViewModel: TaskListViewModel = hiltViewModel()
 
     val context = LocalContext.current
+    val activity = context as? Activity
+    val currentIntent by rememberUpdatedState(activity?.intent)
 
-    LaunchedEffect(authState, navController) {
+    LaunchedEffect(authState, navController, currentIntent) {
         Log.d(
             "ScombApp_Debug",
             "LaunchedEffect triggered. AuthState is: ${authState::class.java.simpleName}"
         )
 
         if (authState is AuthState.Authenticated) {
+            val notificationUrl = currentIntent?.getStringExtra("notification_url")
+            if (!notificationUrl.isNullOrBlank()) {
+                openUrlInCustomTab(context, notificationUrl)
+                currentIntent?.removeExtra("notification_url")
+                currentIntent?.removeExtra("notification_type")
+            }
+
             val activity = context as? Activity
             val intent = activity?.intent
             val destination = intent?.getStringExtra("destination")
@@ -428,4 +440,13 @@ fun TimetableTopBar(
             containerColor = MaterialTheme.colorScheme.background
         )
     )
+}
+
+private fun openUrlInCustomTab(context: android.content.Context, url: String) {
+    runCatching {
+        val customTabsIntent = CustomTabsIntent.Builder().build()
+        customTabsIntent.launchUrl(context, url.toUri())
+    }.onFailure {
+        Log.e("ScombApp", "Failed to open Custom Tab", it)
+    }
 }

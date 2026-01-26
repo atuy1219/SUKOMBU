@@ -1,5 +1,14 @@
 package com.atuy.scomb.service
 
+import android.Manifest
+import android.app.PendingIntent
+import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import com.atuy.scomb.MainActivity
+import com.atuy.scomb.R
 import com.atuy.scomb.data.repository.ScombzRepository
 import com.atuy.scomb.util.AppLogger
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -13,6 +22,10 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class ScombMessagingService : FirebaseMessagingService() {
+
+    companion object {
+        private const val NEWS_NOTIFICATION_CHANNEL_ID = "SCOMB_MOBILE_NEWS_NOTIFICATION"
+    }
 
     @Inject
     lateinit var scombzRepository: ScombzRepository
@@ -44,14 +57,49 @@ class ScombMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(remoteMessage)
         AppLogger.d("From: ${remoteMessage.from}")
 
-        // データペイロードが含まれている場合
-        if (remoteMessage.data.isNotEmpty()) {
+        val data = remoteMessage.data
+        val urlFromData = data["url"] ?: data["newsUrl"]
+        val urlFromNotification = remoteMessage.notification?.link?.toString()
+        val newsUrl = urlFromData ?: urlFromNotification
+
+        val title = data["title"] ?: remoteMessage.notification?.title ?: getString(R.string.app_name)
+        val body = data["body"] ?: remoteMessage.notification?.body ?: "新しいお知らせがあります"
+
+        if (newsUrl.isNullOrBlank()) {
             AppLogger.d("Message data payload: ${remoteMessage.data}")
-            // ここで独自の通知を表示したり、DBを更新したりする
+            remoteMessage.notification?.let { AppLogger.d("Message Notification Body: ${it.body}") }
+            return
         }
 
-        remoteMessage.notification?.let {
-            AppLogger.d("Message Notification Body: ${it.body}")
+        showNewsNotification(title, body, newsUrl)
+    }
+
+    private fun showNewsNotification(title: String, body: String, url: String) {
+        val notificationId = url.hashCode()
+        val clickIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("notification_url", url)
+            putExtra("notification_type", "news")
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            notificationId,
+            clickIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(this, NEWS_NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            NotificationManagerCompat.from(this).notify(notificationId, builder.build())
+        } else {
+            AppLogger.w("Notification permission not granted; skipping news notification")
         }
     }
 }

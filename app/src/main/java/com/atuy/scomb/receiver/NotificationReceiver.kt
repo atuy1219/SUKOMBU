@@ -1,6 +1,7 @@
 package com.atuy.scomb.receiver
 
 import android.Manifest
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -9,6 +10,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.atuy.scomb.MainActivity
 import com.atuy.scomb.R
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -18,6 +20,7 @@ class NotificationReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "NotificationReceiver"
+        private const val TASK_NOTIFICATION_CHANNEL_ID = "SCOMB_MOBILE_TASK_NOTIFICATION"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -36,6 +39,7 @@ class NotificationReceiver : BroadcastReceiver() {
 
         val taskId = intent.getStringExtra("TASK_ID") ?: return
         val taskTitle = intent.getStringExtra("TASK_TITLE") ?: "課題"
+        val taskUrl = intent.getStringExtra("TASK_URL")
         val minutesBefore = intent.getIntExtra("NOTIFICATION_MINUTES_BEFORE", 0)
 
         // メッセージの構築
@@ -48,8 +52,20 @@ class NotificationReceiver : BroadcastReceiver() {
 
         Log.d(TAG, "onReceive: 通知処理を開始します - Title: $taskTitle, Message: $message")
 
-        val channelId = "SCOMB_MOBILE_TASK_NOTIFICATION"
+        val channelId = TASK_NOTIFICATION_CHANNEL_ID
         val notificationId = taskId.hashCode()
+
+        val clickIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("notification_url", taskUrl)
+            putExtra("notification_type", "task")
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            notificationId,
+            clickIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -57,6 +73,7 @@ class NotificationReceiver : BroadcastReceiver() {
             .setContentText(taskTitle)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
 
         with(NotificationManagerCompat.from(context)) {
             if (ContextCompat.checkSelfPermission(

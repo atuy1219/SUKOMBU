@@ -1,6 +1,7 @@
 package com.atuy.scomb
 
 import android.content.BroadcastReceiver
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,6 +42,11 @@ class MainActivity : ComponentActivity() {
                 ScombApp()
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
 
     override fun onResume() {

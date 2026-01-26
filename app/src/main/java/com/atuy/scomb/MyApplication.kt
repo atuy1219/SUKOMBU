@@ -122,15 +122,24 @@ class MyApplication : Application(), Configuration.Provider {
             .build()
 
     private fun createNotificationChannel() {
-        val channelId = "SCOMB_MOBILE_TASK_NOTIFICATION"
-        val name = "課題の通知"
-        val descriptionText = "課題の締め切りが近づくと通知します"
-        val importance = NotificationManager.IMPORTANCE_HIGH
-        val channel = NotificationChannel(channelId, name, importance).apply {
-            description = descriptionText
+        val taskChannelId = "SCOMB_MOBILE_TASK_NOTIFICATION"
+        val taskName = "課題の通知"
+        val taskDescriptionText = "課題の締め切りが近づくと通知します"
+        val taskImportance = NotificationManager.IMPORTANCE_HIGH
+        val taskChannel = NotificationChannel(taskChannelId, taskName, taskImportance).apply {
+            description = taskDescriptionText
         }
+
+        val newsChannelId = "SCOMB_MOBILE_NEWS_NOTIFICATION"
+        val newsName = "お知らせの通知"
+        val newsDescriptionText = "ScombZからのお知らせを通知します"
+        val newsChannel = NotificationChannel(newsChannelId, newsName, NotificationManager.IMPORTANCE_DEFAULT).apply {
+            description = newsDescriptionText
+        }
+
         val notificationManager: NotificationManager =
             getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(channel)
+        notificationManager.createNotificationChannel(taskChannel)
+        notificationManager.createNotificationChannel(newsChannel)
     }
 }
