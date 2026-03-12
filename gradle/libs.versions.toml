@@ -2,7 +2,7 @@
 agp = "9.1.0"
 browser = "1.9.0"
 kotlin = "2.3.10"
-coreKtx = "1.17.0"
+coreKtx = "1.18.0"
 lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.12.4"
 composeBom = "2026.02.01"
