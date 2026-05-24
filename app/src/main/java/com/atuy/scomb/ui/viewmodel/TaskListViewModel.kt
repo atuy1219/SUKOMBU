@@ -54,7 +54,7 @@ class TaskListViewModel @Inject constructor(
     val openUrlEvent = _openUrlEvent.receiveAsFlow()
 
     init {
-        fetchTasks(forceRefresh = false)
+        fetchTasks(forceRefresh = true)
         observeAutoRefresh()
     }
 

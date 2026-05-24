@@ -11,6 +11,9 @@ interface TaskDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateTask(task: Task)
 
+    @Query("DELETE FROM task_table WHERE addManually = 0")
+    suspend fun clearApiTasks()
+
     @Query("SELECT * FROM task_table ORDER BY deadline ASC")
     suspend fun getAllTasks(): List<Task>
 

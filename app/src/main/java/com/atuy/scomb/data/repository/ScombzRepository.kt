@@ -130,16 +130,15 @@ class ScombzRepository @Inject constructor(
 
             ensureAuthenticated()
 
-            val calendar = Calendar.getInstance()
-            val year = calendar.get(Calendar.YEAR)
-            val month = calendar.get(Calendar.MONTH) + 1
-            val yearMonth = String.format(Locale.US, "%d%02d", year, month)
+            val currentTerm = DateUtils.getCurrentScombTerm()
+            val yearMonth = currentTerm.yearApiTerm
 
             val response = apiService.getTasks(yearMonth)
             val apiTasks = validateResponse(response) ?: emptyList()
 
             val dbTasks = apiTasks.mapNotNull { it.toDbTask() }
 
+            taskDao.clearApiTasks()
             dbTasks.forEach { taskDao.insertOrUpdateTask(it) }
             dbTasks
         }
