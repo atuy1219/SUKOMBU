@@ -14,9 +14,13 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Refresh
@@ -30,6 +34,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -43,8 +49,11 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -154,6 +163,9 @@ fun ScombApp(
     val bottomBarScreens =
         listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
     val shouldShowBottomBar = currentDestination?.route in bottomBarScreens.map { it.route }
+    // Tablet layouts should be selected by available logical width, not physical dpi.
+    // smallestScreenWidthDp also remains stable when the device rotates.
+    val isTablet = LocalConfiguration.current.smallestScreenWidthDp >= 600
 
     Scaffold(
         topBar = {
@@ -167,7 +179,7 @@ fun ScombApp(
             }
         },
         bottomBar = {
-            if (shouldShowBottomBar && authState is AuthState.Authenticated) {
+            if (shouldShowBottomBar && authState is AuthState.Authenticated && !isTablet) {
                 NavigationBar {
                     bottomBarScreens.forEach { screen ->
                         NavigationBarItem(
@@ -189,19 +201,51 @@ fun ScombApp(
             }
         }
     ) { innerPadding ->
-        if (authState is AuthState.Loading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            if (isTablet && shouldShowBottomBar && authState is AuthState.Authenticated) {
+                NavigationRail(modifier = Modifier.fillMaxHeight()) {
+                    Column(
+                        modifier = Modifier.fillMaxHeight(),
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                    ) {
+                        bottomBarScreens.forEach { screen ->
+                            NavigationRailItem(
+                                icon = { Icon(screen.icon, contentDescription = null) },
+                                label = { Text(stringResource(screen.resourceId)) },
+                                selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                                onClick = {
+                                    navController.navigate(screen.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
             }
-        } else {
-            val startDestination =
-                if (authState is AuthState.Authenticated) Screen.Home.route else Screen.Login.route
 
-            SharedTransitionLayout {
-                NavHost(
-                    navController = navController,
-                    startDestination = startDestination,
-                    modifier = Modifier.padding(innerPadding),
+            Box(modifier = Modifier.weight(1f)) {
+                if (authState is AuthState.Loading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    val startDestination =
+                        if (authState is AuthState.Authenticated) Screen.Home.route else Screen.Login.route
+
+                    SharedTransitionLayout {
+                        NavHost(
+                            navController = navController,
+                            startDestination = startDestination,
+                            modifier = Modifier.fillMaxSize(),
                     enterTransition = {
                         val initialIndex =
                             bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
@@ -236,29 +280,43 @@ fun ScombApp(
                             slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(75))
                         }
                     }
-                ) {
+                        ) {
                     composable(Screen.Login.route) {
-                        LoginScreen()
+                        AdaptiveRouteContainer(isTablet, 520.dp) { LoginScreen() }
                     }
                     composable(Screen.Home.route) {
-                        HomeScreen(
-                            navController = navController,
-                            paddingValues = innerPadding,
-                            sharedTransitionScope = this@SharedTransitionLayout,
-                            animatedVisibilityScope = this@composable
-                        )
+                        AdaptiveRouteContainer(isTablet, 1200.dp) {
+                            HomeScreen(
+                                navController = navController,
+                                paddingValues = innerPadding,
+                                sharedTransitionScope = this@SharedTransitionLayout,
+                                animatedVisibilityScope = this@composable
+                            )
+                        }
                     }
-                    composable(Screen.Tasks.route) { TaskListScreen(viewModel = taskListViewModel) }
+                    composable(Screen.Tasks.route) {
+                        AdaptiveRouteContainer(isTablet, 900.dp) {
+                            TaskListScreen(viewModel = taskListViewModel)
+                        }
+                    }
                     composable(Screen.Timetable.route) {
-                        TimetableScreen(
-                            navController,
-                            timetableViewModel,
-                            sharedTransitionScope = this@SharedTransitionLayout,
-                            animatedVisibilityScope = this@composable
-                        )
+                        AdaptiveRouteContainer(isTablet, 1400.dp) {
+                            TimetableScreen(
+                                navController,
+                                timetableViewModel,
+                                sharedTransitionScope = this@SharedTransitionLayout,
+                                animatedVisibilityScope = this@composable
+                            )
+                        }
                     }
-                    composable(Screen.News.route) { NewsScreen(newsViewModel) }
-                    composable(Screen.Settings.route) { SettingsScreen(navController = navController) }
+                    composable(Screen.News.route) {
+                        AdaptiveRouteContainer(isTablet, 900.dp) { NewsScreen(newsViewModel) }
+                    }
+                    composable(Screen.Settings.route) {
+                        AdaptiveRouteContainer(isTablet, 900.dp) {
+                            SettingsScreen(navController = navController)
+                        }
+                    }
                     composable(
                         route = Screen.ClassDetail.route,
                         arguments = listOf(
@@ -277,17 +335,49 @@ fun ScombApp(
                         val dayOfWeek = backStackEntry.arguments?.getInt("dayOfWeek") ?: -1
                         val period = backStackEntry.arguments?.getInt("period") ?: -1
 
-                        ClassDetailScreen(
-                            navController = navController,
-                            classId = classId,
-                            dayOfWeek = dayOfWeek,
-                            period = period,
-                            sharedTransitionScope = this@SharedTransitionLayout,
-                            animatedVisibilityScope = this@composable
-                        )
+                        AdaptiveRouteContainer(isTablet, 1000.dp) {
+                            ClassDetailScreen(
+                                navController = navController,
+                                classId = classId,
+                                dayOfWeek = dayOfWeek,
+                                period = period,
+                                sharedTransitionScope = this@SharedTransitionLayout,
+                                animatedVisibilityScope = this@composable
+                            )
+                        }
+                    }
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AdaptiveRouteContainer(
+    isTablet: Boolean,
+    maxWidth: Dp,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .then(
+                    if (isTablet) {
+                        Modifier
+                            .widthIn(max = maxWidth)
+                            .fillMaxWidth()
+                    } else {
+                        Modifier.fillMaxWidth()
+                    }
+                )
+        ) {
+            content()
         }
     }
 }
