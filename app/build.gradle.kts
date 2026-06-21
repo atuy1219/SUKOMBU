@@ -38,7 +38,7 @@ val gitCommitCount = try {
 
 android {
     namespace = "com.atuy.scomb"
-    compileSdk = 36
+    compileSdk = 37
 
     signingConfigs {
         create("release") {
@@ -72,7 +72,7 @@ android {
     defaultConfig {
         applicationId = "com.atuy.scomb"
         minSdk = 35
-        targetSdk = 36
+        targetSdk = 37
 
         versionCode = gitCommitCount
         versionName = gitVersionName
