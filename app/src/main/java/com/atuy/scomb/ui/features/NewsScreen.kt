@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -75,16 +77,13 @@ fun NewsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    fun openUrlInCustomTab(context: Context, url: String) {
-        val builder = CustomTabsIntent.Builder()
-        val customTabsIntent = builder.build()
-        customTabsIntent.launchUrl(context, url.toUri())
-    }
-
     Column(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is NewsUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator()
                 }
             }
@@ -98,22 +97,21 @@ fun NewsScreen(
                     FilterBar(
                         filter = state.filter,
                         categories = state.allCategories,
-                        onFilterChanged = { viewModel.updateFilter(it) }
+                        authors = state.allAuthors,
+                        onFilterChanged = viewModel::updateFilter
                     )
                 }
 
                 PullToRefreshBox(
                     isRefreshing = state.isRefreshing,
-                    onRefresh = {
-                        viewModel.fetchNews(forceRefresh = true)
-                    },
+                    onRefresh = { viewModel.fetchNews(forceRefresh = true) },
                     modifier = Modifier.weight(1f)
                 ) {
                     NewsList(
                         newsItems = state.filteredNews,
                         onItemClick = { newsItem ->
                             viewModel.markAsRead(newsItem)
-                            openUrlInCustomTab(context, newsItem.url)
+                            context.openNewsUrl(newsItem.url)
                         }
                     )
                 }
@@ -129,13 +127,22 @@ fun NewsScreen(
     }
 }
 
+private fun Context.openNewsUrl(url: String) {
+    CustomTabsIntent.Builder()
+        .build()
+        .launchUrl(this, url.toUri())
+}
+
 @Composable
 fun FilterBar(
     filter: NewsFilter,
     categories: List<String>,
+    authors: List<String>,
     onFilterChanged: (NewsFilter) -> Unit
 ) {
-    var searchQuery by remember { mutableStateOf(filter.searchQuery) }
+    var searchQuery by remember(filter.searchQuery) {
+        mutableStateOf(filter.searchQuery)
+    }
     val focusManager = LocalFocusManager.current
 
     Column(
@@ -150,99 +157,125 @@ fun FilterBar(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = null)
+            },
             trailingIcon = if (searchQuery.isNotEmpty()) {
                 {
-                    IconButton(onClick = {
-                        searchQuery = ""
-                        onFilterChanged(filter.copy(searchQuery = ""))
-                    }) {
+                    IconButton(
+                        onClick = {
+                            searchQuery = ""
+                            onFilterChanged(filter.copy(searchQuery = ""))
+                        }
+                    ) {
                         Icon(Icons.Default.Close, contentDescription = "クリア")
                     }
                 }
-            } else null,
+            } else {
+                null
+            },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = {
-                onFilterChanged(filter.copy(searchQuery = searchQuery))
-                focusManager.clearFocus()
-            })
+            keyboardActions = KeyboardActions(
+                onSearch = {
+                    onFilterChanged(filter.copy(searchQuery = searchQuery))
+                    focusManager.clearFocus()
+                }
+            )
         )
+
         Spacer(modifier = Modifier.height(8.dp))
+
         Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             FilterChip(
                 selected = filter.unreadOnly,
-                onClick = { onFilterChanged(filter.copy(unreadOnly = !filter.unreadOnly)) },
+                onClick = {
+                    onFilterChanged(filter.copy(unreadOnly = !filter.unreadOnly))
+                },
                 label = { Text("未読のみ") }
             )
-            MultiSelectCategorySelector(
-                allCategories = categories,
-                selectedCategories = filter.selectedCategories,
-                onSelectionChanged = { onFilterChanged(filter.copy(selectedCategories = it)) }
+
+            MultiSelectFilterChip(
+                label = "カテゴリ",
+                dialogTitle = "カテゴリを選択",
+                options = categories,
+                selectedOptions = filter.selectedCategories,
+                onSelectionChanged = {
+                    onFilterChanged(filter.copy(selectedCategories = it))
+                }
+            )
+
+            MultiSelectFilterChip(
+                label = "教授",
+                dialogTitle = "教授名を選択",
+                options = authors,
+                selectedOptions = filter.selectedAuthors,
+                onSelectionChanged = {
+                    onFilterChanged(filter.copy(selectedAuthors = it))
+                }
             )
         }
     }
 }
 
 @Composable
-fun MultiSelectCategorySelector(
-    allCategories: List<String>,
-    selectedCategories: Set<String>,
+fun MultiSelectFilterChip(
+    label: String,
+    dialogTitle: String,
+    options: List<String>,
+    selectedOptions: Set<String>,
     onSelectionChanged: (Set<String>) -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
 
-    val buttonText = if (selectedCategories.isEmpty()) {
-        "カテゴリ"
+    val chipLabel = if (selectedOptions.isEmpty()) {
+        label
     } else {
-        "カテゴリ (${selectedCategories.size})"
+        "$label (${selectedOptions.size})"
     }
 
     AssistChip(
         onClick = { showDialog = true },
-        label = { Text(buttonText) },
-        trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
+        label = { Text(chipLabel) },
+        trailingIcon = {
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+        },
+        enabled = options.isNotEmpty()
     )
 
     if (showDialog) {
-        val tempSelection = remember { mutableStateOf(selectedCategories) }
+        var temporarySelection by remember(selectedOptions) {
+            mutableStateOf(selectedOptions)
+        }
 
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("カテゴリを選択") },
+            title = { Text(dialogTitle) },
             text = {
                 LazyColumn {
-                    items(allCategories) { category ->
+                    items(options, key = { it }) { option ->
                         Row(
-                            Modifier
+                            modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    val currentSelection = tempSelection.value.toMutableSet()
-                                    if (category in currentSelection) {
-                                        currentSelection.remove(category)
-                                    } else {
-                                        currentSelection.add(category)
-                                    }
-                                    tempSelection.value = currentSelection
+                                    temporarySelection = temporarySelection.toggle(option)
                                 }
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Checkbox(
-                                checked = category in tempSelection.value,
-                                onCheckedChange = { isChecked ->
-                                    val currentSelection = tempSelection.value.toMutableSet()
-                                    if (isChecked) {
-                                        currentSelection.add(category)
-                                    } else {
-                                        currentSelection.remove(category)
-                                    }
-                                    tempSelection.value = currentSelection
+                                checked = option in temporarySelection,
+                                onCheckedChange = {
+                                    temporarySelection = temporarySelection.toggle(option)
                                 }
                             )
-                            Text(category, modifier = Modifier.padding(start = 8.dp))
+                            Text(
+                                text = option,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
                         }
                     }
                 }
@@ -250,7 +283,7 @@ fun MultiSelectCategorySelector(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        onSelectionChanged(tempSelection.value)
+                        onSelectionChanged(temporarySelection)
                         showDialog = false
                     }
                 ) {
@@ -258,9 +291,7 @@ fun MultiSelectCategorySelector(
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showDialog = false }
-                ) {
+                TextButton(onClick = { showDialog = false }) {
                     Text("キャンセル")
                 }
             }
@@ -268,39 +299,56 @@ fun MultiSelectCategorySelector(
     }
 }
 
+private fun Set<String>.toggle(value: String): Set<String> {
+    return if (value in this) this - value else this + value
+}
 
 @Composable
-fun NewsList(newsItems: List<NewsItem>, onItemClick: (NewsItem) -> Unit) {
+fun NewsList(
+    newsItems: List<NewsItem>,
+    onItemClick: (NewsItem) -> Unit
+) {
     if (newsItems.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
             Text(
                 "表示するお知らせがありません。",
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(newsItems) { news ->
-                NewsCard(
-                    newsItem = news,
-                    onClick = { onItemClick(news) }
-                )
-            }
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(
+            items = newsItems,
+            key = NewsItem::newsId
+        ) { news ->
+            NewsCard(
+                newsItem = news,
+                onClick = { onItemClick(news) }
+            )
         }
     }
 }
 
 @Composable
-fun NewsCard(newsItem: NewsItem, onClick: () -> Unit) {
+fun NewsCard(
+    newsItem: NewsItem,
+    onClick: () -> Unit
+) {
     val alpha = if (newsItem.unread) 1.0f else 0.6f
-    val containerColor = if (newsItem.unread)
+    val containerColor = if (newsItem.unread) {
         MaterialTheme.colorScheme.surfaceContainer
-    else
+    } else {
         MaterialTheme.colorScheme.surfaceContainerLow
+    }
 
     Card(
         modifier = Modifier
@@ -309,11 +357,11 @@ fun NewsCard(newsItem: NewsItem, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (newsItem.unread) 2.dp else 0.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (newsItem.unread) 2.dp else 0.dp
+        )
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -322,17 +370,25 @@ fun NewsCard(newsItem: NewsItem, onClick: () -> Unit) {
                 Text(
                     text = newsItem.title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (newsItem.unread) FontWeight.Bold else FontWeight.Medium,
+                    fontWeight = if (newsItem.unread) {
+                        FontWeight.Bold
+                    } else {
+                        FontWeight.Medium
+                    },
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+
                 if (newsItem.unread) {
                     Box(
                         modifier = Modifier
                             .padding(start = 8.dp, top = 4.dp)
                             .size(8.dp)
-                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            .background(
+                                MaterialTheme.colorScheme.primary,
+                                CircleShape
+                            )
                     )
                 }
             }
@@ -343,7 +399,6 @@ fun NewsCard(newsItem: NewsItem, onClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // カテゴリバッジ
                 Box(
                     modifier = Modifier
                         .background(
