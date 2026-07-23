@@ -6,6 +6,13 @@ on:
       - dev
     paths:
       - .github/workflows/apply-news-notification-toggle.yml
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 permissions:
   contents: write
