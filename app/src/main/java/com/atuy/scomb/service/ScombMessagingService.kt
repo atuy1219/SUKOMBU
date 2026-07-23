@@ -9,6 +9,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.atuy.scomb.MainActivity
 import com.atuy.scomb.R
+import com.atuy.scomb.data.manager.SettingsManager
 import com.atuy.scomb.data.repository.ScombzRepository
 import com.atuy.scomb.util.AppLogger
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -17,6 +18,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -29,6 +31,9 @@ class ScombMessagingService : FirebaseMessagingService() {
 
     @Inject
     lateinit var scombzRepository: ScombzRepository
+
+    @Inject
+    lateinit var settingsManager: SettingsManager
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -65,7 +70,13 @@ class ScombMessagingService : FirebaseMessagingService() {
             return
         }
 
-        showNewsNotification(title, body, newsUrl)
+        serviceScope.launch {
+            if (!settingsManager.newsNotificationsEnabledFlow.first()) {
+                AppLogger.d("News notifications disabled; skipping notification")
+                return@launch
+            }
+            showNewsNotification(title, body, newsUrl)
+        }
     }
 
     private fun showNewsNotification(title: String, body: String, url: String) {

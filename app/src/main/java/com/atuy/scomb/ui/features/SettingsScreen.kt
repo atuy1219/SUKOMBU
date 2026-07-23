@@ -136,6 +136,8 @@ fun SettingsScreen(
         item {
             SettingsGroupCard {
                 NotificationSettingsSection(
+                    newsNotificationsEnabled = uiState.newsNotificationsEnabled,
+                    onNewsNotificationsEnabledChange = { viewModel.updateNewsNotificationsEnabled(it) },
                     selectedTimings = uiState.notificationTimings,
                     onTimingsChange = { viewModel.updateNotificationTimings(it) }
                 )
@@ -354,6 +356,8 @@ private fun TimetableSettingsSection(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun NotificationSettingsSection(
+    newsNotificationsEnabled: Boolean,
+    onNewsNotificationsEnabledChange: (Boolean) -> Unit,
     selectedTimings: Set<Int>,
     onTimingsChange: (Set<Int>) -> Unit
 ) {
@@ -382,6 +386,37 @@ private fun NotificationSettingsSection(
         SectionHeader(
             title = stringResource(R.string.settings_notification_title),
             icon = Icons.Default.Notifications
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "お知らせ通知",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = "ScombZから届くお知らせを通知します",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = newsNotificationsEnabled,
+                onCheckedChange = onNewsNotificationsEnabledChange
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "課題の締切通知",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(bottom = 4.dp)
         )
 
         Text(

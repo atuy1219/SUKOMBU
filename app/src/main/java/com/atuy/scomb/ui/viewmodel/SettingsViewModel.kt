@@ -20,6 +20,7 @@ import javax.inject.Inject
 
 data class SettingsUiState(
     val notificationTimings: Set<Int> = emptySet(),
+    val newsNotificationsEnabled: Boolean = true,
     val showHomeNews: Boolean = true,
     val isDebugMode: Boolean = false,
     val displayWeekDays: Set<Int> = setOf(0, 1, 2, 3, 4, 5), // 0=月 ... 5=土
@@ -35,17 +36,19 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    // 6つのFlowを結合するために、下部で定義した拡張combine関数を使用します
+    // 7つのFlowを結合するために、下部で定義した拡張combine関数を使用します
     val uiState: StateFlow<SettingsUiState> = combine(
         settingsManager.notificationTimingsFlow,
+        settingsManager.newsNotificationsEnabledFlow,
         settingsManager.showHomeNewsFlow,
         settingsManager.debugModeFlow,
         settingsManager.displayWeekDaysFlow,
         settingsManager.timetablePeriodCountFlow,
         settingsManager.themeModeFlow
-    ) { timings, showNews, debugMode, weekDays, periodCount, themeMode ->
+    ) { timings, newsNotificationsEnabled, showNews, debugMode, weekDays, periodCount, themeMode ->
         SettingsUiState(
             notificationTimings = timings.mapNotNull { it.toIntOrNull() }.toSet(),
+            newsNotificationsEnabled = newsNotificationsEnabled,
             showHomeNews = showNews,
             isDebugMode = debugMode,
             displayWeekDays = weekDays,
@@ -64,6 +67,12 @@ class SettingsViewModel @Inject constructor(
     fun updateNotificationTimings(timings: Set<Int>) {
         viewModelScope.launch {
             settingsManager.setNotificationTimings(timings.map { it.toString() }.toSet())
+        }
+    }
+
+    fun updateNewsNotificationsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsManager.setNewsNotificationsEnabled(enabled)
         }
     }
 
@@ -131,21 +140,23 @@ class SettingsViewModel @Inject constructor(
 }
 
 @Suppress("UNCHECKED_CAST")
-fun <T1, T2, T3, T4, T5, T6, R> combine(
+fun <T1, T2, T3, T4, T5, T6, T7, R> combine(
     flow1: Flow<T1>,
     flow2: Flow<T2>,
     flow3: Flow<T3>,
     flow4: Flow<T4>,
     flow5: Flow<T5>,
     flow6: Flow<T6>,
-    transform: suspend (T1, T2, T3, T4, T5, T6) -> R
-): Flow<R> = combine(listOf(flow1, flow2, flow3, flow4, flow5, flow6)) { args ->
+    flow7: Flow<T7>,
+    transform: suspend (T1, T2, T3, T4, T5, T6, T7) -> R
+): Flow<R> = combine(listOf(flow1, flow2, flow3, flow4, flow5, flow6, flow7)) { args ->
     transform(
         args[0] as T1,
         args[1] as T2,
         args[2] as T3,
         args[3] as T4,
         args[4] as T5,
-        args[5] as T6
+        args[5] as T6,
+        args[6] as T7
     )
 }
