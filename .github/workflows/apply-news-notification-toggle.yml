@@ -141,49 +141,48 @@ jobs:
               '    onNewsNotificationsEnabledChange: (Boolean) -> Unit,\n'
               '    selectedTimings: Set<Int>,'
           )
-          notification_function = screen
-          file = Path(notification_function)
+          file = Path(screen)
           text = file.read_text()
           start = text.index('private fun NotificationSettingsSection(')
-          marker = '''        SectionHeader(
-              title = stringResource(R.string.settings_notification_title),
-              icon = Icons.Default.Notifications
+          marker = (
+              '        SectionHeader(\n'
+              '            title = stringResource(R.string.settings_notification_title),\n'
+              '            icon = Icons.Default.Notifications\n'
+              '        )\n'
           )
-'''
           local_index = text.index(marker, start)
           insert_at = local_index + len(marker)
-          addition = '''
-          Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-          ) {
-              Column(modifier = Modifier.weight(1f)) {
-                  Text(
-                      text = "お知らせ通知",
-                      style = MaterialTheme.typography.bodyLarge
-                  )
-                  Text(
-                      text = "ScombZから届くお知らせを通知します",
-                      style = MaterialTheme.typography.bodySmall,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant
-                  )
-              }
-              Switch(
-                  checked = newsNotificationsEnabled,
-                  onCheckedChange = onNewsNotificationsEnabledChange
-              )
-          }
-
-          Spacer(modifier = Modifier.height(20.dp))
-
-          Text(
-              text = "課題の締切通知",
-              style = MaterialTheme.typography.bodyLarge,
-              fontWeight = FontWeight.Medium,
-              modifier = Modifier.padding(bottom = 4.dp)
+          addition = (
+              '\n'
+              '        Row(\n'
+              '            modifier = Modifier.fillMaxWidth(),\n'
+              '            horizontalArrangement = Arrangement.SpaceBetween,\n'
+              '            verticalAlignment = Alignment.CenterVertically\n'
+              '        ) {\n'
+              '            Column(modifier = Modifier.weight(1f)) {\n'
+              '                Text(\n'
+              '                    text = "お知らせ通知",\n'
+              '                    style = MaterialTheme.typography.bodyLarge\n'
+              '                )\n'
+              '                Text(\n'
+              '                    text = "ScombZから届くお知らせを通知します",\n'
+              '                    style = MaterialTheme.typography.bodySmall,\n'
+              '                    color = MaterialTheme.colorScheme.onSurfaceVariant\n'
+              '                )\n'
+              '            }\n'
+              '            Switch(\n'
+              '                checked = newsNotificationsEnabled,\n'
+              '                onCheckedChange = onNewsNotificationsEnabledChange\n'
+              '            )\n'
+              '        }\n\n'
+              '        Spacer(modifier = Modifier.height(20.dp))\n\n'
+              '        Text(\n'
+              '            text = "課題の締切通知",\n'
+              '            style = MaterialTheme.typography.bodyLarge,\n'
+              '            fontWeight = FontWeight.Medium,\n'
+              '            modifier = Modifier.padding(bottom = 4.dp)\n'
+              '        )\n'
           )
-'''
           file.write_text(text[:insert_at] + addition + text[insert_at:])
 
           service = "app/src/main/java/com/atuy/scomb/service/ScombMessagingService.kt"
