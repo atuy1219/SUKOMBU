@@ -34,8 +34,7 @@ class ScombMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        AppLogger.d("Refreshed token: $token")
-        // トークンが更新された場合も、サーバーへ再送信が必要です
+        AppLogger.d("FCM token refreshed")
         serviceScope.launch {
             try {
                 scombzRepository.registerFcmToken(token)
@@ -47,10 +46,6 @@ class ScombMessagingService : FirebaseMessagingService() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // 必要ならScopeをキャンセルするが、Serviceが死ぬ時はプロセスごと死ぬことが多いので
-        // 厳密なキャンセルは必須ではないかもしれないが、マナーとして Job.cancel() ぐらいは想定できる
-        // ここでは簡単なフィールド初期化で済ませているため、onDestroyで明示的にキャンセルはしていないが、
-        // SupervisorJobを使っているので問題ない範囲。
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -66,8 +61,7 @@ class ScombMessagingService : FirebaseMessagingService() {
         val body = data["body"] ?: remoteMessage.notification?.body ?: "新しいお知らせがあります"
 
         if (newsUrl.isNullOrBlank()) {
-            AppLogger.d("Message data payload: ${remoteMessage.data}")
-            remoteMessage.notification?.let { AppLogger.d("Message Notification Body: ${it.body}") }
+            AppLogger.d("Message received without a news URL")
             return
         }
 

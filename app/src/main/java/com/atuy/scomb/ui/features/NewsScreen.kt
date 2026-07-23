@@ -7,8 +7,9 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,46 +27,34 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atuy.scomb.data.db.NewsItem
-import com.atuy.scomb.ui.viewmodel.NewsFilter
+import com.atuy.scomb.data.db.hasSourceName
 import com.atuy.scomb.ui.viewmodel.NewsUiState
 import com.atuy.scomb.ui.viewmodel.NewsViewModel
 
@@ -97,8 +86,17 @@ fun NewsScreen(
                     FilterBar(
                         filter = state.filter,
                         categories = state.allCategories,
-                        authors = state.allAuthors,
+                        searchError = state.searchError,
                         onFilterChanged = viewModel::updateFilter
+                    )
+                }
+
+                AnimatedVisibility(visible = state.isSelectionMode) {
+                    NewsSelectionBar(
+                        state = state,
+                        onClearSelection = viewModel::clearSelection,
+                        onToggleSelectAll = viewModel::toggleSelectAllFiltered,
+                        onToggleReadState = viewModel::toggleSelectedReadState
                     )
                 }
 
@@ -109,10 +107,13 @@ fun NewsScreen(
                 ) {
                     NewsList(
                         newsItems = state.filteredNews,
-                        onItemClick = { newsItem ->
+                        isSelectionMode = state.isSelectionMode,
+                        selectedNewsIds = state.selectedNewsIds,
+                        onItemOpen = { newsItem ->
                             viewModel.markAsRead(newsItem)
                             context.openNewsUrl(newsItem.url)
-                        }
+                        },
+                        onSelectionToggle = viewModel::toggleNewsSelection
                     )
                 }
             }
@@ -134,179 +135,56 @@ private fun Context.openNewsUrl(url: String) {
 }
 
 @Composable
-fun FilterBar(
-    filter: NewsFilter,
-    categories: List<String>,
-    authors: List<String>,
-    onFilterChanged: (NewsFilter) -> Unit
+private fun NewsSelectionBar(
+    state: NewsUiState.Success,
+    onClearSelection: () -> Unit,
+    onToggleSelectAll: () -> Unit,
+    onToggleReadState: () -> Unit
 ) {
-    var searchQuery by remember(filter.searchQuery) {
-        mutableStateOf(filter.searchQuery)
-    }
-    val focusManager = LocalFocusManager.current
+    val visibleIds = state.filteredNews.map(NewsItem::newsId).toSet()
+    val allVisibleSelected = visibleIds.isNotEmpty() &&
+        visibleIds.all { it in state.selectedNewsIds }
 
-    Column(
-        modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .background(MaterialTheme.colorScheme.surface)
-    ) {
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            placeholder = { Text("タイトルを検索") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            leadingIcon = {
-                Icon(Icons.Default.Search, contentDescription = null)
-            },
-            trailingIcon = if (searchQuery.isNotEmpty()) {
-                {
-                    IconButton(
-                        onClick = {
-                            searchQuery = ""
-                            onFilterChanged(filter.copy(searchQuery = ""))
-                        }
-                    ) {
-                        Icon(Icons.Default.Close, contentDescription = "クリア")
-                    }
-                }
-            } else {
-                null
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(
-                onSearch = {
-                    onFilterChanged(filter.copy(searchQuery = searchQuery))
-                    focusManager.clearFocus()
-                }
-            )
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
+    Surface(tonalElevation = 1.dp) {
         Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 8.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            FilterChip(
-                selected = filter.unreadOnly,
-                onClick = {
-                    onFilterChanged(filter.copy(unreadOnly = !filter.unreadOnly))
-                },
-                label = { Text("未読のみ") }
+            Text(
+                text = "${state.selectedNewsIds.size}件選択",
+                modifier = Modifier.padding(horizontal = 8.dp),
+                style = MaterialTheme.typography.labelLarge
             )
-
-            MultiSelectFilterChip(
-                label = "カテゴリ",
-                dialogTitle = "カテゴリを選択",
-                options = categories,
-                selectedOptions = filter.selectedCategories,
-                onSelectionChanged = {
-                    onFilterChanged(filter.copy(selectedCategories = it))
-                }
-            )
-
-            MultiSelectFilterChip(
-                label = "教授",
-                dialogTitle = "教授名を選択",
-                options = authors,
-                selectedOptions = filter.selectedAuthors,
-                onSelectionChanged = {
-                    onFilterChanged(filter.copy(selectedAuthors = it))
-                }
-            )
-        }
-    }
-}
-
-@Composable
-fun MultiSelectFilterChip(
-    label: String,
-    dialogTitle: String,
-    options: List<String>,
-    selectedOptions: Set<String>,
-    onSelectionChanged: (Set<String>) -> Unit
-) {
-    var showDialog by remember { mutableStateOf(false) }
-
-    val chipLabel = if (selectedOptions.isEmpty()) {
-        label
-    } else {
-        "$label (${selectedOptions.size})"
-    }
-
-    AssistChip(
-        onClick = { showDialog = true },
-        label = { Text(chipLabel) },
-        trailingIcon = {
-            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-        },
-        enabled = options.isNotEmpty()
-    )
-
-    if (showDialog) {
-        var temporarySelection by remember(selectedOptions) {
-            mutableStateOf(selectedOptions)
-        }
-
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text(dialogTitle) },
-            text = {
-                LazyColumn {
-                    items(options, key = { it }) { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    temporarySelection = temporarySelection.toggle(option)
-                                }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = option in temporarySelection,
-                                onCheckedChange = {
-                                    temporarySelection = temporarySelection.toggle(option)
-                                }
-                            )
-                            Text(
-                                text = option,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onSelectionChanged(temporarySelection)
-                        showDialog = false
-                    }
-                ) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text("キャンセル")
-                }
+            TextButton(
+                onClick = onToggleSelectAll,
+                enabled = state.filteredNews.isNotEmpty()
+            ) {
+                Text(if (allVisibleSelected) "全て解除" else "全て選択")
             }
-        )
+            TextButton(
+                onClick = onToggleReadState,
+                enabled = state.selectedNewsIds.isNotEmpty()
+            ) {
+                Text(if (state.selectedNewsAreAllRead) "未読" else "既読")
+            }
+            IconButton(onClick = onClearSelection) {
+                Icon(Icons.Default.Close, contentDescription = "選択を終了")
+            }
+        }
     }
-}
-
-private fun Set<String>.toggle(value: String): Set<String> {
-    return if (value in this) this - value else this + value
 }
 
 @Composable
 fun NewsList(
     newsItems: List<NewsItem>,
-    onItemClick: (NewsItem) -> Unit
+    isSelectionMode: Boolean,
+    selectedNewsIds: Set<String>,
+    onItemOpen: (NewsItem) -> Unit,
+    onSelectionToggle: (String) -> Unit
 ) {
     if (newsItems.isEmpty()) {
         Box(
@@ -332,41 +210,66 @@ fun NewsList(
         ) { news ->
             NewsCard(
                 newsItem = news,
-                onClick = { onItemClick(news) }
+                isSelectionMode = isSelectionMode,
+                isSelected = news.newsId in selectedNewsIds,
+                onClick = {
+                    if (isSelectionMode) {
+                        onSelectionToggle(news.newsId)
+                    } else {
+                        onItemOpen(news)
+                    }
+                },
+                onLongClick = { onSelectionToggle(news.newsId) },
+                onSelectionToggle = { onSelectionToggle(news.newsId) }
             )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NewsCard(
     newsItem: NewsItem,
-    onClick: () -> Unit
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onSelectionToggle: () -> Unit
 ) {
-    val alpha = if (newsItem.unread) 1.0f else 0.6f
-    val containerColor = if (newsItem.unread) {
-        MaterialTheme.colorScheme.surfaceContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerLow
+    val alpha = if (newsItem.unread || isSelected) 1.0f else 0.6f
+    val containerColor = when {
+        isSelected -> MaterialTheme.colorScheme.primaryContainer
+        newsItem.unread -> MaterialTheme.colorScheme.surfaceContainer
+        else -> MaterialTheme.colorScheme.surfaceContainerLow
     }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(alpha)
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (newsItem.unread) 2.dp else 0.dp
+            defaultElevation = if (newsItem.unread || isSelected) 2.dp else 0.dp
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                if (isSelectionMode) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onSelectionToggle() },
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
+
                 Text(
                     text = newsItem.title,
                     style = MaterialTheme.typography.titleMedium,
@@ -417,11 +320,15 @@ fun NewsCard(
                 Spacer(modifier = Modifier.weight(1f))
 
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = newsItem.domain,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (newsItem.hasSourceName) {
+                        Text(
+                            text = "発信元: ${newsItem.domain}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                     Text(
                         text = newsItem.publishTime,
                         style = MaterialTheme.typography.labelSmall,

@@ -63,14 +63,17 @@ class HomeViewModel @Inject constructor(
         LinkItem("シラバス", "https://syllabus.sic.shibaura-it.ac.jp/"),
         LinkItem("時間割検索", "https://timetable.sic.shibaura-it.ac.jp/"),
         LinkItem("学年歴", "https://www.shibaura-it.ac.jp/campus_life/school_calendar"),
-        LinkItem("S*gsot", "https://sgsot.sic.shibaura-it.ac.jp", appendUsername = true),
+        LinkItem(
+            "CITRUS",
+            "https://sitrus.sic.shibaura-it.ac.jp/SITRUS/login/index.html?N=",
+            appendUsername = true
+        ),
         LinkItem("スーパー英語", "https://supereigo2.sic.shibaura-it.ac.jp/sso/"),
         LinkItem("図書館", "https://lib.shibaura-it.ac.jp")
     )
 
     private val _openUrlEvent = Channel<String>(Channel.BUFFERED)
     val openUrlEvent = _openUrlEvent.receiveAsFlow()
-
 
     init {
         loadHomeData(forceRefresh = false)

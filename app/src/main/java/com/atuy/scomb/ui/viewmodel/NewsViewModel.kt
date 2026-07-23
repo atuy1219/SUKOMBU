@@ -17,8 +17,7 @@ import javax.inject.Inject
 data class NewsFilter(
     val searchQuery: String = "",
     val unreadOnly: Boolean = false,
-    val selectedCategories: Set<String> = emptySet(),
-    val selectedAuthors: Set<String> = emptySet()
+    val selectedCategories: Set<String> = emptySet()
 )
 
 sealed interface NewsUiState {
@@ -27,9 +26,12 @@ sealed interface NewsUiState {
     data class Success(
         val filteredNews: List<NewsItem>,
         val allCategories: List<String>,
-        val allAuthors: List<String>,
         val filter: NewsFilter,
+        val searchError: String?,
         val isSearchActive: Boolean,
+        val isSelectionMode: Boolean = false,
+        val selectedNewsIds: Set<String> = emptySet(),
+        val selectedNewsAreAllRead: Boolean = false,
         val isRefreshing: Boolean = false
     ) : NewsUiState
 
@@ -81,7 +83,8 @@ class NewsViewModel @Inject constructor(
                 val previousSuccess = previousState as? NewsUiState.Success
                 _uiState.value = createSuccessState(
                     filter = previousSuccess?.filter ?: NewsFilter(),
-                    isSearchActive = previousSuccess?.isSearchActive ?: false
+                    isSearchActive = previousSuccess?.isSearchActive ?: false,
+                    selectedNewsIds = previousSuccess?.selectedNewsIds.orEmpty()
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -93,20 +96,62 @@ class NewsViewModel @Inject constructor(
     }
 
     fun markAsRead(newsItem: NewsItem) {
+        if (!newsItem.unread) return
+        updateNewsUnreadState(
+            newsIds = setOf(newsItem.newsId),
+            unread = false,
+            exitSelectionMode = false
+        )
+    }
+
+    fun toggleSelectedReadState() {
+        val currentState = _uiState.value as? NewsUiState.Success ?: return
+        val selectedItems = allNews.filter { it.newsId in currentState.selectedNewsIds }
+        if (selectedItems.isEmpty()) return
+
+        val shouldMarkUnread = selectedItems.all { !it.unread }
+        updateNewsUnreadState(
+            newsIds = currentState.selectedNewsIds,
+            unread = shouldMarkUnread,
+            exitSelectionMode = true
+        )
+    }
+
+    private fun updateNewsUnreadState(
+        newsIds: Set<String>,
+        unread: Boolean,
+        exitSelectionMode: Boolean
+    ) {
+        if (newsIds.isEmpty()) return
+
         viewModelScope.launch {
-            repository.markAsRead(newsItem)
-            allNews = allNews.map { item ->
-                if (item.newsId == newsItem.newsId) item.copy(unread = false) else item
+            val changedItems = allNews.filter { item ->
+                item.newsId in newsIds && item.unread != unread
             }
-            applyUiFilters()
+            repository.setNewsUnread(changedItems, unread)
+
+            allNews = allNews.map { item ->
+                if (item.newsId in newsIds) item.copy(unread = unread) else item
+            }
+
+            val currentState = _uiState.value as? NewsUiState.Success ?: return@launch
+            val selectedIds = if (exitSelectionMode) emptySet() else currentState.selectedNewsIds
+            _uiState.value = buildSuccessState(
+                currentState = currentState,
+                filter = currentState.filter,
+                selectedNewsIds = selectedIds,
+                isSelectionMode = !exitSelectionMode && selectedIds.isNotEmpty()
+            )
         }
     }
 
     fun updateFilter(newFilter: NewsFilter) {
         val currentState = _uiState.value as? NewsUiState.Success ?: return
-        _uiState.value = currentState.copy(
+        _uiState.value = buildSuccessState(
+            currentState = currentState,
             filter = newFilter,
-            filteredNews = applyFilters(allNews, newFilter)
+            selectedNewsIds = currentState.selectedNewsIds,
+            isSelectionMode = currentState.isSelectionMode
         )
     }
 
@@ -117,16 +162,48 @@ class NewsViewModel @Inject constructor(
         )
     }
 
-    private fun applyUiFilters() {
+    fun clearSelection() {
         val currentState = _uiState.value as? NewsUiState.Success ?: return
         _uiState.value = currentState.copy(
-            filteredNews = applyFilters(allNews, currentState.filter)
+            isSelectionMode = false,
+            selectedNewsIds = emptySet(),
+            selectedNewsAreAllRead = false
+        )
+    }
+
+    fun toggleNewsSelection(newsId: String) {
+        val currentState = _uiState.value as? NewsUiState.Success ?: return
+        val selectedIds = currentState.selectedNewsIds.toggle(newsId)
+        _uiState.value = currentState.copy(
+            isSelectionMode = selectedIds.isNotEmpty(),
+            selectedNewsIds = selectedIds,
+            selectedNewsAreAllRead = selectedIds.areAllRead()
+        )
+    }
+
+    fun toggleSelectAllFiltered() {
+        val currentState = _uiState.value as? NewsUiState.Success ?: return
+        val visibleIds = currentState.filteredNews.map(NewsItem::newsId).toSet()
+        if (visibleIds.isEmpty()) return
+
+        val allVisibleSelected = visibleIds.all { it in currentState.selectedNewsIds }
+        val selectedIds = if (allVisibleSelected) {
+            currentState.selectedNewsIds - visibleIds
+        } else {
+            currentState.selectedNewsIds + visibleIds
+        }
+
+        _uiState.value = currentState.copy(
+            isSelectionMode = selectedIds.isNotEmpty(),
+            selectedNewsIds = selectedIds,
+            selectedNewsAreAllRead = selectedIds.areAllRead()
         )
     }
 
     private fun createSuccessState(
         filter: NewsFilter,
-        isSearchActive: Boolean
+        isSearchActive: Boolean,
+        selectedNewsIds: Set<String>
     ): NewsUiState.Success {
         val categories = allNews
             .map(NewsItem::category)
@@ -134,45 +211,70 @@ class NewsViewModel @Inject constructor(
             .distinct()
             .sorted()
 
-        val authors = allNews
-            .map(NewsItem::domain)
-            .filter { it.isNotBlank() && it != UNKNOWN_AUTHOR }
-            .distinct()
-            .sorted()
-
         val normalizedFilter = filter.copy(
-            selectedCategories = filter.selectedCategories.intersect(categories.toSet()),
-            selectedAuthors = filter.selectedAuthors.intersect(authors.toSet())
+            selectedCategories = filter.selectedCategories.intersect(categories.toSet())
         )
+        val existingIds = allNews.map(NewsItem::newsId).toSet()
+        val normalizedSelectedIds = selectedNewsIds.intersect(existingIds)
+        val filtered = applyFilters(allNews, normalizedFilter)
 
         return NewsUiState.Success(
-            filteredNews = applyFilters(allNews, normalizedFilter),
+            filteredNews = filtered.items,
             allCategories = categories,
-            allAuthors = authors,
             filter = normalizedFilter,
+            searchError = filtered.error,
             isSearchActive = isSearchActive,
+            isSelectionMode = normalizedSelectedIds.isNotEmpty(),
+            selectedNewsIds = normalizedSelectedIds,
+            selectedNewsAreAllRead = normalizedSelectedIds.areAllRead(),
             isRefreshing = false
+        )
+    }
+
+    private fun buildSuccessState(
+        currentState: NewsUiState.Success,
+        filter: NewsFilter,
+        selectedNewsIds: Set<String>,
+        isSelectionMode: Boolean
+    ): NewsUiState.Success {
+        val filtered = applyFilters(allNews, filter)
+        return currentState.copy(
+            filteredNews = filtered.items,
+            filter = filter,
+            searchError = filtered.error,
+            isSelectionMode = isSelectionMode,
+            selectedNewsIds = selectedNewsIds,
+            selectedNewsAreAllRead = selectedNewsIds.areAllRead()
         )
     }
 
     private fun applyFilters(
         news: List<NewsItem>,
         filter: NewsFilter
-    ): List<NewsItem> {
-        return news.filter { item ->
-            val queryMatches = filter.searchQuery.isBlank() ||
-                item.title.contains(filter.searchQuery, ignoreCase = true)
+    ): FilteredNews {
+        val matcher = NewsSearchMatcher.parse(filter.searchQuery)
+        val filteredNews = news.filter { item ->
             val unreadMatches = !filter.unreadOnly || item.unread
             val categoryMatches = filter.selectedCategories.isEmpty() ||
                 item.category in filter.selectedCategories
-            val authorMatches = filter.selectedAuthors.isEmpty() ||
-                item.domain in filter.selectedAuthors
 
-            queryMatches && unreadMatches && categoryMatches && authorMatches
+            matcher.matches(item) && unreadMatches && categoryMatches
         }
+        return FilteredNews(filteredNews, matcher.error)
     }
 
-    private companion object {
-        const val UNKNOWN_AUTHOR = "掲載元不明"
+    private fun Set<String>.areAllRead(): Boolean {
+        if (isEmpty()) return false
+        val selectedItems = allNews.filter { it.newsId in this }
+        return selectedItems.size == size && selectedItems.all { !it.unread }
     }
+
+    private data class FilteredNews(
+        val items: List<NewsItem>,
+        val error: String?
+    )
+}
+
+private fun Set<String>.toggle(value: String): Set<String> {
+    return if (value in this) this - value else this + value
 }

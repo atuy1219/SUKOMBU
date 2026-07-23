@@ -64,18 +64,17 @@ class MyApplication : Application(), Configuration.Provider {
             }
 
             FirebaseApp.initializeApp(this, options)
-            AppLogger.d("Spoofed Firebase Initialized successfully")
+            AppLogger.d("Spoofed Firebase initialized successfully")
 
             FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                 if (!task.isSuccessful) {
-                    AppLogger.e("FCM Token generation failed: ${task.exception}")
+                    AppLogger.e("FCM token generation failed: ${task.exception}")
                     return@addOnCompleteListener
                 }
 
                 val token = task.result
-                AppLogger.d("🎉 Spoofed Token: $token")
+                AppLogger.d("FCM token generated")
 
-                // TODO: ここで取得したトークンをScombZのAPIサーバーへ送信・登録する処理を呼び出す
                 applicationScope.launch {
                     try {
                         scombzRepository.registerFcmToken(token)
@@ -88,6 +87,7 @@ class MyApplication : Application(), Configuration.Provider {
             AppLogger.e("Failed to initialize spoofed Firebase: ${e.message}")
         }
     }
+
     private fun setupBackgroundSync() {
         applicationScope.launch {
             val syncRequest = PeriodicWorkRequestBuilder<BackgroundSyncWorker>(
