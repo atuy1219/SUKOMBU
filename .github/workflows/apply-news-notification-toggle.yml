@@ -31,18 +31,27 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - name: Build and test
+        id: gradle
         shell: bash
         run: |
           set +e
           chmod +x gradlew
-          ./gradlew assembleDebug testDebugUnitTest -x lint 2>&1 | tee /tmp/gradle.log
-          status=${PIPESTATUS[0]}
-          echo "----- Gradle tail -----"
-          tail -n 120 /tmp/gradle.log
+          ./gradlew assembleDebug testDebugUnitTest -x lint > /tmp/gradle.log 2>&1
+          status=$?
+          tail -n 80 /tmp/gradle.log
           exit "$status"
+
+      - name: Upload Gradle log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notification-toggle-gradle-log
+          path: /tmp/gradle.log
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Commit changes
         shell: bash
