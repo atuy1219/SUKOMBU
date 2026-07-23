@@ -11,6 +11,7 @@ import com.atuy.scomb.data.db.Task
 import com.atuy.scomb.data.db.TaskDao
 import com.atuy.scomb.data.manager.AuthManager
 import com.atuy.scomb.data.network.ApiUpdateClassRequest
+import com.atuy.scomb.data.network.LoginRequest
 import com.atuy.scomb.data.network.ScombzApiService
 import com.atuy.scomb.util.ClientException
 import com.atuy.scomb.util.DateUtils
@@ -20,8 +21,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import retrofit2.Response
 import java.io.IOException
-import java.util.Calendar
-import java.util.Locale
 import javax.inject.Inject
 
 class ScombzRepository @Inject constructor(
@@ -32,7 +31,6 @@ class ScombzRepository @Inject constructor(
     private val authManager: AuthManager,
     @ApplicationContext private val context: Context
 ) {
-    // 共通のエラーハンドリングラッパー
     private suspend fun <T> executeWithAuthHandling(block: suspend () -> T): T {
         try {
             return block()
@@ -44,56 +42,50 @@ class ScombzRepository @Inject constructor(
                     authManager.clearAuthToken()
                     throw Exception(context.getString(R.string.error_session_expired), e)
                 }
-                is IOException -> {
-                    throw Exception(context.getString(R.string.error_network), e)
-                }
-                is ServerException -> {
-                    throw Exception(context.getString(R.string.error_server, e.code), e)
-                }
-                is ClientException -> {
-                    throw Exception(context.getString(R.string.error_client, e.code), e)
-                }
-                else -> {
-                    throw e
-                }
+                is IOException -> throw Exception(context.getString(R.string.error_network), e)
+                is ServerException -> throw Exception(context.getString(R.string.error_server, e.code), e)
+                is ClientException -> throw Exception(context.getString(R.string.error_client, e.code), e)
+                else -> throw e
             }
         }
     }
 
-    // APIレスポンスの検証ヘルパー
     private fun <T> validateResponse(response: Response<T>): T? {
-        if (response.isSuccessful) {
-            return response.body()
-        } else {
-            val code = response.code()
-            val errorBody = response.errorBody()?.string()
-            Log.e("ScombzRepository", "API Error: $code - $errorBody")
+        if (response.isSuccessful) return response.body()
 
-            when (code) {
-                401 -> throw SessionExpiredException()
-                in 400..499 -> throw ClientException(code, "Client Error: $code")
-                in 500..599 -> throw ServerException(code, "Server Error: $code")
-                else -> throw Exception("Unexpected error: $code")
-            }
+        val code = response.code()
+        val errorBody = response.errorBody()?.string()
+        Log.e("ScombzRepository", "API Error: $code - $errorBody")
+        when (code) {
+            401 -> throw SessionExpiredException()
+            in 400..499 -> throw ClientException(code, "Client Error: $code")
+            in 500..599 -> throw ServerException(code, "Server Error: $code")
+            else -> throw Exception("Unexpected error: $code")
         }
     }
 
     suspend fun login(userId: String, userPw: String): Result<Unit> {
         return try {
-            val response = apiService.login(com.atuy.scomb.data.network.LoginRequest(userId, userPw))
-
+            val response = apiService.login(LoginRequest(userId, userPw))
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null && body.status == "OK" && body.token != null) {
                     authManager.saveAuthToken(body.token)
-                    authManager.saveUsername(userId) // ログイン成功時にユーザー名（学籍番号）を保存
+                    authManager.saveUsername(userId)
                     Result.success(Unit)
                 } else {
                     val statusMsg = body?.status ?: "Unknown status"
                     Result.failure(Exception(context.getString(R.string.error_login_failed, statusMsg)))
                 }
             } else {
-                Result.failure(Exception(context.getString(R.string.error_login_failed, "Code: ${response.code()}")))
+                Result.failure(
+                    Exception(
+                        context.getString(
+                            R.string.error_login_failed,
+                            "Code: ${response.code()}"
+                        )
+                    )
+                )
             }
         } catch (e: IOException) {
             Result.failure(Exception(context.getString(R.string.error_network), e))
@@ -103,9 +95,7 @@ class ScombzRepository @Inject constructor(
     }
 
     private suspend fun ensureAuthenticated() {
-        if (authManager.authTokenFlow.first() == null) {
-            throw SessionExpiredException()
-        }
+        if (authManager.authTokenFlow.first() == null) throw SessionExpiredException()
     }
 
     private suspend fun getOtkey(): Result<String> {
@@ -116,7 +106,6 @@ class ScombzRepository @Inject constructor(
                 return Result.success(body.otkey)
             }
         }
-
         if (response.code() == 401) throw SessionExpiredException()
         return Result.failure(Exception("Failed to get otkey: ${response.code()}"))
     }
@@ -129,13 +118,8 @@ class ScombzRepository @Inject constructor(
             }
 
             ensureAuthenticated()
-
-            val currentTerm = DateUtils.getCurrentScombTerm()
-            val yearMonth = currentTerm.yearApiTerm
-
-            val response = apiService.getTasks(yearMonth)
-            val apiTasks = validateResponse(response) ?: emptyList()
-
+            val yearMonth = DateUtils.getCurrentScombTerm().yearApiTerm
+            val apiTasks = validateResponse(apiService.getTasks(yearMonth)) ?: emptyList()
             val dbTasks = apiTasks.mapNotNull { it.toDbTask() }
 
             taskDao.clearApiTasks()
@@ -154,20 +138,16 @@ class ScombzRepository @Inject constructor(
 
             val existingCells = classCellDao.getCells(timetableTitle)
             val customLinksMap = existingCells.associate { it.classId to it.customLinksJson }
-
             ensureAuthenticated()
 
             val yearMonth = if (term == "1") "${year}01" else "${year}02"
-
-            val response = apiService.getTimetable(yearMonth)
-            val apiClassCells = validateResponse(response) ?: emptyList()
-
+            val apiClassCells = validateResponse(apiService.getTimetable(yearMonth)) ?: emptyList()
             val dbClassCells = apiClassCells.map {
                 it.toDbClassCell(
                     year,
                     term,
                     timetableTitle,
-                    existingUserNote = null, // APIの値を正とするため、ローカルキャッシュは無視
+                    existingUserNote = null,
                     existingCustomLinks = customLinksMap[it.id]
                 )
             }
@@ -178,40 +158,33 @@ class ScombzRepository @Inject constructor(
         }
     }
 
-    // メモと色などの設定を更新する汎用メソッド
     suspend fun updateClassInfo(classCell: ClassCell, note: String?, customColorInt: Int?) {
         executeWithAuthHandling {
             ensureAuthenticated()
-
-            val yearMonth = if (classCell.term == "1") "${classCell.year}01" else "${classCell.year}02"
-
-
+            val yearMonth = if (classCell.term == "1") {
+                "${classCell.year}01"
+            } else {
+                "${classCell.year}02"
+            }
             val colorString = if (customColorInt == null || customColorInt == 0) {
                 null
             } else {
                 Integer.toUnsignedString(customColorInt)
             }
-
             val request = ApiUpdateClassRequest(
                 classId = classCell.classId,
                 note = note,
                 customColor = colorString,
                 customizedNumberOfCredit = 0
             )
-
-            val response = apiService.updateClass(yearMonth, listOf(request))
-            val result = validateResponse(response)
-
-            if (result?.status == "OK") {
-                // 成功したらローカルDBも更新
-                val updatedCell = classCell.copy(
-                    note = note,
-                    customColorInt = customColorInt
-                )
-                classCellDao.insertClassCell(updatedCell)
-            } else {
+            val result = validateResponse(apiService.updateClass(yearMonth, listOf(request)))
+            if (result?.status != "OK") {
                 throw Exception("Failed to update class info: Status not OK")
             }
+
+            classCellDao.insertClassCell(
+                classCell.copy(note = note, customColorInt = customColorInt)
+            )
         }
     }
 
@@ -224,12 +197,8 @@ class ScombzRepository @Inject constructor(
 
             ensureAuthenticated()
             val currentTerm = DateUtils.getCurrentScombTerm()
-
-            val response = apiService.getNews()
-            val apiNews = validateResponse(response) ?: emptyList()
-
+            val apiNews = validateResponse(apiService.getNews()) ?: emptyList()
             val existingNewsMap = newsItemDao.getAllNews().associate { it.newsId to it.unread }
-
             val dbNews = apiNews.map { apiItem ->
                 val newItem = apiItem.toDbNewsItem(currentTerm.yearApiTerm)
                 if (existingNewsMap[newItem.newsId] == false) {
@@ -246,8 +215,15 @@ class ScombzRepository @Inject constructor(
     }
 
     suspend fun markAsRead(newsItem: NewsItem) {
+        setNewsUnread(listOf(newsItem), unread = false)
+    }
+
+    suspend fun setNewsUnread(newsItems: Collection<NewsItem>, unread: Boolean) {
+        if (newsItems.isEmpty()) return
         executeWithAuthHandling {
-            newsItemDao.insertOrUpdateNewsItem(newsItem.copy(unread = false))
+            newsItems.forEach { item ->
+                newsItemDao.insertOrUpdateNewsItem(item.copy(unread = unread))
+            }
         }
     }
 
@@ -256,7 +232,9 @@ class ScombzRepository @Inject constructor(
             ensureAuthenticated()
             val otkeyResult = getOtkey()
             val otkey = otkeyResult.getOrNull() ?: run {
-                if (otkeyResult.exceptionOrNull() is SessionExpiredException) throw SessionExpiredException()
+                if (otkeyResult.exceptionOrNull() is SessionExpiredException) {
+                    throw SessionExpiredException()
+                }
                 throw Exception(context.getString(R.string.error_otkey_failed))
             }
 
@@ -270,34 +248,27 @@ class ScombzRepository @Inject constructor(
     }
 
     suspend fun getClassUrl(classId: String): String {
-
         return executeWithAuthHandling {
             ensureAuthenticated()
             val otkeyResult = getOtkey()
             val otkey = otkeyResult.getOrNull() ?: run {
-                if (otkeyResult.exceptionOrNull() is SessionExpiredException) throw SessionExpiredException()
+                if (otkeyResult.exceptionOrNull() is SessionExpiredException) {
+                    throw SessionExpiredException()
+                }
                 throw Exception(context.getString(R.string.error_otkey_failed))
             }
-
             "https://mobile.scombz.shibaura-it.ac.jp/$otkey/lms/course?idnumber=$classId"
         }
     }
 
     suspend fun registerFcmToken(token: String) {
         executeWithAuthHandling {
-            // FCM登録は認証が必要かどうか確認が必要ですが、おそらく必要でしょう。
-            // しかし、ログイン前でも登録できる場合があるかもしれません。
-            // ここでは他のメソッド同様 ensureAuthenticated() を呼んでおきます。
             ensureAuthenticated()
-
-            val requestBody = mapOf("fcm_token" to token)
-            val response = apiService.registerFcm(requestBody)
-
-            val result = validateResponse(response)
-
+            val result = validateResponse(
+                apiService.registerFcm(mapOf("fcm_token" to token))
+            )
             if (result?.status != "OK") {
                 Log.e("ScombzRepository", "Failed to register FCM token: Status not OK")
-                // 必要であれば例外を投げたり、ユーザーに通知したりする
             } else {
                 Log.d("ScombzRepository", "FCM token registered successfully")
             }
