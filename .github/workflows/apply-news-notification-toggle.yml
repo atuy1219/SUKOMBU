@@ -1,0 +1,336 @@
+name: Apply news notification toggle
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - .github/workflows/apply-news-notification-toggle.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Apply source changes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              if text.count(old) != 1:
+                  raise RuntimeError(f"Expected one match in {path}, found {text.count(old)}")
+              file.write_text(text.replace(old, new, 1))
+
+          replace_once(
+              "app/src/main/java/com/atuy/scomb/data/manager/SettingManager.kt",
+              '''        val NOTIFICATION_TIMINGS_KEY = stringSetPreferencesKey("notification_timings")
+                  val DEFAULT_TIMINGS = setOf("60")''',
+              '''        val NOTIFICATION_TIMINGS_KEY = stringSetPreferencesKey("notification_timings")
+                  val DEFAULT_TIMINGS = setOf("60")
+
+                  val NEWS_NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("news_notifications_enabled")
+                  const val DEFAULT_NEWS_NOTIFICATIONS_ENABLED = true'''
+          )
+
+          replace_once(
+              "app/src/main/java/com/atuy/scomb/data/manager/SettingManager.kt",
+              '''    val notificationTimingsFlow: Flow<Set<String>> = context.settingsDataStore.data.map { preferences ->
+                  preferences[NOTIFICATION_TIMINGS_KEY] ?: DEFAULT_TIMINGS
+              }
+
+              suspend fun setNotificationTimings(timings: Set<String>) {
+                  context.settingsDataStore.edit { preferences ->
+                      preferences[NOTIFICATION_TIMINGS_KEY] = timings
+                  }
+              }''',
+              '''    val notificationTimingsFlow: Flow<Set<String>> = context.settingsDataStore.data.map { preferences ->
+                  preferences[NOTIFICATION_TIMINGS_KEY] ?: DEFAULT_TIMINGS
+              }
+
+              suspend fun setNotificationTimings(timings: Set<String>) {
+                  context.settingsDataStore.edit { preferences ->
+                      preferences[NOTIFICATION_TIMINGS_KEY] = timings
+                  }
+              }
+
+              val newsNotificationsEnabledFlow: Flow<Boolean> = context.settingsDataStore.data.map { preferences ->
+                  preferences[NEWS_NOTIFICATIONS_ENABLED_KEY] ?: DEFAULT_NEWS_NOTIFICATIONS_ENABLED
+              }
+
+              suspend fun setNewsNotificationsEnabled(enabled: Boolean) {
+                  context.settingsDataStore.edit { preferences ->
+                      preferences[NEWS_NOTIFICATIONS_ENABLED_KEY] = enabled
+                  }
+              }'''
+          )
+
+          replace_once(
+              "app/src/main/java/com/atuy/scomb/ui/viewmodel/SettingsViewModel.kt",
+              '''data class SettingsUiState(
+                  val notificationTimings: Set<Int> = emptySet(),
+                  val showHomeNews: Boolean = true,''',
+              '''data class SettingsUiState(
+                  val notificationTimings: Set<Int> = emptySet(),
+                  val newsNotificationsEnabled: Boolean = true,
+                  val showHomeNews: Boolean = true,'''
+          )
+
+          replace_once(
+              "app/src/main/java/com/atuy/scomb/ui/viewmodel/SettingsViewModel.kt",
+              '''    // 6つのFlowを結合するために、下部で定義した拡張combine関数を使用します
+              val uiState: StateFlow<SettingsUiState> = combine(
+                  settingsManager.notificationTimingsFlow,
+                  settingsManager.showHomeNewsFlow,
+                  settingsManager.debugModeFlow,
+                  settingsManager.displayWeekDaysFlow,
+                  settingsManager.timetablePeriodCountFlow,
+                  settingsManager.themeModeFlow
+              ) { timings, showNews, debugMode, weekDays, periodCount, themeMode ->
+                  SettingsUiState(
+                      notificationTimings = timings.mapNotNull { it.toIntOrNull() }.toSet(),
+                      showHomeNews = showNews,''',
+              '''    // 7つのFlowを結合するために、下部で定義した拡張combine関数を使用します
+              val uiState: StateFlow<SettingsUiState> = combine(
+                  settingsManager.notificationTimingsFlow,
+                  settingsManager.newsNotificationsEnabledFlow,
+                  settingsManager.showHomeNewsFlow,
+                  settingsManager.debugModeFlow,
+                  settingsManager.displayWeekDaysFlow,
+                  settingsManager.timetablePeriodCountFlow,
+                  settingsManager.themeModeFlow
+              ) { timings, newsNotificationsEnabled, showNews, debugMode, weekDays, periodCount, themeMode ->
+                  SettingsUiState(
+                      notificationTimings = timings.mapNotNull { it.toIntOrNull() }.toSet(),
+                      newsNotificationsEnabled = newsNotificationsEnabled,
+                      showHomeNews = showNews,'''
+          )
+
+          replace_once(
+              "app/src/main/java/com/atuy/scomb/ui/viewmodel/SettingsViewModel.kt",
+              '''    fun updateNotificationTimings(timings: Set<Int>) {
+                  viewModelScope.launch {
+                      settingsManager.setNotificationTimings(timings.map { it.toString() }.toSet())
+                  }
+              }
+
+              fun updateShowHomeNews(show: Boolean) {''',
+              '''    fun updateNotificationTimings(timings: Set<Int>) {
+                  viewModelScope.launch {
+                      settingsManager.setNotificationTimings(timings.map { it.toString() }.toSet())
+                  }
+              }
+
+              fun updateNewsNotificationsEnabled(enabled: Boolean) {
+                  viewModelScope.launch {
+                      settingsManager.setNewsNotificationsEnabled(enabled)
+                  }
+              }
+
+              fun updateShowHomeNews(show: Boolean) {'''
+          )
+
+          replace_once(
+              "app/src/main/java/com/atuy/scomb/ui/viewmodel/SettingsViewModel.kt",
+              '''@Suppress("UNCHECKED_CAST")
+              fun <T1, T2, T3, T4, T5, T6, R> combine(
+                  flow1: Flow<T1>,
+                  flow2: Flow<T2>,
+                  flow3: Flow<T3>,
+                  flow4: Flow<T4>,
+                  flow5: Flow<T5>,
+                  flow6: Flow<T6>,
+                  transform: suspend (T1, T2, T3, T4, T5, T6) -> R
+              ): Flow<R> = combine(listOf(flow1, flow2, flow3, flow4, flow5, flow6)) { args ->
+                  transform(
+                      args[0] as T1,
+                      args[1] as T2,
+                      args[2] as T3,
+                      args[3] as T4,
+                      args[4] as T5,
+                      args[5] as T6
+                  )
+              }''',
+              '''@Suppress("UNCHECKED_CAST")
+              fun <T1, T2, T3, T4, T5, T6, T7, R> combine(
+                  flow1: Flow<T1>,
+                  flow2: Flow<T2>,
+                  flow3: Flow<T3>,
+                  flow4: Flow<T4>,
+                  flow5: Flow<T5>,
+                  flow6: Flow<T6>,
+                  flow7: Flow<T7>,
+                  transform: suspend (T1, T2, T3, T4, T5, T6, T7) -> R
+              ): Flow<R> = combine(listOf(flow1, flow2, flow3, flow4, flow5, flow6, flow7)) { args ->
+                  transform(
+                      args[0] as T1,
+                      args[1] as T2,
+                      args[2] as T3,
+                      args[3] as T4,
+                      args[4] as T5,
+                      args[5] as T6,
+                      args[6] as T7
+                  )
+              }'''
+          )
+
+          replace_once(
+              "app/src/main/java/com/atuy/scomb/ui/features/SettingsScreen.kt",
+              '''                NotificationSettingsSection(
+                      selectedTimings = uiState.notificationTimings,
+                      onTimingsChange = { viewModel.updateNotificationTimings(it) }
+                  )''',
+              '''                NotificationSettingsSection(
+                      newsNotificationsEnabled = uiState.newsNotificationsEnabled,
+                      onNewsNotificationsEnabledChange = { viewModel.updateNewsNotificationsEnabled(it) },
+                      selectedTimings = uiState.notificationTimings,
+                      onTimingsChange = { viewModel.updateNotificationTimings(it) }
+                  )'''
+          )
+
+          replace_once(
+              "app/src/main/java/com/atuy/scomb/ui/features/SettingsScreen.kt",
+              '''private fun NotificationSettingsSection(
+                  selectedTimings: Set<Int>,
+                  onTimingsChange: (Set<Int>) -> Unit
+              ) {''',
+              '''private fun NotificationSettingsSection(
+                  newsNotificationsEnabled: Boolean,
+                  onNewsNotificationsEnabledChange: (Boolean) -> Unit,
+                  selectedTimings: Set<Int>,
+                  onTimingsChange: (Set<Int>) -> Unit
+              ) {'''
+          )
+
+          replace_once(
+              "app/src/main/java/com/atuy/scomb/ui/features/SettingsScreen.kt",
+              '''        SectionHeader(
+                      title = stringResource(R.string.settings_notification_title),
+                      icon = Icons.Default.Notifications
+                  )
+
+                  Text(
+                      text = stringResource(R.string.settings_notification_desc),''',
+              '''        SectionHeader(
+                      title = stringResource(R.string.settings_notification_title),
+                      icon = Icons.Default.Notifications
+                  )
+
+                  Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                  ) {
+                      Column(modifier = Modifier.weight(1f)) {
+                          Text(
+                              text = "お知らせ通知",
+                              style = MaterialTheme.typography.bodyLarge
+                          )
+                          Text(
+                              text = "ScombZから届くお知らせを通知します",
+                              style = MaterialTheme.typography.bodySmall,
+                              color = MaterialTheme.colorScheme.onSurfaceVariant
+                          )
+                      }
+                      Switch(
+                          checked = newsNotificationsEnabled,
+                          onCheckedChange = onNewsNotificationsEnabledChange
+                      )
+                  }
+
+                  Spacer(modifier = Modifier.height(20.dp))
+
+                  Text(
+                      text = "課題の締切通知",
+                      style = MaterialTheme.typography.bodyLarge,
+                      fontWeight = FontWeight.Medium,
+                      modifier = Modifier.padding(bottom = 4.dp)
+                  )
+
+                  Text(
+                      text = stringResource(R.string.settings_notification_desc),'''
+          )
+
+          replace_once(
+              "app/src/main/java/com/atuy/scomb/service/ScombMessagingService.kt",
+              '''import com.atuy.scomb.R
+              import com.atuy.scomb.data.repository.ScombzRepository''',
+              '''import com.atuy.scomb.R
+              import com.atuy.scomb.data.manager.SettingsManager
+              import com.atuy.scomb.data.repository.ScombzRepository'''
+          )
+
+          replace_once(
+              "app/src/main/java/com/atuy/scomb/service/ScombMessagingService.kt",
+              '''import kotlinx.coroutines.SupervisorJob
+              import kotlinx.coroutines.launch''',
+              '''import kotlinx.coroutines.SupervisorJob
+              import kotlinx.coroutines.flow.first
+              import kotlinx.coroutines.launch'''
+          )
+
+          replace_once(
+              "app/src/main/java/com/atuy/scomb/service/ScombMessagingService.kt",
+              '''    @Inject
+              lateinit var scombzRepository: ScombzRepository
+
+              private val serviceScope''',
+              '''    @Inject
+              lateinit var scombzRepository: ScombzRepository
+
+              @Inject
+              lateinit var settingsManager: SettingsManager
+
+              private val serviceScope'''
+          )
+
+          replace_once(
+              "app/src/main/java/com/atuy/scomb/service/ScombMessagingService.kt",
+              '''        showNewsNotification(title, body, newsUrl)
+              }''',
+              '''        serviceScope.launch {
+                  if (!settingsManager.newsNotificationsEnabledFlow.first()) {
+                      AppLogger.d("News notifications disabled; skipping notification")
+                      return@launch
+                  }
+                  showNewsNotification(title, body, newsUrl)
+              }
+              }'''
+          )
+          PY
+
+          rm .github/workflows/apply-news-notification-toggle.yml
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build and test
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug testDebugUnitTest -x lint
+
+      - name: Commit changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            app/src/main/java/com/atuy/scomb/data/manager/SettingManager.kt \
+            app/src/main/java/com/atuy/scomb/ui/viewmodel/SettingsViewModel.kt \
+            app/src/main/java/com/atuy/scomb/ui/features/SettingsScreen.kt \
+            app/src/main/java/com/atuy/scomb/service/ScombMessagingService.kt \
+            .github/workflows/apply-news-notification-toggle.yml
+          git commit -m "Add news notification toggle"
+          git push origin HEAD:dev
