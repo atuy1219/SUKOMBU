@@ -24,6 +24,9 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
         val NOTIFICATION_TIMINGS_KEY = stringSetPreferencesKey("notification_timings")
         val DEFAULT_TIMINGS = setOf("60")
 
+        val NEWS_NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("news_notifications_enabled")
+        const val DEFAULT_NEWS_NOTIFICATIONS_ENABLED = true
+
         val SHOW_HOME_NEWS_KEY = booleanPreferencesKey("show_home_news")
         const val DEFAULT_SHOW_HOME_NEWS = true
 
@@ -56,6 +59,16 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
     suspend fun setNotificationTimings(timings: Set<String>) {
         context.settingsDataStore.edit { preferences ->
             preferences[NOTIFICATION_TIMINGS_KEY] = timings
+        }
+    }
+
+    val newsNotificationsEnabledFlow: Flow<Boolean> = context.settingsDataStore.data.map { preferences ->
+        preferences[NEWS_NOTIFICATIONS_ENABLED_KEY] ?: DEFAULT_NEWS_NOTIFICATIONS_ENABLED
+    }
+
+    suspend fun setNewsNotificationsEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[NEWS_NOTIFICATIONS_ENABLED_KEY] = enabled
         }
     }
 
