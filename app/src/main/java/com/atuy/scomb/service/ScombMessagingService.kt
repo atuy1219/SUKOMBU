@@ -34,6 +34,9 @@ class ScombMessagingService : FirebaseMessagingService() {
     lateinit var scombzRepository: ScombzRepository
 
     @Inject
+    lateinit var authManager: com.atuy.scomb.data.manager.AuthManager
+
+    @Inject
     lateinit var settingsManager: SettingsManager
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -74,6 +77,7 @@ class ScombMessagingService : FirebaseMessagingService() {
         }
 
         serviceScope.launch {
+            if (authManager.authTokenFlow.first() == null) return@launch
             if (!settingsManager.newsNotificationsEnabledFlow.first()) {
                 AppLogger.d("News notifications disabled; skipping notification")
                 return@launch

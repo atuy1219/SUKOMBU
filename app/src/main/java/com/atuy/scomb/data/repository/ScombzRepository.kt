@@ -56,6 +56,7 @@ class ScombzRepository @Inject constructor(
                     Log.d("ScombzRepository", "Session expired. Clearing auth token.")
                     kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
                         authManager.invalidateAuthToken()
+                        context.getSystemService(android.app.NotificationManager::class.java).cancelAll()
                         updateTaskSurfaces(emptyList())
                     }
                     throw SessionExpiredException(context.getString(R.string.error_session_expired))
@@ -287,6 +288,7 @@ class ScombzRepository @Inject constructor(
 
     private suspend fun clearSession() = kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
         authManager.clearAuthToken()
+        context.getSystemService(android.app.NotificationManager::class.java).cancelAll()
         cache.clear()
         resetCacheState()
         updateTaskSurfaces(emptyList())

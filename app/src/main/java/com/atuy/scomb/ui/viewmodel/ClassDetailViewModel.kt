@@ -69,7 +69,7 @@ class ClassDetailViewModel @Inject constructor(
                     _uiState.value = ClassDetailUiState.Success(classCell, tasks, customLinks)
                 }
             } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _uiState.value =
                     ClassDetailUiState.Error(e.message ?: "データの読み込みに失敗しました。")
             }
@@ -148,7 +148,7 @@ class ClassDetailViewModel @Inject constructor(
                 val url = repository.getClassUrl(classId)
                 _openUrlEvent.send(url)
             } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _uiState.value = ClassDetailUiState.Error(e.message ?: "URLの取得に失敗しました")
             }
         }
@@ -160,7 +160,7 @@ class ClassDetailViewModel @Inject constructor(
                 val url = repository.getTaskUrl(task)
                 _openUrlEvent.send(url)
             } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 // エラー時はトーストなどで通知したいが、ここではUI Stateのエラーにはしない（画面全体がエラーになるため）
                 // 簡易的にコンソールに出力し、失敗したらtask.urlをフォールバックとして開くようイベントを送る手もあるが
                 // ここではエラーメッセージを表示せずに既存のURLを試すようにする
