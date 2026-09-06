@@ -9,32 +9,13 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-fun getGitCommitHash(): String {
-    return try {
-        val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD").start()
-        process.inputStream.bufferedReader().use { it.readText().trim() }
-    } catch (_: Exception) {
-        "unknown"
-    }
-}
-
-fun getGitCommandOutput(command: String): String {
-    return try {
-        providers.exec {
-            commandLine(command.split(" "))
-        }.standardOutput.asText.get().trim()
-    } catch (_: Exception) {
-        "1.0.0-dev"
-    }
-}
-
-val gitVersionName = getGitCommandOutput("git describe --tags --always")
-
-val gitCommitCount = try {
-    getGitCommandOutput("git rev-list --count HEAD").toInt()
-} catch (_: Exception) {
-    1
-}
+val buildVersionCode = providers.environmentVariable("SUKOMBU_VERSION_CODE")
+    .map { it.toIntOrNull() ?: 1 }
+    .orElse(1)
+val buildVersionName = providers.environmentVariable("SUKOMBU_VERSION_NAME")
+    .orElse("1.0.0-dev")
+val buildCommitHash = providers.environmentVariable("SUKOMBU_COMMIT_HASH")
+    .orElse("local")
 
 android {
     namespace = "com.atuy.scomb"
@@ -48,16 +29,13 @@ android {
                 keystoreProperties.load(FileInputStream(keystorePropertiesFile))
             }
 
-            val keyStorePath = System.getenv("KEYSTORE_PATH")
+            val keyStorePath = providers.environmentVariable("KEYSTORE_PATH").orNull
                 ?: keystoreProperties.getProperty("key.store")
-
-            val keyStorePwd = System.getenv("KEY_STORE_PASSWORD")
+            val keyStorePwd = providers.environmentVariable("KEY_STORE_PASSWORD").orNull
                 ?: keystoreProperties.getProperty("key.store.password")
-
-            val keyAliasVal = System.getenv("ALIAS")
+            val keyAliasVal = providers.environmentVariable("ALIAS").orNull
                 ?: keystoreProperties.getProperty("key.alias")
-
-            val keyPwd = System.getenv("KEY_PASSWORD")
+            val keyPwd = providers.environmentVariable("KEY_PASSWORD").orNull
                 ?: keystoreProperties.getProperty("key.password")
 
             if (keyStorePath != null && keyStorePwd != null && keyAliasVal != null && keyPwd != null) {
@@ -74,11 +52,10 @@ android {
         minSdk = 35
         targetSdk = 37
 
-        versionCode = gitCommitCount
-        versionName = gitVersionName
+        versionCode = buildVersionCode.get()
+        versionName = buildVersionName.get()
+        manifestPlaceholders["gitCommitHash"] = buildCommitHash.get()
 
-        buildConfigField("String", "GIT_COMMIT_HASH", "\"${getGitCommitHash()}\"")
-        
         ndk {
             abiFilters.add("arm64-v8a")
         }
@@ -101,19 +78,15 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    
-
     buildFeatures {
         compose = true
         buildConfig = true
     }
 }
 
-
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)
-        freeCompilerArgs.add("-Xannotation-default-target=param-property")
     }
 }
 
@@ -126,7 +99,6 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.browser)
     implementation(libs.androidx.security.crypto)
-
 
     // --- UI (Compose & Material3) ---
     implementation(platform(libs.androidx.compose.bom))
