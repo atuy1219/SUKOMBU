@@ -38,7 +38,7 @@ jobs:
           mkdir -p app/src/main/assets
           printf '%s' "$(git rev-parse HEAD)" > app/src/main/assets/build_commit.txt
 
-      - name: Verify M3E audit
+      - name: Verify M3E UI audit
         run: python3 scripts/check_m3e_ui.py
 
       - name: Build and test
