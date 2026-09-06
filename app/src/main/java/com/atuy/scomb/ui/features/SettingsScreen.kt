@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
@@ -647,14 +646,15 @@ private fun AppInfoSection(
     val packageInfo = remember(context) {
         context.packageManager.getPackageInfo(
             context.packageName,
-            PackageManager.PackageInfoFlags.of(0)
+            PackageManager.PackageInfoFlags.of(0L)
         )
     }
     val commitHash = remember(context) {
-        context.packageManager.getApplicationInfo(
-            context.packageName,
-            PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong())
-        ).metaData?.getString("com.atuy.scomb.GIT_COMMIT_HASH").orEmpty().take(7)
+        runCatching {
+            context.assets.open("build_commit.txt").bufferedReader().use { reader ->
+                reader.readText().trim()
+            }
+        }.getOrDefault("local").take(7)
     }
     val versionName = packageInfo.versionName ?: "unknown"
     val displayVersion = if (
