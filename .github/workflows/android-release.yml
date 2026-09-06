@@ -21,8 +21,13 @@ jobs:
       - name: Set build metadata
         run: |
           SHORT_SHA="$(git rev-parse --short HEAD)"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION_NAME="$GITHUB_REF_NAME"
+          else
+            VERSION_NAME="$(git describe --tags --always)"
+          fi
           echo "SUKOMBU_VERSION_CODE=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
-          echo "SUKOMBU_VERSION_NAME=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          echo "SUKOMBU_VERSION_NAME=${VERSION_NAME}" >> "$GITHUB_ENV"
           mkdir -p app/src/main/assets
           printf '%s' "$SHORT_SHA" > app/src/main/assets/build_commit.txt
 
