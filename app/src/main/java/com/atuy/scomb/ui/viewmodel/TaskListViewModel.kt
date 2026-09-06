@@ -39,8 +39,8 @@ sealed interface TaskListUiState {
 
 @HiltViewModel
 class TaskListViewModel @Inject constructor(
+    private val authManager: com.atuy.scomb.data.manager.AuthManager,
     private val repository: ScombzRepository,
-    private val scheduleNotificationsUseCase: ScheduleNotificationsUseCase,
     private val autoRefreshManager: AutoRefreshManager
 ) : ViewModel() {
 
@@ -54,14 +54,21 @@ class TaskListViewModel @Inject constructor(
     val openUrlEvent = _openUrlEvent.receiveAsFlow()
 
     init {
-        fetchTasks(forceRefresh = true)
+        viewModelScope.launch {
+            authManager.authTokenFlow.collect { token ->
+                loadJob?.cancel()
+                _uiState.value = TaskListUiState.Loading
+                allTasks = emptyList()
+                if (token != null) fetchTasks(false)
+            }
+        }
         observeAutoRefresh()
     }
 
     private fun observeAutoRefresh() {
         viewModelScope.launch {
             autoRefreshManager.refreshEvent.collect {
-                fetchTasks(forceRefresh = true)
+                fetchTasks(forceRefresh = false)
             }
         }
     }
@@ -89,7 +96,6 @@ class TaskListViewModel @Inject constructor(
                     isRefreshing = false,
                     isSearchActive = isSearchActive
                 )
-                scheduleNotificationsUseCase(allTasks)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.value =
@@ -105,6 +111,7 @@ class TaskListViewModel @Inject constructor(
                 val url = repository.getTaskUrl(task)
                 _openUrlEvent.send(url)
             } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
                 e.printStackTrace()
             }
         }

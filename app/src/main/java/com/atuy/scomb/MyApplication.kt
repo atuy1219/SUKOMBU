@@ -20,12 +20,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import okhttp3.logging.HttpLoggingInterceptor
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltAndroidApp
 class MyApplication : Application(), Configuration.Provider {
+
+    @Inject
+    lateinit var authManager: com.atuy.scomb.data.manager.AuthManager
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
@@ -66,20 +70,23 @@ class MyApplication : Application(), Configuration.Provider {
             FirebaseApp.initializeApp(this, options)
             AppLogger.d("Spoofed Firebase initialized successfully")
 
-            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                if (!task.isSuccessful) {
-                    AppLogger.e("FCM token generation failed: ${task.exception}")
-                    return@addOnCompleteListener
-                }
-
-                val token = task.result
-                AppLogger.d("FCM token generated")
-
-                applicationScope.launch {
-                    try {
-                        scombzRepository.registerFcmToken(token)
-                    } catch (e: Exception) {
-                        AppLogger.e("Failed to register FCM token: ${e.message}")
+            applicationScope.launch {
+                authManager.authTokenFlow.distinctUntilChanged().collect { authToken ->
+                    if (authToken == null) return@collect
+                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                        if (!task.isSuccessful) {
+                            AppLogger.e("FCM token generation failed: ${task.exception}")
+                            return@addOnCompleteListener
+                        }
+                        applicationScope.launch {
+                            try {
+                                scombzRepository.registerFcmToken(task.result)
+                            } catch (e: kotlinx.coroutines.CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("Failed to register FCM token: ${e.message}")
+                            }
+                        }
                     }
                 }
             }
@@ -92,7 +99,8 @@ class MyApplication : Application(), Configuration.Provider {
         applicationScope.launch {
             val syncRequest = PeriodicWorkRequestBuilder<BackgroundSyncWorker>(
                 1, TimeUnit.HOURS
-            ).build()
+            ).setConstraints(androidx.work.Constraints.Builder()
+                .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build()).build()
 
             WorkManager.getInstance(this@MyApplication).enqueueUniquePeriodicWork(
                 "ScombBackgroundSync",
@@ -108,7 +116,7 @@ class MyApplication : Application(), Configuration.Provider {
                 AppLogger.setEnabled(isDebugEnabled)
 
                 httpLoggingInterceptor.level = if (isDebugEnabled) {
-                    HttpLoggingInterceptor.Level.BODY
+                    HttpLoggingInterceptor.Level.BASIC
                 } else {
                     HttpLoggingInterceptor.Level.NONE
                 }

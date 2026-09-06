@@ -43,6 +43,7 @@ sealed interface NewsUiState {
 
 @HiltViewModel
 class NewsViewModel @Inject constructor(
+    private val authManager: com.atuy.scomb.data.manager.AuthManager,
     private val repository: ScombzRepository,
     private val autoRefreshManager: AutoRefreshManager
 ) : ViewModel() {
@@ -54,14 +55,21 @@ class NewsViewModel @Inject constructor(
     private var loadJob: Job? = null
 
     init {
-        fetchNews(forceRefresh = false)
+        viewModelScope.launch {
+            authManager.authTokenFlow.collect { token ->
+                loadJob?.cancel()
+                _uiState.value = NewsUiState.Loading
+                allNews = emptyList()
+                if (token != null) fetchNews(false)
+            }
+        }
         observeAutoRefresh()
     }
 
     private fun observeAutoRefresh() {
         viewModelScope.launch {
             autoRefreshManager.refreshEvent.collect {
-                fetchNews(forceRefresh = true)
+                fetchNews(forceRefresh = false)
             }
         }
     }

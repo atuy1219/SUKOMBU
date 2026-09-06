@@ -4,12 +4,20 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
+import java.text.ParsePosition
 
 object DateUtils {
+    private val campusZone = TimeZone.getTimeZone("Asia/Tokyo")
     fun stringToTime(time: String, format: String = "yyyy/MM/dd HH:mm"): Long {
         return try {
-            val dateFormat = SimpleDateFormat(format, Locale.JAPAN)
-            dateFormat.parse(time)?.time ?: 0L
+            val dateFormat = SimpleDateFormat(format, Locale.JAPAN).apply {
+                timeZone = campusZone
+                isLenient = false
+            }
+            val position = ParsePosition(0)
+            val parsed = dateFormat.parse(time, position)
+            if (position.index == time.length) parsed?.time ?: 0L else 0L
         } catch (e: Exception) {
             0L
         }
@@ -17,12 +25,12 @@ object DateUtils {
 
     fun timeToString(time: Long): String {
         val date = Date(time)
-        val now = Calendar.getInstance()
-        val target = Calendar.getInstance().apply { timeInMillis = time }
+        val now = Calendar.getInstance(campusZone)
+        val target = Calendar.getInstance(campusZone).apply { timeInMillis = time }
 
-        val formatYear = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.JAPAN)
-        val formatMonthDay = SimpleDateFormat("MM/dd HH:mm", Locale.JAPAN)
-        val formatTime = SimpleDateFormat("HH:mm", Locale.JAPAN)
+        val formatYear = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.JAPAN).apply { timeZone = campusZone }
+        val formatMonthDay = SimpleDateFormat("MM/dd HH:mm", Locale.JAPAN).apply { timeZone = campusZone }
+        val formatTime = SimpleDateFormat("HH:mm", Locale.JAPAN).apply { timeZone = campusZone }
 
         if (target.before(now)) {
             return if (now.get(Calendar.YEAR) != target.get(Calendar.YEAR)) {
@@ -77,7 +85,7 @@ object DateUtils {
     }
 
     fun getCurrentScombTerm(): ScombTerm {
-        val calendar = Calendar.getInstance()
+        val calendar = Calendar.getInstance(campusZone)
         val month = calendar.get(Calendar.MONTH) // 0-11
         val year = if (month < 3) { // 1月, 2月, 3月は前年度扱い
             calendar.get(Calendar.YEAR) - 1
@@ -94,7 +102,7 @@ object DateUtils {
     // 現在の時限を取得 (0-based index: 0=1限, 1=2限...)
     // 該当なしの場合は -1 を返す
     fun getCurrentPeriod(): Int {
-        val calendar = Calendar.getInstance()
+        val calendar = Calendar.getInstance(campusZone)
         val hour = calendar.get(Calendar.HOUR_OF_DAY)
         val minute = calendar.get(Calendar.MINUTE)
         val currentTime = hour * 60 + minute

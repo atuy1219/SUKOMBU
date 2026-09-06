@@ -43,7 +43,7 @@ private fun String.toTerms(): List<String> =
     trim().split(Regex("\\s+")).filter(String::isNotEmpty).map(String::asSearchTerm)
 
 private fun String.asSearchTerm(): String =
-    if (any { it.isWhitespace() || it in "()\"" } || this == "OR") {
+    if (any { it.isWhitespace() || it in "()\":\\" } || startsWith("-") || this == "OR") {
         asQuotedPhrase()
     } else {
         this

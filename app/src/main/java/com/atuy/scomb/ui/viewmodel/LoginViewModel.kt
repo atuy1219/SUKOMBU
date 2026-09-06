@@ -25,6 +25,7 @@ class LoginViewModel @Inject constructor(
     val uiState: StateFlow<LoginUiState> = _uiState
 
     fun login(username: String, password: String) {
+        if (_uiState.value is LoginUiState.Loading) return
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
             val result = repository.login(username, password)

@@ -17,10 +17,7 @@ import javax.inject.Inject
 class BootReceiver : BroadcastReceiver() {
 
     @Inject
-    lateinit var taskDao: TaskDao
-
-    @Inject
-    lateinit var scheduleNotificationsUseCase: ScheduleNotificationsUseCase
+    lateinit var repository: com.atuy.scomb.data.repository.ScombzRepository
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
@@ -31,11 +28,7 @@ class BootReceiver : BroadcastReceiver() {
 
             scope.launch {
                 try {
-                    val tasks = taskDao.getAllTasks()
-
-                    scheduleNotificationsUseCase(tasks)
-
-                    Log.d("BootReceiver", "${tasks.size} 件の課題データを用いて通知を再設定しました。")
+                    repository.rescheduleNotifications()
                 } catch (e: Exception) {
                     Log.e("BootReceiver", "通知の再スケジュールに失敗しました", e)
                 } finally {

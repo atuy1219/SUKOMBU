@@ -54,8 +54,9 @@ object AppModule {
     @Singleton
     fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().apply {
+            redactHeader("Authorization")
             level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.BODY
+                HttpLoggingInterceptor.Level.BASIC
             } else {
                 HttpLoggingInterceptor.Level.NONE
             }
@@ -103,26 +104,6 @@ object AppModule {
     @Singleton
     fun provideScombzApiService(retrofit: Retrofit): ScombzApiService {
         return retrofit.create(ScombzApiService::class.java)
-    }
-
-    @Provides
-    @Singleton
-    fun provideScombzRepository(
-        taskDao: com.atuy.scomb.data.db.TaskDao,
-        classCellDao: com.atuy.scomb.data.db.ClassCellDao,
-        newsItemDao: com.atuy.scomb.data.db.NewsItemDao,
-        apiService: ScombzApiService,
-        authManager: AuthManager,
-        @ApplicationContext context: Context
-    ): ScombzRepository {
-        return ScombzRepository(
-            taskDao,
-            classCellDao,
-            newsItemDao,
-            apiService,
-            authManager,
-            context
-        )
     }
 
     @Provides

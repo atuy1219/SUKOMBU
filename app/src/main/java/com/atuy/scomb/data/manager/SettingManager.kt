@@ -94,7 +94,7 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
 
     val displayWeekDaysFlow: Flow<Set<Int>> = context.settingsDataStore.data.map { preferences ->
         (preferences[DISPLAY_WEEK_DAYS_KEY] ?: DEFAULT_DISPLAY_WEEK_DAYS)
-            .mapNotNull { it.toIntOrNull() }
+            .mapNotNull { it.toIntOrNull()?.takeIf { day -> day in 0..5 } }
             .toSet()
     }
 
@@ -105,12 +105,12 @@ class SettingsManager @Inject constructor(@param:ApplicationContext private val 
     }
 
     val timetablePeriodCountFlow: Flow<Int> = context.settingsDataStore.data.map { preferences ->
-        preferences[TIMETABLE_PERIOD_COUNT_KEY] ?: DEFAULT_TIMETABLE_PERIOD_COUNT
+        (preferences[TIMETABLE_PERIOD_COUNT_KEY] ?: DEFAULT_TIMETABLE_PERIOD_COUNT).coerceIn(1, 7)
     }
 
     suspend fun setTimetablePeriodCount(count: Int) {
         context.settingsDataStore.edit { preferences ->
-            preferences[TIMETABLE_PERIOD_COUNT_KEY] = count
+            preferences[TIMETABLE_PERIOD_COUNT_KEY] = count.coerceIn(1, 7)
         }
     }
 

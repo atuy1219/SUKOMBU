@@ -30,7 +30,7 @@ data class SettingsUiState(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val authManager: AuthManager,
+    private val repository: com.atuy.scomb.data.repository.ScombzRepository,
     private val settingsManager: SettingsManager,
     private val scheduleNotificationsUseCase: ScheduleNotificationsUseCase,
     @ApplicationContext private val context: Context
@@ -67,6 +67,7 @@ class SettingsViewModel @Inject constructor(
     fun updateNotificationTimings(timings: Set<Int>) {
         viewModelScope.launch {
             settingsManager.setNotificationTimings(timings.map { it.toString() }.toSet())
+            repository.rescheduleNotifications()
         }
     }
 
@@ -134,7 +135,8 @@ class SettingsViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
-            authManager.clearAuthToken()
+            repository.logout()
+            settingsManager.updateLastSyncTime(0L)
         }
     }
 }

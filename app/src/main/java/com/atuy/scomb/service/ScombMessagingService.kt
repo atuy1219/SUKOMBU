@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -44,12 +45,14 @@ class ScombMessagingService : FirebaseMessagingService() {
             try {
                 scombzRepository.registerFcmToken(token)
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 AppLogger.e("Failed to update token on server: ${e.message}")
             }
         }
     }
 
     override fun onDestroy() {
+        serviceScope.cancel()
         super.onDestroy()
     }
 
