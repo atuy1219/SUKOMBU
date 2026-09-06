@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SUKOMBU_COMMIT_HASH: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - name: Checkout code
@@ -24,7 +26,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v6.3.0
         with:
           gradle-version: wrapper
-          
+          # Same-repository PRs may populate the cache. Fork PRs remain read-only.
+          cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
