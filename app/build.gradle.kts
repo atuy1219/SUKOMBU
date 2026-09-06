@@ -14,8 +14,6 @@ val buildVersionCode = providers.environmentVariable("SUKOMBU_VERSION_CODE")
     .orElse(1)
 val buildVersionName = providers.environmentVariable("SUKOMBU_VERSION_NAME")
     .orElse("1.0.0-dev")
-val buildCommitHash = providers.environmentVariable("SUKOMBU_COMMIT_HASH")
-    .orElse("local")
 
 android {
     namespace = "com.atuy.scomb"
@@ -54,7 +52,6 @@ android {
 
         versionCode = buildVersionCode.get()
         versionName = buildVersionName.get()
-        manifestPlaceholders["gitCommitHash"] = buildCommitHash.get()
 
         ndk {
             abiFilters.add("arm64-v8a")
@@ -91,7 +88,6 @@ kotlin {
 }
 
 dependencies {
-    // --- Core & Lifecycle ---
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -100,7 +96,6 @@ dependencies {
     implementation(libs.androidx.browser)
     implementation(libs.androidx.security.crypto)
 
-    // --- UI (Compose & Material3) ---
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.ui)
@@ -109,41 +104,33 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
 
-    // --- Navigation ---
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
 
-    // --- Network (Retrofit & Moshi) ---
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.moshi)
     implementation(libs.logging.interceptor)
     implementation(libs.moshi)
     ksp(libs.moshi.codegen)
 
-    // --- Database (Room) ---
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.room.compiler)
 
-    // --- Dependency Injection (Hilt) ---
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
-    // --- Background & Widgets (WorkManager & Glance) ---
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
 
-    // --- Debugging ---
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    // R8ビルドエラー対策
     implementation(libs.error.prone.annotations)
 
-    // --- Firebase (FCM Spoofing) ---
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.common)
