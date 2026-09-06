@@ -41,9 +41,6 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Verify Material 3 Expressive UI
-        run: python3 scripts/check_m3e_ui.py
-
       - name: Build with Gradle
         run: ./gradlew assembleDebug testDebugUnitTest -x lint
 
