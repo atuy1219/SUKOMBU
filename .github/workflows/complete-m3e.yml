@@ -49,8 +49,9 @@ jobs:
       - name: Commit verified migration
         run: |
           rm -f app/src/main/assets/build_commit.txt
+          git checkout -- .github/workflows/android-ci.yml
           git rm .github/workflows/complete-m3e.yml scripts/migrate_m3e_once.py scripts/fix_home_pull_refresh_once.py scripts/fix_motion_capture_once.py
-          git add app/src/main/java/com/atuy/scomb/ui scripts/check_m3e_ui.py .github/workflows/android-ci.yml
+          git add app/src/main/java/com/atuy/scomb/ui scripts/check_m3e_ui.py
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'Material 3 Expressiveコンポーネント移行を完了'
