@@ -28,12 +28,12 @@ fun ErrorState(message: String, onRetry: () -> Unit) {
     ) {
         Text(
             text = stringResource(R.string.error_generic_title),
-            style = MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.headlineSmallEmphasized
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = message,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(16.dp))

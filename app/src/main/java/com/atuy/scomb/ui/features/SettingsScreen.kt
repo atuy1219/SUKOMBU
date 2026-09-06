@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
@@ -102,7 +101,7 @@ fun SettingsScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item {
             SettingsGroupCard {
@@ -180,7 +179,7 @@ fun SettingsGroupCard(content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -480,7 +479,7 @@ fun AddNotificationTimingDialog(
         onDismissRequest = onDismiss,
         title = { Text("通知時間を追加") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 OutlinedTextField(
                     value = valueText,
                     onValueChange = { if (it.all { char -> char.isDigit() }) valueText = it },
@@ -646,7 +645,7 @@ private fun LogoutSection(onLogoutClick: () -> Unit) {
         onClick = onLogoutClick,
         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp)
+        shape = MaterialTheme.shapes.extraLarge
     ) {
         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
         Spacer(modifier = Modifier.width(8.dp))

@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -166,7 +165,7 @@ fun TaskSearchBar(
             }
         },
         singleLine = true,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.largeIncreased,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
     )
@@ -230,7 +229,7 @@ fun TaskList(tasks: List<Task>, onTaskClick: (Task) -> Unit) {
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(tasks, key = { it.id }) { task ->
@@ -260,9 +259,9 @@ fun TaskCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onTaskClick(task) },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        shape = RoundedCornerShape(12.dp)
+        shape = MaterialTheme.shapes.large
     ) {
         // IntrinsicSize.Minを使用することで、コンテンツの高さに合わせてRowの高さを決定し、
         // その高さに合わせて左側のカラーバー(Box)を伸縮させます。

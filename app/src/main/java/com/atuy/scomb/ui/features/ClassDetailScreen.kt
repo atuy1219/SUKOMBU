@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -248,7 +247,7 @@ fun ClassDetailContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item(key = "header") {
             ClassHeaderCard(classCell, onClassPageClick)
@@ -264,7 +263,7 @@ fun ClassDetailContent(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                shape = RoundedCornerShape(16.dp)
+                shape = MaterialTheme.shapes.extraLarge
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -337,7 +336,7 @@ fun ClassDetailContent(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                shape = RoundedCornerShape(16.dp)
+                shape = MaterialTheme.shapes.extraLarge
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -389,8 +388,7 @@ fun ClassDetailContent(
         item(key = "task_header") {
             Text(
                 text = stringResource(R.string.class_detail_related_tasks),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
         }
@@ -440,7 +438,7 @@ fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        shape = RoundedCornerShape(24.dp)
+        shape = MaterialTheme.shapes.extraLarge
     ) {
         Column(
             modifier = Modifier.padding(24.dp),
@@ -624,7 +622,7 @@ fun InfoGridCard(classCell: ClassCell) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        shape = RoundedCornerShape(16.dp)
+        shape = MaterialTheme.shapes.extraLarge
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             val dayPeriodValue = if (classCell.period == 8 || classCell.dayOfWeek == 8) {

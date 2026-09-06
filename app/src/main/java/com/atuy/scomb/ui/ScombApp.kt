@@ -168,6 +168,7 @@ fun ScombApp(
     val isTablet = LocalConfiguration.current.smallestScreenWidthDp >= 600
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             if (shouldShowBottomBar) {
                 AppTopBar(
@@ -180,7 +181,7 @@ fun ScombApp(
         },
         bottomBar = {
             if (shouldShowBottomBar && authState is AuthState.Authenticated && !isTablet) {
-                NavigationBar {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                     bottomBarScreens.forEach { screen ->
                         NavigationBarItem(
                             icon = { Icon(screen.icon, contentDescription = null) },
@@ -207,7 +208,10 @@ fun ScombApp(
                 .padding(innerPadding)
         ) {
             if (isTablet && shouldShowBottomBar && authState is AuthState.Authenticated) {
-                NavigationRail(modifier = Modifier.fillMaxHeight()) {
+                NavigationRail(
+                    modifier = Modifier.fillMaxHeight(),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ) {
                     Column(
                         modifier = Modifier.fillMaxHeight(),
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center

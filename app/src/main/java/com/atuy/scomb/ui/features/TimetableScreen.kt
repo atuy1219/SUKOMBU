@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -263,8 +262,7 @@ fun TimetableGrid(
 
             Text(
                 text = "その他",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
@@ -354,12 +352,12 @@ fun ClassCellView(
                             animatedVisibilityScope = animatedVisibilityScope
                         )
                         .clickable(onClick = onClick),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.largeIncreased,
                     colors = CardDefaults.cardColors(
                         containerColor = containerColor,
                         contentColor = contentColor
                     ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(
                         modifier = Modifier
@@ -432,12 +430,12 @@ fun OtherClassCellView(
                         animatedVisibilityScope = animatedVisibilityScope
                     )
                     .clickable(onClick = onClick),
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.largeIncreased,
                 colors = CardDefaults.cardColors(
                     containerColor = containerColor,
                     contentColor = contentColor
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier

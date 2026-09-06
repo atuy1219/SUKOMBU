@@ -60,7 +60,7 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.surface),
         contentAlignment = Alignment.Center
     ) {
         LoginForm(
@@ -88,8 +88,9 @@ fun LoginForm(
         modifier = Modifier
             .fillMaxWidth(0.9f)
             .padding(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        shape = MaterialTheme.shapes.extraExtraLarge
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -107,8 +108,7 @@ fun LoginForm(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = stringResource(R.string.login_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineLargeEmphasized,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -168,7 +168,7 @@ fun LoginForm(
                 enabled = username.isNotBlank() && password.isNotBlank() && !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .height(56.dp)
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
@@ -228,6 +228,6 @@ fun LoginTextField(
             onDone = { onAction() }
         ),
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium
+        shape = MaterialTheme.shapes.large
     )
 }
