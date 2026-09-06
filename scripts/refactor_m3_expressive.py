@@ -61,8 +61,26 @@ def tune(name: str, text: str) -> str:
             1,
         )
     elif name == "LoginScreen.kt":
-        text = text.replace("MaterialTheme.typography.headlineMedium", "MaterialTheme.typography.headlineLargeEmphasized")
-        text = text.replace("MaterialTheme.typography.titleLarge", "MaterialTheme.typography.titleLargeEmphasized")
+        text = text.replace(
+            ".background(MaterialTheme.colorScheme.background)",
+            ".background(MaterialTheme.colorScheme.surface)",
+        )
+        text = text.replace(
+            "elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),",
+            "elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),",
+        )
+        text = text.replace(
+            "colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)\n    ) {",
+            "colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),\n        shape = MaterialTheme.shapes.extraExtraLarge\n    ) {",
+            1,
+        )
+        text = text.replace(
+            "style = MaterialTheme.typography.headlineSmall,\n                    fontWeight = FontWeight.Bold,",
+            "style = MaterialTheme.typography.headlineLargeEmphasized,",
+            1,
+        )
+        text = text.replace(".height(50.dp)", ".height(56.dp)", 1)
+        text = text.replace("shape = MaterialTheme.shapes.medium", "shape = MaterialTheme.shapes.large")
     elif name == "ErrorState.kt":
         text = text.replace("style = MaterialTheme.typography.titleMedium", "style = MaterialTheme.typography.headlineSmallEmphasized")
         text = text.replace("style = MaterialTheme.typography.bodyMedium", "style = MaterialTheme.typography.bodyLarge")
