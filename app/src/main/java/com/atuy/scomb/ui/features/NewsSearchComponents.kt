@@ -43,6 +43,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.atuy.scomb.ui.viewmodel.AdvancedNewsSearchInput
 import com.atuy.scomb.ui.viewmodel.NewsFilter
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
 
 @Composable
 fun FilterBar(
@@ -68,7 +72,7 @@ fun FilterBar(
                 isError = searchError != null
             )
             Spacer(modifier = Modifier.width(4.dp))
-            IconButton(onClick = { showAdvancedSearch = true }) {
+            IconButton(shapes = IconButtonDefaults.shapes(), onClick = { showAdvancedSearch = true }) {
                 Icon(Icons.Default.Tune, contentDescription = "詳細検索")
             }
         }
@@ -90,7 +94,7 @@ fun FilterBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             FilterChip(
-                selected = filter.unreadOnly,
+                shapes = FilterChipDefaults.shapes(),                selected = filter.unreadOnly,
                 onClick = {
                     onFilterChanged(filter.copy(unreadOnly = !filter.unreadOnly))
                 },
@@ -131,19 +135,18 @@ private fun NewsSearchField(
     val focusManager = LocalFocusManager.current
 
     OutlinedTextField(
-        value = value,
+        shape = OutlinedTextFieldDefaults.roundedShape,        value = value,
         onValueChange = onValueChange,
         placeholder = { Text(placeholder) },
         modifier = modifier,
         singleLine = true,
         isError = isError,
-        shape = MaterialTheme.shapes.largeIncreased,
         leadingIcon = {
             Icon(Icons.Default.Search, contentDescription = null)
         },
         trailingIcon = if (value.isNotEmpty()) {
             {
-                IconButton(onClick = { onValueChange("") }) {
+                IconButton(shapes = IconButtonDefaults.shapes(), onClick = { onValueChange("") }) {
                     Icon(Icons.Default.Close, contentDescription = "検索をクリア")
                 }
             }
@@ -257,7 +260,7 @@ private fun AdvancedSearchDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = {
+                shapes = ButtonDefaults.shapes(),                onClick = {
                     onApply(
                         AdvancedNewsSearchInput(
                             allWords = allWords,
@@ -276,7 +279,7 @@ private fun AdvancedSearchDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(shapes = ButtonDefaults.shapes(), onClick = onDismiss) {
                 Text("キャンセル")
             }
         }
@@ -291,7 +294,7 @@ private fun AdvancedSearchField(
     placeholder: String? = null
 ) {
     OutlinedTextField(
-        value = value,
+        shape = OutlinedTextFieldDefaults.roundedShape,        value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
         placeholder = if (placeholder == null) null else {
@@ -363,7 +366,7 @@ fun MultiSelectFilterChip(
             },
             confirmButton = {
                 TextButton(
-                    onClick = {
+                    shapes = ButtonDefaults.shapes(),                    onClick = {
                         onSelectionChanged(temporarySelection)
                         showDialog = false
                     }
@@ -372,7 +375,7 @@ fun MultiSelectFilterChip(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
+                TextButton(shapes = ButtonDefaults.shapes(), onClick = { showDialog = false }) {
                     Text("キャンセル")
                 }
             }

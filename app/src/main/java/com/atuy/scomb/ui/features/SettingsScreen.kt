@@ -81,6 +81,8 @@ import com.atuy.scomb.R
 import com.atuy.scomb.data.manager.SettingsManager
 import com.atuy.scomb.ui.Screen
 import com.atuy.scomb.ui.viewmodel.SettingsViewModel
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
 
 @Composable
 fun SettingsScreen(
@@ -411,7 +413,7 @@ private fun TimetableSettingsSection(
             weekDays.forEachIndexed { index, day ->
                 val isSelected = displayWeekDays.contains(index)
                 FilterChip(
-                    selected = isSelected,
+                    shapes = FilterChipDefaults.shapes(),                    selected = isSelected,
                     onClick = {
                         val newSelection = displayWeekDays.toMutableSet()
                         if (isSelected) {
@@ -517,7 +519,7 @@ private fun NotificationSettingsSection(
             allTimingsToDisplay.forEach { minutes ->
                 val isSelected = selectedTimings.contains(minutes)
                 FilterChip(
-                    selected = isSelected,
+                    shapes = FilterChipDefaults.shapes(),                    selected = isSelected,
                     onClick = {
                         val newSelection = selectedTimings.toMutableSet()
                         if (isSelected) {
@@ -582,12 +584,11 @@ fun AddNotificationTimingDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 OutlinedTextField(
-                    value = valueText,
+                    shape = OutlinedTextFieldDefaults.roundedShape,                    value = valueText,
                     onValueChange = { if (it.all { char -> char.isDigit() }) valueText = it },
                     label = { Text("数値") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
-                    shape = MaterialTheme.shapes.largeIncreased,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -604,7 +605,7 @@ fun AddNotificationTimingDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = {
+                shapes = ButtonDefaults.shapes(),                onClick = {
                     val value = valueText.toIntOrNull()
                     if (value != null && value > 0) {
                         val minutes = when (selectedUnit) {
@@ -622,7 +623,7 @@ fun AddNotificationTimingDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(shapes = ButtonDefaults.shapes(), onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
             }
         }
@@ -706,15 +707,14 @@ private fun AppInfoSection(
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedButton(
-            onClick = {
+            shapes = ButtonDefaults.shapes(),            onClick = {
                 val intent = Intent(Intent.ACTION_VIEW, "https://github.com/atuy1219/SUKOMBU".toUri())
                 context.startActivity(intent)
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 56.dp),
-            shape = MaterialTheme.shapes.extraLarge
-        ) {
+) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                 contentDescription = null,
@@ -738,21 +738,19 @@ private fun DebugSection(
         )
 
         Button(
-            onClick = onTestNotificationClick,
+            shapes = ButtonDefaults.shapes(),            onClick = onTestNotificationClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 56.dp),
-            shape = MaterialTheme.shapes.extraLarge
-        ) {
+) {
             Text(stringResource(R.string.settings_test_notification_button))
         }
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedButton(
-            onClick = onDisableDebugModeClick,
+            shapes = ButtonDefaults.shapes(),            onClick = onDisableDebugModeClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 56.dp),
-            shape = MaterialTheme.shapes.extraLarge,
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
         ) {
             Text(stringResource(R.string.settings_disable_debug_mode))
@@ -763,13 +761,12 @@ private fun DebugSection(
 @Composable
 private fun LogoutSection(onLogoutClick: () -> Unit) {
     Button(
-        onClick = onLogoutClick,
+        shapes = ButtonDefaults.shapes(),        onClick = onLogoutClick,
         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
+) {
         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
         Spacer(modifier = Modifier.width(8.dp))
         Text(stringResource(R.string.settings_logout_button))
@@ -792,14 +789,14 @@ fun LogoutDialog(
         text = { Text(stringResource(R.string.settings_logout_dialog_message)) },
         confirmButton = {
             TextButton(
-                onClick = onConfirm,
+                shapes = ButtonDefaults.shapes(),                onClick = onConfirm,
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
             ) {
                 Text(stringResource(R.string.settings_logout_button))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(shapes = ButtonDefaults.shapes(), onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
             }
         }

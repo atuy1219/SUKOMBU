@@ -16,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.atuy.scomb.R
+import androidx.compose.material3.ButtonDefaults
 
 @Composable
 fun ErrorState(message: String, onRetry: () -> Unit) {
@@ -37,7 +38,7 @@ fun ErrorState(message: String, onRetry: () -> Unit) {
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetry) {
+        Button(shapes = ButtonDefaults.shapes(), onClick = onRetry) {
             Text(stringResource(R.string.retry))
         }
     }

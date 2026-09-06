@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.atuy.scomb.ui.features
 
 import android.Manifest
@@ -36,7 +38,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -47,6 +49,8 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -137,15 +141,24 @@ fun HomeScreen(
         when (val state = uiState) {
             is HomeUiState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    LoadingIndicator()
                 }
             }
 
             is HomeUiState.Success -> {
+                val pullToRefreshState = rememberPullToRefreshState()
                 PullToRefreshBox(
+                    state = pullToRefreshState,
                     isRefreshing = state.isRefreshing,
                     onRefresh = {
                         viewModel.loadHomeData(forceRefresh = true)
+                    },
+                    indicator = {
+                        PullToRefreshDefaults.LoadingIndicator(
+                            state = pullToRefreshState,
+                            isRefreshing = state.isRefreshing,
+                            modifier = Modifier.align(Alignment.TopCenter)
+                        )
                     },
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -295,15 +308,13 @@ fun TodaysClassesSection(
                         Color.Transparent
 
                     ListItem(
-                        colors = ListItemDefaults.colors(containerColor = backgroundColor),
-                        headlineContent = {
-                            Text(
-                                text = classCell.name ?: "",
-                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                                maxLines = 1,
-                                color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
+                        onClick = {
+                            if (classCell.classId.isNotEmpty()) {
+                                onClassClick(classCell.classId, classCell.dayOfWeek, classCell.period)
+                            }
                         },
+                        colors = ListItemDefaults.colors(containerColor = backgroundColor),
+                        shapes = ListItemDefaults.shapes(),
                         supportingContent = {
                             Text(
                                 text = classCell.room ?: stringResource(R.string.home_room_unset),
@@ -325,24 +336,23 @@ fun TodaysClassesSection(
                                 ) {
                                     Text(
                                         text = "${classCell.period + 1}",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
+                                        style = MaterialTheme.typography.titleMediumEmphasized
                                     )
                                 }
                             }
                         },
-                        modifier = Modifier
-                            .sharedElement(
-                                // キーに曜日と時限を含めて一致させる
-                                sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
-                                animatedVisibilityScope = animatedVisibilityScope
-                            )
-                            .clickable {
-                                if (classCell.classId.isNotEmpty()) {
-                                    onClassClick(classCell.classId, classCell.dayOfWeek, classCell.period)
-                                }
-                            }
-                    )
+                        modifier = Modifier.sharedElement(
+                            sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
+                            animatedVisibilityScope = animatedVisibilityScope
+                        )
+                    ) {
+                        Text(
+                            text = classCell.name ?: "",
+                            style = if (isCurrent) MaterialTheme.typography.bodyLargeEmphasized else MaterialTheme.typography.bodyLarge,
+                            maxLines = 1,
+                            color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                     if (index < classes.size - 1) {
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
@@ -373,14 +383,9 @@ fun UpcomingTasksSection(
                     if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
 
                 ListItem(
+                    onClick = { onTaskClick(task) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = {
-                        Text(
-                            text = task.title,
-                            maxLines = 1,
-                            fontWeight = FontWeight.Medium
-                        )
-                    },
+                    shapes = ListItemDefaults.shapes(),
                     supportingContent = {
                         Text(
                             text = task.className,
@@ -401,9 +406,14 @@ fun UpcomingTasksSection(
                                 color = timeColor
                             )
                         }
-                    },
-                    modifier = Modifier.clickable { onTaskClick(task) }
-                )
+                    }
+                ) {
+                    Text(
+                        text = task.title,
+                        maxLines = 1,
+                        style = MaterialTheme.typography.bodyLargeEmphasized
+                    )
+                }
                 if (index < tasks.size - 1) {
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -430,14 +440,9 @@ fun RecentNewsSection(
         } else {
             news.forEachIndexed { index, newsItem ->
                 ListItem(
+                    onClick = { onNewsClick(newsItem.url) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = {
-                        Text(
-                            text = newsItem.title,
-                            maxLines = 2,
-                            fontWeight = if (newsItem.unread) FontWeight.Bold else FontWeight.Normal
-                        )
-                    },
+                    shapes = ListItemDefaults.shapes(),
                     supportingContent = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -466,9 +471,14 @@ fun RecentNewsSection(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    },
-                    modifier = Modifier.clickable { onNewsClick(newsItem.url) }
-                )
+                    }
+                ) {
+                    Text(
+                        text = newsItem.title,
+                        maxLines = 2,
+                        style = if (newsItem.unread) MaterialTheme.typography.bodyLargeEmphasized else MaterialTheme.typography.bodyLarge
+                    )
+                }
                 if (index < news.size - 1) {
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp),

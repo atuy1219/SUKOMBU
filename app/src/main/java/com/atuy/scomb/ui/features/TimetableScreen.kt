@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.atuy.scomb.ui.features
 
 import android.util.Log
@@ -23,7 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -50,6 +52,8 @@ import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.ui.viewmodel.TimetableUiState
 import com.atuy.scomb.ui.viewmodel.TimetableViewModel
 import java.util.Calendar
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 
 private const val TAG = "TimetableScreen"
 
@@ -80,12 +84,21 @@ fun TimetableScreen(
         when (val state = uiState) {
             is TimetableUiState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    LoadingIndicator()
                 }
             }
 
             is TimetableUiState.Success -> {
+                val pullToRefreshState = rememberPullToRefreshState()
                 PullToRefreshBox(
+                    state = pullToRefreshState,
+                    indicator = {
+                        PullToRefreshDefaults.LoadingIndicator(
+                            state = pullToRefreshState,
+                            isRefreshing = state.isRefreshing,
+                            modifier = Modifier.align(Alignment.TopCenter)
+                        )
+                    },
                     isRefreshing = state.isRefreshing,
                     onRefresh = { viewModel.refresh() },
                     modifier = Modifier.fillMaxSize()

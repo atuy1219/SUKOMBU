@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.atuy.scomb.ui.features
 
 import androidx.browser.customtabs.CustomTabsIntent
@@ -42,7 +44,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -83,6 +85,8 @@ import com.atuy.scomb.ui.viewmodel.ClassDetailUiState
 import com.atuy.scomb.ui.viewmodel.ClassDetailViewModel
 import kotlin.math.PI
 import kotlin.math.atan2
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -127,14 +131,14 @@ fun ClassDetailScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.screen_class_detail)) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     // 色設定ボタンを追加
                     if (uiState is ClassDetailUiState.Success) {
-                        IconButton(onClick = { showColorDialog = true }) {
+                        IconButton(shapes = IconButtonDefaults.shapes(), onClick = { showColorDialog = true }) {
                             Icon(
                                 imageVector = Icons.Default.ColorLens,
                                 contentDescription = "表示カラー設定",
@@ -165,7 +169,7 @@ fun ClassDetailScreen(
                 when (val state = uiState) {
                     is ClassDetailUiState.Loading -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
+                            LoadingIndicator()
                         }
                     }
 
@@ -277,7 +281,7 @@ fun ClassDetailContent(
                             fontWeight = FontWeight.Bold
                         )
                         IconButton(
-                            onClick = { showAddLinkDialog = true },
+                            shapes = IconButtonDefaults.shapes(),                            onClick = { showAddLinkDialog = true },
                             modifier = Modifier.size(24.dp)
                         ) {
                             Icon(Icons.Default.Add, contentDescription = stringResource(R.string.class_detail_add_link_button))
@@ -288,7 +292,7 @@ fun ClassDetailContent(
 
                     // 公式シラバス
                     FilledTonalButton(
-                        onClick = { openUrl(classCell.syllabusUrl) },
+                        shapes = ButtonDefaults.shapes(),                        onClick = { openUrl(classCell.syllabusUrl) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
@@ -308,7 +312,7 @@ fun ClassDetailContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             FilledTonalButton(
-                                onClick = { openUrl(link.url) },
+                                shapes = ButtonDefaults.shapes(),                                onClick = { openUrl(link.url) },
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(
@@ -319,7 +323,7 @@ fun ClassDetailContent(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(link.title)
                             }
-                            IconButton(onClick = { onRemoveLink(link) }) {
+                            IconButton(shapes = IconButtonDefaults.shapes(), onClick = { onRemoveLink(link) }) {
                                 Icon(
                                     Icons.Default.Delete,
                                     contentDescription = stringResource(R.string.class_detail_delete_link),
@@ -351,15 +355,14 @@ fun ClassDetailContent(
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             AnimatedVisibility(visible = isSaving) {
-                                CircularProgressIndicator(
+                                LoadingIndicator(
                                     modifier = Modifier
                                         .size(16.dp)
                                         .padding(end = 8.dp),
-                                    strokeWidth = 2.dp
-                                )
+)
                             }
                             IconButton(
-                                onClick = { showEditNoteDialog = true },
+                                shapes = IconButtonDefaults.shapes(),                                onClick = { showEditNoteDialog = true },
                                 modifier = Modifier.size(24.dp),
                                 enabled = !isSaving
                             ) {
@@ -468,7 +471,7 @@ fun ClassHeaderCard(classCell: ClassCell, onClassPageClick: () -> Unit) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
-                onClick = onClassPageClick,
+                shapes = ButtonDefaults.shapes(),                onClick = onClassPageClick,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = contentColor,
                     contentColor = containerColor
@@ -536,13 +539,13 @@ fun ColorPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(shapes = ButtonDefaults.shapes(), onClick = onDismiss) {
                 Text(stringResource(R.string.ok))
             }
         },
         dismissButton = {
             TextButton(
-                onClick = onResetColor,
+                shapes = ButtonDefaults.shapes(),                onClick = onResetColor,
                 enabled = !isSaving && currentColorInt != null && currentColorInt != 0
             ) {
                 Text("色をリセット")
@@ -686,13 +689,13 @@ fun AddLinkDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
-                    value = title,
+                    shape = OutlinedTextFieldDefaults.roundedShape,                    value = title,
                     onValueChange = { title = it },
                     label = { Text(stringResource(R.string.class_detail_dialog_title_label)) },
                     singleLine = true
                 )
                 OutlinedTextField(
-                    value = url,
+                    shape = OutlinedTextFieldDefaults.roundedShape,                    value = url,
                     onValueChange = { url = it },
                     label = { Text(stringResource(R.string.class_detail_dialog_url_label)) },
                     singleLine = true
@@ -701,13 +704,13 @@ fun AddLinkDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { if (title.isNotBlank() && url.isNotBlank()) onConfirm(title, url) }
+                shapes = ButtonDefaults.shapes(),                onClick = { if (title.isNotBlank() && url.isNotBlank()) onConfirm(title, url) }
             ) {
                 Text(stringResource(R.string.add))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(shapes = ButtonDefaults.shapes(), onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
             }
         }
@@ -727,7 +730,7 @@ fun EditNoteDialog(
         title = { Text(stringResource(R.string.class_detail_dialog_edit_memo_title)) },
         text = {
             OutlinedTextField(
-                value = note,
+                shape = OutlinedTextFieldDefaults.roundedShape,                value = note,
                 onValueChange = { note = it },
                 label = { Text(stringResource(R.string.class_detail_dialog_content_label)) },
                 minLines = 3,
@@ -736,12 +739,12 @@ fun EditNoteDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(note) }) {
+            TextButton(shapes = ButtonDefaults.shapes(), onClick = { onConfirm(note) }) {
                 Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(shapes = ButtonDefaults.shapes(), onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
             }
         }
