@@ -1,6 +1,7 @@
 package com.atuy.scomb.ui.features
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.widget.ImageView
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -13,16 +14,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
@@ -33,6 +38,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,12 +47,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -58,6 +65,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -100,7 +110,7 @@ fun SettingsScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item {
@@ -178,11 +188,13 @@ fun SettingsScreen(
 fun SettingsGroupCard(content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        shape = MaterialTheme.shapes.extraExtraLarge,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             content()
         }
     }
@@ -192,21 +204,130 @@ fun SettingsGroupCard(content: @Composable () -> Unit) {
 fun SectionHeader(title: String, icon: ImageVector) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(bottom = 12.dp)
+        modifier = Modifier.padding(bottom = 16.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(10.dp)
+                    .size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMediumEmphasized,
             color = MaterialTheme.colorScheme.onSurface
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun <T> ExpressiveSingleChoiceGroup(
+    options: List<Pair<T, String>>,
+    selectedValue: T,
+    onSelected: (T) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+    ) {
+        options.forEachIndexed { index, (value, label) ->
+            val isSelected = selectedValue == value
+            ToggleButton(
+                checked = isSelected,
+                onCheckedChange = { checked ->
+                    if (checked) onSelected(value)
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { role = Role.RadioButton },
+                buttonSize = ToggleButtonSize.Small,
+                shapes = when (index) {
+                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                },
+                icon = if (isSelected) {
+                    {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null
+                        )
+                    }
+                } else {
+                    null
+                }
+            ) {
+                Text(label)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExpressiveSwitchSetting(
+    title: String,
+    supportingText: String? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.largeIncreased,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        Row(
+            modifier = Modifier
+                .toggleable(
+                    value = checked,
+                    role = Role.Switch,
+                    onValueChange = onCheckedChange
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 16.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLargeEmphasized
+                )
+                if (supportingText != null) {
+                    Text(
+                        text = supportingText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Switch(
+                checked = checked,
+                onCheckedChange = null,
+                thumbContent = if (checked) {
+                    {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                        )
+                    }
+                } else {
+                    null
+                }
+            )
+        }
     }
 }
 
@@ -222,23 +343,15 @@ private fun ThemeSettingsSection(
             icon = Icons.Default.DarkMode
         )
 
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            val options = listOf(
+        ExpressiveSingleChoiceGroup(
+            options = listOf(
                 SettingsManager.THEME_MODE_SYSTEM to "自動",
                 SettingsManager.THEME_MODE_LIGHT to "ライト",
                 SettingsManager.THEME_MODE_DARK to "ダーク"
-            )
-
-            options.forEachIndexed { index, (mode, label) ->
-                SegmentedButton(
-                    selected = currentMode == mode,
-                    onClick = { onModeChange(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
-                ) {
-                    Text(label)
-                }
-            }
-        }
+            ),
+            selectedValue = currentMode,
+            onSelected = onModeChange
+        )
     }
 }
 
@@ -253,20 +366,11 @@ private fun HomeSettingsSection(
             icon = Icons.Default.Home
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.settings_show_home_news),
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Switch(
-                checked = showHomeNews,
-                onCheckedChange = onShowHomeNewsChange
-            )
-        }
+        ExpressiveSwitchSetting(
+            title = stringResource(R.string.settings_show_home_news),
+            checked = showHomeNews,
+            onCheckedChange = onShowHomeNewsChange
+        )
     }
 }
 
@@ -294,16 +398,16 @@ private fun TimetableSettingsSection(
             icon = Icons.Default.DateRange
         )
 
-        // 表示する曜日設定
         Text(
             text = stringResource(R.string.settings_display_week_days),
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyLargeEmphasized,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             weekDays.forEachIndexed { index, day ->
                 val isSelected = displayWeekDays.contains(index)
@@ -312,7 +416,6 @@ private fun TimetableSettingsSection(
                     onClick = {
                         val newSelection = displayWeekDays.toMutableSet()
                         if (isSelected) {
-                            // 少なくとも1日は選択必須にする場合
                             if (newSelection.size > 1) {
                                 newSelection.remove(index)
                             }
@@ -321,34 +424,37 @@ private fun TimetableSettingsSection(
                         }
                         onDisplayWeekDaysChange(newSelection)
                     },
-                    label = { Text(day) }
+                    label = { Text(day) },
+                    leadingIcon = if (isSelected) {
+                        {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    } else {
+                        null
+                    }
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // 時限数設定
         Text(
             text = stringResource(R.string.settings_period_count),
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyLargeEmphasized,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            periodOptions.forEachIndexed { index, count ->
-                SegmentedButton(
-                    selected = periodCount == count,
-                    onClick = { onPeriodCountChange(count) },
-                    shape = SegmentedButtonDefaults.itemShape(
-                        index = index,
-                        count = periodOptions.size
-                    )
-                ) {
-                    Text(stringResource(R.string.settings_period_suffix, count))
-                }
-            }
-        }
+        ExpressiveSingleChoiceGroup(
+            options = periodOptions.map { count ->
+                count to stringResource(R.string.settings_period_suffix, count)
+            },
+            selectedValue = periodCount,
+            onSelected = onPeriodCountChange
+        )
     }
 }
 
@@ -361,12 +467,7 @@ private fun NotificationSettingsSection(
     onTimingsChange: (Set<Int>) -> Unit
 ) {
     val (showAddDialog, setShowAddDialog) = remember { mutableStateOf(false) }
-
-    // デフォルトの選択肢（表示順序のため）
     val defaultOptions = listOf(10, 30, 60, 120, 1440, 2880, 4320)
-
-    // 表示する全てのタイミング（デフォルト + ユーザーが追加したもの）
-    // デフォルト値のリストに含まれていなくても、selectedTimingsにあるものは表示する
     val allTimingsToDisplay = (defaultOptions + selectedTimings).distinct().sorted()
 
     if (showAddDialog) {
@@ -387,34 +488,18 @@ private fun NotificationSettingsSection(
             icon = Icons.Default.Notifications
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "お知らせ通知",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = "ScombZから届くお知らせを通知します",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
-                checked = newsNotificationsEnabled,
-                onCheckedChange = onNewsNotificationsEnabledChange
-            )
-        }
+        ExpressiveSwitchSetting(
+            title = "お知らせ通知",
+            supportingText = "ScombZから届くお知らせを通知します",
+            checked = newsNotificationsEnabled,
+            onCheckedChange = onNewsNotificationsEnabledChange
+        )
 
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = "課題の締切通知",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.bodyLargeEmphasized,
             modifier = Modifier.padding(bottom = 4.dp)
         )
 
@@ -443,11 +528,21 @@ private fun NotificationSettingsSection(
                         }
                         onTimingsChange(newSelection)
                     },
-                    label = { Text(formatNotificationTime(minutes)) }
+                    label = { Text(formatNotificationTime(minutes)) },
+                    leadingIcon = if (isSelected) {
+                        {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    } else {
+                        null
+                    }
                 )
             }
 
-            // 追加ボタン
             AssistChip(
                 onClick = { setShowAddDialog(true) },
                 label = { Text("追加") },
@@ -458,8 +553,9 @@ private fun NotificationSettingsSection(
                         modifier = Modifier.size(18.dp)
                     )
                 },
+                shape = MaterialTheme.shapes.large,
                 colors = AssistChipDefaults.assistChipColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     labelColor = MaterialTheme.colorScheme.primary
                 )
             )
@@ -467,17 +563,23 @@ private fun NotificationSettingsSection(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddNotificationTimingDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit
 ) {
     var valueText by remember { mutableStateOf("") }
-    var selectedUnit by remember { mutableIntStateOf(0) } // 0: 分, 1: 時間, 2: 日
+    var selectedUnit by remember { mutableIntStateOf(0) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("通知時間を追加") },
+        title = {
+            Text(
+                text = "通知時間を追加",
+                style = MaterialTheme.typography.headlineSmallEmphasized
+            )
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 OutlinedTextField(
@@ -486,20 +588,19 @@ fun AddNotificationTimingDialog(
                     label = { Text("数値") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
+                    shape = MaterialTheme.shapes.largeIncreased,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    listOf("分前", "時間前", "日前").forEachIndexed { index, label ->
-                        SegmentedButton(
-                            selected = selectedUnit == index,
-                            onClick = { selectedUnit = index },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 3)
-                        ) {
-                            Text(label)
-                        }
-                    }
-                }
+                ExpressiveSingleChoiceGroup(
+                    options = listOf(
+                        0 to "分前",
+                        1 to "時間前",
+                        2 to "日前"
+                    ),
+                    selectedValue = selectedUnit,
+                    onSelected = { selectedUnit = it }
+                )
             }
         },
         confirmButton = {
@@ -543,15 +644,27 @@ private fun AppInfoSection(
     onVersionClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val versionName = BuildConfig.VERSION_NAME
-    val commitHash = BuildConfig.GIT_COMMIT_HASH
-
-    val displayVersion =
-        if (versionName.contains("nightly", ignoreCase = true) || BuildConfig.DEBUG) {
-            "$versionName ($commitHash)"
-        } else {
-            versionName
-        }
+    val packageInfo = remember(context) {
+        context.packageManager.getPackageInfo(
+            context.packageName,
+            PackageManager.PackageInfoFlags.of(0)
+        )
+    }
+    val commitHash = remember(context) {
+        context.packageManager.getApplicationInfo(
+            context.packageName,
+            PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong())
+        ).metaData?.getString("com.atuy.scomb.GIT_COMMIT_HASH").orEmpty().take(7)
+    }
+    val versionName = packageInfo.versionName ?: "unknown"
+    val displayVersion = if (
+        (BuildConfig.DEBUG || versionName.contains("nightly", ignoreCase = true)) &&
+        commitHash.isNotBlank() && commitHash != "local"
+    ) {
+        "$versionName ($commitHash)"
+    } else {
+        versionName
+    }
 
     Column {
         SectionHeader(
@@ -575,8 +688,7 @@ private fun AppInfoSection(
             Column {
                 Text(
                     text = stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleMediumEmphasized
                 )
                 Text(
                     text = stringResource(R.string.settings_version_format, displayVersion),
@@ -591,14 +703,17 @@ private fun AppInfoSection(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedButton(
             onClick = {
                 val intent = Intent(Intent.ACTION_VIEW, "https://github.com/atuy1219/SUKOMBU".toUri())
                 context.startActivity(intent)
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp),
+            shape = MaterialTheme.shapes.extraLarge
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.OpenInNew,
@@ -624,14 +739,20 @@ private fun DebugSection(
 
         Button(
             onClick = onTestNotificationClick,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp),
+            shape = MaterialTheme.shapes.extraLarge
         ) {
             Text(stringResource(R.string.settings_test_notification_button))
         }
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedButton(
             onClick = onDisableDebugModeClick,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp),
+            shape = MaterialTheme.shapes.extraLarge,
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
         ) {
             Text(stringResource(R.string.settings_disable_debug_mode))
@@ -644,7 +765,9 @@ private fun LogoutSection(onLogoutClick: () -> Unit) {
     Button(
         onClick = onLogoutClick,
         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp),
         shape = MaterialTheme.shapes.extraLarge
     ) {
         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
@@ -660,7 +783,12 @@ fun LogoutDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_logout_dialog_title)) },
+        title = {
+            Text(
+                text = stringResource(R.string.settings_logout_dialog_title),
+                style = MaterialTheme.typography.headlineSmallEmphasized
+            )
+        },
         text = { Text(stringResource(R.string.settings_logout_dialog_message)) },
         confirmButton = {
             TextButton(
