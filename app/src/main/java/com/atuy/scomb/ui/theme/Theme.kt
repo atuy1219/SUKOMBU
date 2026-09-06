@@ -17,7 +17,7 @@ private val DarkColorScheme = darkColorScheme(
     tertiary = Pink80
 )
 
-private val LightColorScheme = expressiveLightColorScheme()
+private val ExpressiveLightColorScheme = expressiveLightColorScheme()
 
 @Composable
 fun ScombTheme(
@@ -31,7 +31,7 @@ fun ScombTheme(
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
         darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        else -> ExpressiveLightColorScheme
     }
 
     MaterialExpressiveTheme(
