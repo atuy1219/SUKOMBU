@@ -1,0 +1,53 @@
+name: Material 3 Expressive Refactor
+
+on:
+  push:
+    branches: [ "dev" ]
+    paths:
+      - "scripts/refactor_m3_expressive.py"
+      - ".github/workflows/refactor-m3e.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v7
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: wrapper
+
+      - name: Apply Material 3 Expressive refactor
+        run: python3 scripts/refactor_m3_expressive.py
+
+      - name: Build and test
+        run: ./gradlew assembleDebug testDebugUnitTest -x lint
+
+      - name: Commit refactor
+        run: |
+          rm scripts/refactor_m3_expressive.py .github/workflows/refactor-m3e.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "全画面をMaterial 3 Expressiveデザインへ刷新"
+          git push origin HEAD:dev
