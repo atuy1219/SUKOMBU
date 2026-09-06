@@ -18,6 +18,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Scomb">
 
+        <meta-data
+            android:name="com.atuy.scomb.GIT_COMMIT_HASH"
+            android:value="${gitCommitHash}" />
+
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
