@@ -41,3 +41,15 @@ tail = tail.replace(app_topbar, app_topbar_new, 1)
 tail = tail.replace('MaterialTheme.motionScheme.fastEffectsSpec()', 'topBarEffectsSpec')
 
 p.write_text(head + boundary + tail)
+
+audit = Path('scripts/check_m3e_ui.py')
+a = audit.read_text()
+a = a.replace(
+    '"MaterialTheme.motionScheme.fastSpatialSpec()",',
+    '"MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.unit.IntOffset>()",'
+)
+a = a.replace(
+    '"MaterialTheme.motionScheme.fastEffectsSpec()",',
+    '"MaterialTheme.motionScheme.fastEffectsSpec<Float>()",'
+)
+audit.write_text(a)
