@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# One-shot Material 3 Expressive refactor; removed after successful verification.
 from pathlib import Path
 import re
 
