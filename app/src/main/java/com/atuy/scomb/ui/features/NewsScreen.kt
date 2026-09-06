@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.atuy.scomb.ui.features
 
 import android.content.Context
@@ -26,13 +28,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,6 +58,10 @@ import com.atuy.scomb.data.db.NewsItem
 import com.atuy.scomb.data.db.hasSourceName
 import com.atuy.scomb.ui.viewmodel.NewsUiState
 import com.atuy.scomb.ui.viewmodel.NewsViewModel
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,15 +78,17 @@ fun NewsScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    LoadingIndicator()
                 }
             }
 
             is NewsUiState.Success -> {
                 AnimatedVisibility(
                     visible = state.isSearchActive,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
+                    enter = expandVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                        fadeIn(animationSpec = MaterialTheme.motionScheme.fastEffectsSpec()),
+                    exit = shrinkVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                        fadeOut(animationSpec = MaterialTheme.motionScheme.fastEffectsSpec())
                 ) {
                     FilterBar(
                         filter = state.filter,
@@ -100,7 +107,16 @@ fun NewsScreen(
                     )
                 }
 
+                val pullToRefreshState = rememberPullToRefreshState()
                 PullToRefreshBox(
+                    state = pullToRefreshState,
+                    indicator = {
+                        PullToRefreshDefaults.LoadingIndicator(
+                            state = pullToRefreshState,
+                            isRefreshing = state.isRefreshing,
+                            modifier = Modifier.align(Alignment.TopCenter)
+                        )
+                    },
                     isRefreshing = state.isRefreshing,
                     onRefresh = { viewModel.fetchNews(forceRefresh = true) },
                     modifier = Modifier.weight(1f)
@@ -160,18 +176,18 @@ private fun NewsSelectionBar(
                 style = MaterialTheme.typography.labelLarge
             )
             TextButton(
-                onClick = onToggleSelectAll,
+                shapes = ButtonDefaults.shapes(),                onClick = onToggleSelectAll,
                 enabled = state.filteredNews.isNotEmpty()
             ) {
                 Text(if (allVisibleSelected) "全て解除" else "全て選択")
             }
             TextButton(
-                onClick = onToggleReadState,
+                shapes = ButtonDefaults.shapes(),                onClick = onToggleReadState,
                 enabled = state.selectedNewsIds.isNotEmpty()
             ) {
                 Text(if (state.selectedNewsAreAllRead) "未読" else "既読")
             }
-            IconButton(onClick = onClearSelection) {
+            IconButton(shapes = IconButtonDefaults.shapes(), onClick = onClearSelection) {
                 Icon(Icons.Default.Close, contentDescription = "選択を終了")
             }
         }
@@ -201,7 +217,7 @@ fun NewsList(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(
@@ -251,7 +267,7 @@ fun NewsCard(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.largeIncreased,
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (newsItem.unread || isSelected) 2.dp else 0.dp
@@ -306,7 +322,7 @@ fun NewsCard(
                     modifier = Modifier
                         .background(
                             MaterialTheme.colorScheme.secondaryContainer,
-                            RoundedCornerShape(4.dp)
+                            MaterialTheme.shapes.extraSmall
                         )
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {

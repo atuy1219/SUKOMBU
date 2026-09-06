@@ -9,32 +9,11 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-fun getGitCommitHash(): String {
-    return try {
-        val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD").start()
-        process.inputStream.bufferedReader().use { it.readText().trim() }
-    } catch (_: Exception) {
-        "unknown"
-    }
-}
-
-fun getGitCommandOutput(command: String): String {
-    return try {
-        providers.exec {
-            commandLine(command.split(" "))
-        }.standardOutput.asText.get().trim()
-    } catch (_: Exception) {
-        "1.0.0-dev"
-    }
-}
-
-val gitVersionName = getGitCommandOutput("git describe --tags --always")
-
-val gitCommitCount = try {
-    getGitCommandOutput("git rev-list --count HEAD").toInt()
-} catch (_: Exception) {
-    1
-}
+val buildVersionCode = providers.environmentVariable("SUKOMBU_VERSION_CODE")
+    .map { it.toIntOrNull() ?: 1 }
+    .orElse(1)
+val buildVersionName = providers.environmentVariable("SUKOMBU_VERSION_NAME")
+    .orElse("1.0.0-dev")
 
 android {
     namespace = "com.atuy.scomb"
@@ -48,16 +27,13 @@ android {
                 keystoreProperties.load(FileInputStream(keystorePropertiesFile))
             }
 
-            val keyStorePath = System.getenv("KEYSTORE_PATH")
+            val keyStorePath = providers.environmentVariable("KEYSTORE_PATH").orNull
                 ?: keystoreProperties.getProperty("key.store")
-
-            val keyStorePwd = System.getenv("KEY_STORE_PASSWORD")
+            val keyStorePwd = providers.environmentVariable("KEY_STORE_PASSWORD").orNull
                 ?: keystoreProperties.getProperty("key.store.password")
-
-            val keyAliasVal = System.getenv("ALIAS")
+            val keyAliasVal = providers.environmentVariable("ALIAS").orNull
                 ?: keystoreProperties.getProperty("key.alias")
-
-            val keyPwd = System.getenv("KEY_PASSWORD")
+            val keyPwd = providers.environmentVariable("KEY_PASSWORD").orNull
                 ?: keystoreProperties.getProperty("key.password")
 
             if (keyStorePath != null && keyStorePwd != null && keyAliasVal != null && keyPwd != null) {
@@ -74,11 +50,9 @@ android {
         minSdk = 35
         targetSdk = 37
 
-        versionCode = gitCommitCount
-        versionName = gitVersionName
+        versionCode = buildVersionCode.get()
+        versionName = buildVersionName.get()
 
-        buildConfigField("String", "GIT_COMMIT_HASH", "\"${getGitCommitHash()}\"")
-        
         ndk {
             abiFilters.add("arm64-v8a")
         }
@@ -101,14 +75,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    
-
     buildFeatures {
         compose = true
         buildConfig = true
     }
 }
-
 
 kotlin {
     compilerOptions {
@@ -118,7 +89,6 @@ kotlin {
 }
 
 dependencies {
-    // --- Core & Lifecycle ---
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -127,8 +97,6 @@ dependencies {
     implementation(libs.androidx.browser)
     implementation(libs.androidx.security.crypto)
 
-
-    // --- UI (Compose & Material3) ---
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.ui)
@@ -137,41 +105,33 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
 
-    // --- Navigation ---
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
 
-    // --- Network (Retrofit & Moshi) ---
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.moshi)
     implementation(libs.logging.interceptor)
     implementation(libs.moshi)
     ksp(libs.moshi.codegen)
 
-    // --- Database (Room) ---
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.room.compiler)
 
-    // --- Dependency Injection (Hilt) ---
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
-    // --- Background & Widgets (WorkManager & Glance) ---
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
 
-    // --- Debugging ---
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    // R8ビルドエラー対策
     implementation(libs.error.prone.annotations)
 
-    // --- Firebase (FCM Spoofing) ---
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.common)

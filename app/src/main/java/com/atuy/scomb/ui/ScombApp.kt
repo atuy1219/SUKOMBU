@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.atuy.scomb.ui
 
 import android.app.Activity
@@ -6,7 +8,6 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -25,17 +26,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -80,6 +76,15 @@ import com.atuy.scomb.ui.viewmodel.NewsViewModel
 import com.atuy.scomb.ui.viewmodel.TaskListViewModel
 import com.atuy.scomb.ui.viewmodel.TimetableViewModel
 import java.util.Calendar
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.SelectableDropdownMenuItem
+import androidx.compose.material3.ShortNavigationBar
+import androidx.compose.material3.ShortNavigationBarArrangement
+import androidx.compose.material3.ShortNavigationBarItem
+import androidx.compose.material3.WideNavigationRail
+import androidx.compose.material3.WideNavigationRailItem
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -166,8 +171,11 @@ fun ScombApp(
     // Tablet layouts should be selected by available logical width, not physical dpi.
     // smallestScreenWidthDp also remains stable when the device rotates.
     val isTablet = LocalConfiguration.current.smallestScreenWidthDp >= 600
+    val navigationEffectsSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+    val navigationSpatialSpec = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.unit.IntOffset>()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             if (shouldShowBottomBar) {
                 AppTopBar(
@@ -180,9 +188,12 @@ fun ScombApp(
         },
         bottomBar = {
             if (shouldShowBottomBar && authState is AuthState.Authenticated && !isTablet) {
-                NavigationBar {
+                ShortNavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    arrangement = ShortNavigationBarArrangement.EqualWeight
+                ) {
                     bottomBarScreens.forEach { screen ->
-                        NavigationBarItem(
+                        ShortNavigationBarItem(
                             icon = { Icon(screen.icon, contentDescription = null) },
                             label = { Text(stringResource(screen.resourceId)) },
                             selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
@@ -207,27 +218,26 @@ fun ScombApp(
                 .padding(innerPadding)
         ) {
             if (isTablet && shouldShowBottomBar && authState is AuthState.Authenticated) {
-                NavigationRail(modifier = Modifier.fillMaxHeight()) {
-                    Column(
-                        modifier = Modifier.fillMaxHeight(),
-                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
-                    ) {
-                        bottomBarScreens.forEach { screen ->
-                            NavigationRailItem(
-                                icon = { Icon(screen.icon, contentDescription = null) },
-                                label = { Text(stringResource(screen.resourceId)) },
-                                selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                                onClick = {
-                                    navController.navigate(screen.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
+                WideNavigationRail(
+                    modifier = Modifier.fillMaxHeight(),
+                    arrangement = androidx.compose.foundation.layout.Arrangement.Center
+                ) {
+                    bottomBarScreens.forEach { screen ->
+                        WideNavigationRailItem(
+                            icon = { Icon(screen.icon, contentDescription = null) },
+                            label = { Text(stringResource(screen.resourceId)) },
+                            railExpanded = false,
+                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                            onClick = {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
                                     }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                            )
-                        }
+                            }
+                        )
                     }
                 }
             }
@@ -235,7 +245,7 @@ fun ScombApp(
             Box(modifier = Modifier.weight(1f)) {
                 if (authState is AuthState.Loading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        LoadingIndicator()
                     }
                 } else {
                     val startDestination =
@@ -253,13 +263,13 @@ fun ScombApp(
                             bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
 
                         if (initialIndex == -1 || targetIndex == -1) {
-                            fadeIn(animationSpec = tween(75))
+                            fadeIn(animationSpec = navigationEffectsSpec)
                         } else if (initialIndex < targetIndex) {
-                            slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(75))
+                            slideInHorizontally(initialOffsetX = { it }, animationSpec = navigationSpatialSpec)
                         } else {
                             slideInHorizontally(
                                 initialOffsetX = { -it },
-                                animationSpec = tween(75)
+                                animationSpec = navigationSpatialSpec
                             )
                         }
                     },
@@ -270,14 +280,14 @@ fun ScombApp(
                             bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
 
                         if (initialIndex == -1 || targetIndex == -1) {
-                            fadeOut(animationSpec = tween(75))
+                            fadeOut(animationSpec = navigationEffectsSpec)
                         } else if (initialIndex < targetIndex) {
                             slideOutHorizontally(
                                 targetOffsetX = { -it },
-                                animationSpec = tween(75)
+                                animationSpec = navigationSpatialSpec
                             )
                         } else {
-                            slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(75))
+                            slideOutHorizontally(targetOffsetX = { it }, animationSpec = navigationSpatialSpec)
                         }
                     }
                         ) {
@@ -390,10 +400,11 @@ fun AppTopBar(
     newsViewModel: NewsViewModel,
     taskListViewModel: TaskListViewModel
 ) {
+    val topBarEffectsSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
     AnimatedContent(
         targetState = currentRoute,
         transitionSpec = {
-            fadeIn() togetherWith fadeOut()
+            fadeIn(animationSpec = topBarEffectsSpec) togetherWith fadeOut(animationSpec = topBarEffectsSpec)
         },
         label = "TopBarAnimation"
     ) { targetRoute ->
@@ -438,7 +449,7 @@ fun NewsTopBar(viewModel: NewsViewModel) {
     TopAppBar(
         title = { Text(stringResource(R.string.screen_news)) },
         actions = {
-            IconButton(onClick = { viewModel.toggleSearchActive() }) {
+            IconButton(shapes = IconButtonDefaults.shapes(), onClick = { viewModel.toggleSearchActive() }) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = stringResource(R.string.search)
@@ -457,7 +468,7 @@ fun TasksTopBar(viewModel: TaskListViewModel) {
     TopAppBar(
         title = { Text(stringResource(R.string.screen_tasks)) },
         actions = {
-            IconButton(onClick = { viewModel.toggleSearchActive() }) {
+            IconButton(shapes = IconButtonDefaults.shapes(), onClick = { viewModel.toggleSearchActive() }) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = stringResource(R.string.search)
@@ -498,19 +509,25 @@ fun TimetableTopBar(
                     onDismissRequest = { menuExpanded = false }
                 ) {
                     val startYear = Calendar.getInstance().get(Calendar.YEAR)
-                    for (i in 0..5) {
-                        val displayYear = startYear - i
-                        DropdownMenuItem(
-                            text = { Text(TimetableTerm(displayYear, "2").getDisplayName()) },
-                            onClick = {
-                                viewModel.changeYearAndTerm(displayYear, "2")
-                                menuExpanded = false
+                    val terms = remember(startYear) {
+                        buildList {
+                            for (i in 0..5) {
+                                val displayYear = startYear - i
+                                add(TimetableTerm(displayYear, "2"))
+                                add(TimetableTerm(displayYear, "1"))
                             }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(TimetableTerm(displayYear, "1").getDisplayName()) },
+                        }
+                    }
+                    terms.forEachIndexed { index, term ->
+                        SelectableDropdownMenuItem(
+                            selected = term == current,
+                            text = { Text(term.getDisplayName()) },
+                            shapes = MenuDefaults.itemShape(index, terms.size),
+                            selectedLeadingIcon = {
+                                Icon(Icons.Default.Check, contentDescription = null)
+                            },
                             onClick = {
-                                viewModel.changeYearAndTerm(displayYear, "1")
+                                viewModel.changeYearAndTerm(term.year, term.term)
                                 menuExpanded = false
                             }
                         )
@@ -519,7 +536,7 @@ fun TimetableTopBar(
             }
         },
         actions = {
-            IconButton(onClick = { viewModel.refresh() }) {
+            IconButton(shapes = IconButtonDefaults.shapes(), onClick = { viewModel.refresh() }) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = stringResource(R.string.refresh)

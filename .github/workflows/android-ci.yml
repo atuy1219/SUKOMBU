@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "main" ]
 
+concurrency:
+  group: android-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,6 +17,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+
+      - name: Write build metadata
+        env:
+          BUILD_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          mkdir -p app/src/main/assets
+          printf '%s' "$BUILD_COMMIT" > app/src/main/assets/build_commit.txt
 
       - name: Set up JDK 21
         uses: actions/setup-java@v6
@@ -24,7 +35,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v6.3.0
         with:
           gradle-version: wrapper
-          
+          # Same-repository PRs may populate the cache. Fork PRs remain read-only.
+          cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew

@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.atuy.scomb.ui.features
 
 import androidx.compose.foundation.background
@@ -21,7 +23,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +52,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atuy.scomb.R
 import com.atuy.scomb.ui.viewmodel.LoginUiState
 import com.atuy.scomb.ui.viewmodel.LoginViewModel
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
 
 @Composable
 fun LoginScreen(
@@ -60,7 +65,7 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.surface),
         contentAlignment = Alignment.Center
     ) {
         LoginForm(
@@ -88,8 +93,9 @@ fun LoginForm(
         modifier = Modifier
             .fillMaxWidth(0.9f)
             .padding(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        shape = MaterialTheme.shapes.extraExtraLarge
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -107,8 +113,7 @@ fun LoginForm(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = stringResource(R.string.login_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineLargeEmphasized,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -164,18 +169,17 @@ fun LoginForm(
 
             // ログインボタン
             Button(
-                onClick = { onLogin(username, password) },
+                shapes = ButtonDefaults.shapes(),                onClick = { onLogin(username, password) },
                 enabled = username.isNotBlank() && password.isNotBlank() && !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .height(56.dp)
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(
+                    LoadingIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
+)
                 } else {
                     Text(
                         text = stringResource(R.string.login_button),
@@ -203,7 +207,7 @@ fun LoginTextField(
     onPasswordToggle: () -> Unit = {}
 ) {
     OutlinedTextField(
-        value = value,
+        shape = OutlinedTextFieldDefaults.roundedShape,        value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
         leadingIcon = { Icon(icon, contentDescription = null) },
@@ -214,7 +218,7 @@ fun LoginTextField(
             {
                 val image =
                     if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                IconButton(onClick = onPasswordToggle) {
+                IconButton(shapes = IconButtonDefaults.shapes(), onClick = onPasswordToggle) {
                     Icon(imageVector = image, contentDescription = null)
                 }
             }
@@ -228,6 +232,5 @@ fun LoginTextField(
             onDone = { onAction() }
         ),
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium
-    )
+)
 }

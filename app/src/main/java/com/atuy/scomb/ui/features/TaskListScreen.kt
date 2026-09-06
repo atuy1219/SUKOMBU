@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.atuy.scomb.ui.features
 
 import android.widget.Toast
@@ -25,7 +27,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -34,7 +35,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -64,6 +65,11 @@ import com.atuy.scomb.ui.viewmodel.TaskFilter
 import com.atuy.scomb.ui.viewmodel.TaskListUiState
 import com.atuy.scomb.ui.viewmodel.TaskListViewModel
 import com.atuy.scomb.util.DateUtils
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,15 +95,17 @@ fun TaskListScreen(
         when (val state = uiState) {
             is TaskListUiState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    LoadingIndicator()
                 }
             }
 
             is TaskListUiState.Success -> {
                 AnimatedVisibility(
                     visible = state.isSearchActive,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
+                    enter = expandVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                        fadeIn(animationSpec = MaterialTheme.motionScheme.fastEffectsSpec()),
+                    exit = shrinkVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                        fadeOut(animationSpec = MaterialTheme.motionScheme.fastEffectsSpec())
                 ) {
                     Column(
                         modifier = Modifier
@@ -117,7 +125,16 @@ fun TaskListScreen(
                     }
                 }
 
+                val pullToRefreshState = rememberPullToRefreshState()
                 PullToRefreshBox(
+                    state = pullToRefreshState,
+                    indicator = {
+                        PullToRefreshDefaults.LoadingIndicator(
+                            state = pullToRefreshState,
+                            isRefreshing = state.isRefreshing,
+                            modifier = Modifier.align(Alignment.TopCenter)
+                        )
+                    },
                     isRefreshing = state.isRefreshing,
                     onRefresh = {
                         viewModel.fetchTasks(forceRefresh = true)
@@ -151,7 +168,7 @@ fun TaskSearchBar(
     val focusManager = LocalFocusManager.current
 
     OutlinedTextField(
-        value = searchQuery,
+        shape = OutlinedTextFieldDefaults.roundedShape,        value = searchQuery,
         onValueChange = onSearchQueryChanged,
         modifier = Modifier
             .fillMaxWidth()
@@ -160,13 +177,12 @@ fun TaskSearchBar(
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         trailingIcon = {
             if (searchQuery.isNotEmpty()) {
-                IconButton(onClick = { onSearchQueryChanged("") }) {
+                IconButton(shapes = IconButtonDefaults.shapes(), onClick = { onSearchQueryChanged("") }) {
                     Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear))
                 }
             }
         },
         singleLine = true,
-        shape = RoundedCornerShape(12.dp),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
     )
@@ -185,23 +201,23 @@ fun FilterBar(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         FilterChip(
-            selected = filter.showAssignments,
+            shapes = FilterChipDefaults.shapes(),            selected = filter.showAssignments,
             onClick = { onFilterChanged(filter.copy(showAssignments = !filter.showAssignments)) },
             label = { Text(stringResource(R.string.task_list_filter_assignment)) }
         )
         FilterChip(
-            selected = filter.showTests,
+            shapes = FilterChipDefaults.shapes(),            selected = filter.showTests,
             onClick = { onFilterChanged(filter.copy(showTests = !filter.showTests)) },
             label = { Text(stringResource(R.string.task_list_filter_test)) }
         )
         FilterChip(
-            selected = filter.showSurveys,
+            shapes = FilterChipDefaults.shapes(),            selected = filter.showSurveys,
             onClick = { onFilterChanged(filter.copy(showSurveys = !filter.showSurveys)) },
             label = { Text(stringResource(R.string.task_list_filter_survey)) }
         )
         Spacer(modifier = Modifier.weight(1f))
         FilterChip(
-            selected = filter.showCompleted,
+            shapes = FilterChipDefaults.shapes(),            selected = filter.showCompleted,
             onClick = { onFilterChanged(filter.copy(showCompleted = !filter.showCompleted)) },
             label = { Text(stringResource(R.string.task_list_filter_completed)) },
             leadingIcon = {
@@ -230,7 +246,7 @@ fun TaskList(tasks: List<Task>, onTaskClick: (Task) -> Unit) {
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(tasks, key = { it.id }) { task ->
@@ -260,9 +276,9 @@ fun TaskCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onTaskClick(task) },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        shape = RoundedCornerShape(12.dp)
+        shape = MaterialTheme.shapes.large
     ) {
         // IntrinsicSize.Minを使用することで、コンテンツの高さに合わせてRowの高さを決定し、
         // その高さに合わせて左側のカラーバー(Box)を伸縮させます。

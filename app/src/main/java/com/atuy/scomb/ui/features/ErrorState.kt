@@ -16,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.atuy.scomb.R
+import androidx.compose.material3.ButtonDefaults
 
 @Composable
 fun ErrorState(message: String, onRetry: () -> Unit) {
@@ -28,16 +29,16 @@ fun ErrorState(message: String, onRetry: () -> Unit) {
     ) {
         Text(
             text = stringResource(R.string.error_generic_title),
-            style = MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.headlineSmallEmphasized
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = message,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetry) {
+        Button(shapes = ButtonDefaults.shapes(), onClick = onRetry) {
             Text(stringResource(R.string.retry))
         }
     }

@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.atuy.scomb.ui.features
 
 import android.util.Log
@@ -20,11 +22,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -51,6 +52,8 @@ import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.ui.viewmodel.TimetableUiState
 import com.atuy.scomb.ui.viewmodel.TimetableViewModel
 import java.util.Calendar
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 
 private const val TAG = "TimetableScreen"
 
@@ -81,12 +84,21 @@ fun TimetableScreen(
         when (val state = uiState) {
             is TimetableUiState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    LoadingIndicator()
                 }
             }
 
             is TimetableUiState.Success -> {
+                val pullToRefreshState = rememberPullToRefreshState()
                 PullToRefreshBox(
+                    state = pullToRefreshState,
+                    indicator = {
+                        PullToRefreshDefaults.LoadingIndicator(
+                            state = pullToRefreshState,
+                            isRefreshing = state.isRefreshing,
+                            modifier = Modifier.align(Alignment.TopCenter)
+                        )
+                    },
                     isRefreshing = state.isRefreshing,
                     onRefresh = { viewModel.refresh() },
                     modifier = Modifier.fillMaxSize()
@@ -263,8 +275,7 @@ fun TimetableGrid(
 
             Text(
                 text = "その他",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
@@ -354,12 +365,12 @@ fun ClassCellView(
                             animatedVisibilityScope = animatedVisibilityScope
                         )
                         .clickable(onClick = onClick),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.largeIncreased,
                     colors = CardDefaults.cardColors(
                         containerColor = containerColor,
                         contentColor = contentColor
                     ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(
                         modifier = Modifier
@@ -432,12 +443,12 @@ fun OtherClassCellView(
                         animatedVisibilityScope = animatedVisibilityScope
                     )
                     .clickable(onClick = onClick),
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.largeIncreased,
                 colors = CardDefaults.cardColors(
                     containerColor = containerColor,
                     contentColor = contentColor
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier
