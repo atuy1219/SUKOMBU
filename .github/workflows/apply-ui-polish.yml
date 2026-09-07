@@ -1,0 +1,63 @@
+name: Apply UI polish
+
+on:
+  push:
+    branches:
+      - fix/v1.4.0-ui-polish
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/v1.4.0-ui-polish
+          fetch-depth: 0
+
+      - name: Apply source fixes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          app = Path('app/src/main/java/com/atuy/scomb/ui/ScombApp.kt')
+          text = app.read_text()
+          text = text.replace(
+              'import androidx.compose.animation.SharedTransitionLayout\n',
+              'import androidx.compose.animation.SharedTransitionLayout\nimport androidx.compose.animation.core.tween\n',
+              1,
+          )
+          old = 'val navigationSpatialSpec = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.unit.IntOffset>()'
+          new = 'val navigationSlideSpec = tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 150)'
+          if old not in text:
+              raise SystemExit('navigation spatial spec not found')
+          text = text.replace(old, new, 1)
+          text = text.replace('animationSpec = navigationSpatialSpec', 'animationSpec = navigationSlideSpec')
+          app.write_text(text)
+
+          settings = Path('app/src/main/java/com/atuy/scomb/ui/features/SettingsScreen.kt')
+          text = settings.read_text()
+          text = text.replace(
+              'import androidx.compose.foundation.layout.FlowRow\n',
+              'import androidx.compose.foundation.layout.FlowRow\nimport androidx.compose.foundation.layout.PaddingValues\n',
+              1,
+          )
+          old = '''    LazyColumn(\n        modifier = Modifier\n            .fillMaxSize()\n            .padding(horizontal = 16.dp, vertical = 12.dp),\n        verticalArrangement = Arrangement.spacedBy(20.dp)\n    ) {'''
+          new = '''    LazyColumn(\n        modifier = Modifier.fillMaxSize(),\n        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),\n        verticalArrangement = Arrangement.spacedBy(20.dp)\n    ) {'''
+          if old not in text:
+              raise SystemExit('settings LazyColumn block not found')
+          text = text.replace(old, new, 1)
+          settings.write_text(text)
+
+          Path('.github/workflows/apply-ui-polish.yml').unlink()
+
+      - name: Commit fixes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m '画面遷移のバウンドと設定画面下端の表示を修正'
+          git push
