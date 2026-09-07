@@ -24,7 +24,7 @@ android {
             val keystorePropertiesFile = rootProject.file("local.properties")
             val keystoreProperties = Properties()
             if (keystorePropertiesFile.exists()) {
-                keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+                FileInputStream(keystorePropertiesFile).use(keystoreProperties::load)
             }
 
             val keyStorePath = providers.environmentVariable("KEYSTORE_PATH").orNull
@@ -75,6 +75,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -89,6 +93,8 @@ kotlin {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.16")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)

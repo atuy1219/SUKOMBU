@@ -99,7 +99,7 @@ fun ScombApp(
 
     val context = LocalContext.current
     val activity = context as? Activity
-    val currentIntent by rememberUpdatedState(activity?.intent)
+    val currentIntent by rememberUpdatedState((activity as? com.atuy.scomb.MainActivity)?.notificationIntent ?: activity?.intent)
 
     LaunchedEffect(authState, navController, currentIntent) {
         Log.d(

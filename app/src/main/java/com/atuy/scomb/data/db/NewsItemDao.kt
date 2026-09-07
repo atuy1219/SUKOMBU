@@ -8,6 +8,13 @@ import androidx.room.Query
 @Dao
 interface NewsItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertNews(news: List<NewsItem>)
+
+    @Query("UPDATE news_table SET unread = :unread WHERE newsId IN (:ids)")
+    suspend fun setUnread(ids: List<String>, unread: Boolean)
+
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateNewsItem(newsItem: NewsItem)
 
     @Query("SELECT * FROM news_table ORDER BY publishTime DESC")

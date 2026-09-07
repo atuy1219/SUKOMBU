@@ -114,6 +114,12 @@ fun ClassDetailScreen(
         }
     }
 
+    LaunchedEffect(viewModel) {
+        viewModel.errorEvent.collect { message ->
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
     // ダイアログの表示
     if (showColorDialog && uiState is ClassDetailUiState.Success) {
         val state = uiState as ClassDetailUiState.Success

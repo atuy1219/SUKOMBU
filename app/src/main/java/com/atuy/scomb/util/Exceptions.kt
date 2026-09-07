@@ -2,7 +2,7 @@ package com.atuy.scomb.util
 
 import java.io.IOException
 
-class SessionExpiredException : Exception("Session has expired. Please log in again.")
+class SessionExpiredException(message: String = "Session has expired. Please log in again.") : Exception(message)
 
 class NetworkException(message: String = "Network error", cause: Throwable? = null) : IOException(message, cause)
 

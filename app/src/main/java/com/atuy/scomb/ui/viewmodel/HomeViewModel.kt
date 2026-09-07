@@ -91,7 +91,7 @@ class HomeViewModel @Inject constructor(
     private fun observeAutoRefresh() {
         viewModelScope.launch {
             autoRefreshManager.refreshEvent.collect {
-                loadHomeData(forceRefresh = true)
+                loadHomeData(forceRefresh = false)
             }
         }
     }
@@ -110,7 +110,7 @@ class HomeViewModel @Inject constructor(
                 coroutineScope {
                     val tasksDeferred = async { repository.getTasksAndSurveys(forceRefresh) }
 
-                    val calendar = Calendar.getInstance()
+                    val calendar = Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Tokyo"))
                     val currentTerm = DateUtils.getCurrentScombTerm()
                     val timetableDeferred =
                         async {
@@ -181,6 +181,7 @@ class HomeViewModel @Inject constructor(
                 val url = repository.getTaskUrl(task)
                 _openUrlEvent.send(url)
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 e.printStackTrace()
             }
         }

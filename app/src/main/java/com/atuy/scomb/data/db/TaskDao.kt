@@ -9,6 +9,13 @@ import androidx.room.Query
 @Dao
 interface TaskDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTasks(tasks: List<Task>)
+
+    @Query("DELETE FROM task_table")
+    suspend fun clearAll()
+
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateTask(task: Task)
 
     @Query("DELETE FROM task_table WHERE addManually = 0")

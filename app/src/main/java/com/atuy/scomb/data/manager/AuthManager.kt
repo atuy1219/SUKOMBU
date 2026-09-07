@@ -39,6 +39,7 @@ class AuthManager @Inject constructor(@ApplicationContext private val context: C
     private val authTokenKey = stringPreferencesKey(KEY_AUTH_TOKEN)
     private val usernameKey = stringPreferencesKey(KEY_USERNAME)
 
+    @Synchronized
     private fun getOrCreateSecretKey(alias: String): SecretKey {
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         if (ks.containsAlias(alias)) {
@@ -61,23 +62,13 @@ class AuthManager @Inject constructor(@ApplicationContext private val context: C
     }
 
     private fun encrypt(plain: String): String {
-        try {
-            val key = getOrCreateSecretKey(KEY_ALIAS)
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            cipher.init(Cipher.ENCRYPT_MODE, key)
-            val cipherText = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
-            
-            val iv = cipher.iv
-            val combined = ByteBuffer.allocate(iv.size + cipherText.size)
-                .put(iv)
-                .put(cipherText)
-                .array()
-
-            return Base64.encodeToString(combined, Base64.NO_WRAP)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return ""
-        }
+        val key = getOrCreateSecretKey(KEY_ALIAS)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, key)
+        val cipherText = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
+        val combined = ByteBuffer.allocate(cipher.iv.size + cipherText.size)
+            .put(cipher.iv).put(cipherText).array()
+        return Base64.encodeToString(combined, Base64.NO_WRAP)
     }
 
     private fun decrypt(encoded: String): String? {
@@ -93,19 +84,20 @@ class AuthManager @Inject constructor(@ApplicationContext private val context: C
             val plain = cipher.doFinal(cipherBytes)
             return String(plain, Charsets.UTF_8)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             e.printStackTrace()
             return null
         }
     }
 
-    suspend fun saveAuthToken(token: String) {
-        val enc = encrypt(token)
-        dataStore.edit { prefs -> prefs[authTokenKey] = enc }
-    }
-
-    suspend fun saveUsername(username: String) {
-        val enc = encrypt(username)
-        dataStore.edit { prefs -> prefs[usernameKey] = enc }
+    suspend fun saveSession(token: String, username: String) {
+        require(token.isNotBlank())
+        val encryptedToken = encrypt(token)
+        val encryptedUsername = encrypt(username)
+        dataStore.edit { prefs ->
+            prefs[authTokenKey] = encryptedToken
+            prefs[usernameKey] = encryptedUsername
+        }
     }
 
     val authTokenFlow: Flow<String?> = dataStore.data.map { prefs ->
@@ -114,6 +106,10 @@ class AuthManager @Inject constructor(@ApplicationContext private val context: C
 
     val usernameFlow: Flow<String?> = dataStore.data.map { prefs ->
         prefs[usernameKey]?.let { decrypt(it) }
+    }
+
+    suspend fun invalidateAuthToken() {
+        dataStore.edit { it.remove(authTokenKey) }
     }
 
     suspend fun clearAuthToken() {

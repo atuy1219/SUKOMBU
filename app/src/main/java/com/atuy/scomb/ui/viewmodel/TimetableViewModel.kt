@@ -51,6 +51,7 @@ private sealed interface TimetableDataState {
 
 @HiltViewModel
 class TimetableViewModel @Inject constructor(
+    private val authManager: com.atuy.scomb.data.manager.AuthManager,
     private val repository: ScombzRepository,
     private val settingsManager: SettingsManager,
     private val autoRefreshManager: AutoRefreshManager
@@ -107,14 +108,21 @@ class TimetableViewModel @Inject constructor(
     private var loadJob: Job? = null
 
     init {
-        loadData(forceRefresh = false)
+        viewModelScope.launch {
+            authManager.authTokenFlow.collect { token ->
+                loadJob?.cancel()
+                _dataState.value = TimetableDataState.Loading
+
+                if (token != null) loadData(false)
+            }
+        }
         observeAutoRefresh()
     }
 
     private fun observeAutoRefresh() {
         viewModelScope.launch {
             autoRefreshManager.refreshEvent.collect {
-                refresh()
+                loadData(forceRefresh = false)
             }
         }
     }

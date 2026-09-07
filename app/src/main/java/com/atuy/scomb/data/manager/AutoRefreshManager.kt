@@ -1,6 +1,8 @@
 package com.atuy.scomb.data.manager
 
-import android.util.Log
+import com.atuy.scomb.data.repository.ScombzRepository
+import com.atuy.scomb.util.DateUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -8,46 +10,43 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class AutoRefreshManager @Inject constructor(
-    private val settingsManager: SettingsManager
+    private val settingsManager: SettingsManager,
+    private val repository: ScombzRepository,
+    private val authManager: AuthManager
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val TAG = "AutoRefreshManager"
-
-    // 更新イベントを通知するためのFlow
-    private val _refreshEvent = MutableSharedFlow<Unit>()
-    val refreshEvent = _refreshEvent.asSharedFlow()
-
-    // 1時間 (ミリ秒)
-    private val REFRESH_INTERVAL = 60 * 60 * 1000L
+    private val refreshMutex = Mutex()
+    private val events = MutableSharedFlow<Unit>()
+    val refreshEvent = events.asSharedFlow()
 
     fun checkAndTriggerRefresh() {
         scope.launch {
-            val lastSyncTime = settingsManager.lastSyncTimeFlow.first()
-            val currentTime = System.currentTimeMillis()
-
-            Log.d(TAG, "Checking refresh: Last=$lastSyncTime, Current=$currentTime, Diff=${currentTime - lastSyncTime}")
-
-            if (currentTime - lastSyncTime > REFRESH_INTERVAL) {
-                Log.d(TAG, "Triggering auto refresh")
-                _refreshEvent.emit(Unit)
-                // ループ防止のため、トリガーした時点で時刻を更新してしまう
-                // ※ 本来は更新完了後にすべきだが、複数ViewModelで整合性を取るのが難しいためここで更新
-                settingsManager.updateLastSyncTime(currentTime)
-            } else {
-                Log.d(TAG, "No refresh needed")
+            refreshMutex.withLock {
+                if (authManager.authTokenFlow.first() == null) return@withLock
+                val lastSync = settingsManager.lastSyncTimeFlow.first()
+                val interval = settingsManager.autoRefreshIntervalFlow.first().coerceAtLeast(1) * 60_000L
+                val now = System.currentTimeMillis()
+                if (now >= lastSync && now - lastSync < interval) return@withLock
+                try {
+                    val term = DateUtils.getCurrentScombTerm()
+                    repository.getTasksAndSurveys(true)
+                    repository.getTimetable(term.year, term.term, true)
+                    repository.getNews(true)
+                    settingsManager.updateLastSyncTime(System.currentTimeMillis())
+                    events.emit(Unit)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    android.util.Log.w("AutoRefreshManager", "Refresh failed", e)
+                }
             }
-        }
-    }
-
-    // 手動更新などで更新が完了した際に外部から時刻更新を呼ぶ用
-    fun updateLastSyncTime() {
-        scope.launch {
-            settingsManager.updateLastSyncTime(System.currentTimeMillis())
         }
     }
 }

@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 sealed interface ClassDetailUiState {
@@ -39,6 +41,8 @@ class ClassDetailViewModel @Inject constructor(
     private val repository: com.atuy.scomb.data.repository.ScombzRepository,
     private val moshi: Moshi
 ) : ViewModel() {
+
+    private val editMutex = Mutex()
 
     private val classId: String = savedStateHandle.get<String>("classId")!!
 
@@ -65,6 +69,7 @@ class ClassDetailViewModel @Inject constructor(
                     _uiState.value = ClassDetailUiState.Success(classCell, tasks, customLinks)
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _uiState.value =
                     ClassDetailUiState.Error(e.message ?: "データの読み込みに失敗しました。")
             }
@@ -78,6 +83,7 @@ class ClassDetailViewModel @Inject constructor(
             val adapter = moshi.adapter<List<CustomLink>>(type)
             adapter.fromJson(json) ?: emptyList()
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             emptyList()
         }
     }
@@ -88,86 +94,50 @@ class ClassDetailViewModel @Inject constructor(
         return adapter.toJson(links)
     }
 
-    // APIを通してメモを更新する
-    fun updateUserNote(note: String) {
-        val currentState = _uiState.value
-        if (currentState is ClassDetailUiState.Success) {
-            viewModelScope.launch {
-                // 保存中表示
-                _uiState.value = currentState.copy(isSaving = true)
+    private fun editClass(transform: suspend (ClassDetailUiState.Success) -> ClassDetailUiState.Success) {
+        viewModelScope.launch {
+            editMutex.withLock {
+                val state = _uiState.value as? ClassDetailUiState.Success ?: return@withLock
+                _uiState.value = state.copy(isSaving = true)
                 try {
-                    // APIに送信してDB更新
-                    // updateClassNoteではなく、汎用的なupdateClassInfoを使用
-                    repository.updateClassInfo(currentState.classCell, note, currentState.classCell.customColorInt)
-
-                    // 表示を更新
-                    val updatedClassCell = currentState.classCell.copy(note = note)
-                    _uiState.value = currentState.copy(classCell = updatedClassCell, isSaving = false)
+                    _uiState.value = transform(state).copy(isSaving = false)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
-                    _uiState.value = currentState.copy(isSaving = false)
+                    _uiState.value = state.copy(isSaving = false)
+                    _errorEvent.send(e.message ?: "保存に失敗しました")
                 }
             }
         }
     }
 
-    // 色を更新する
-    fun updateClassColor(colorInt: Int) {
-        updateColorInternal(colorInt)
+    fun updateUserNote(note: String) = editClass { state ->
+        repository.updateClassInfo(state.classCell, note, state.classCell.customColorInt)
+        state.copy(classCell = state.classCell.copy(note = note))
     }
 
-    // 色をリセットする（nullにする）
-    fun resetClassColor() {
-        updateColorInternal(null)
+    fun updateClassColor(colorInt: Int) = updateColorInternal(colorInt)
+
+    fun resetClassColor() = updateColorInternal(null)
+
+    private fun updateColorInternal(colorInt: Int?) = editClass { state ->
+        repository.updateClassInfo(state.classCell, state.classCell.note, colorInt)
+        state.copy(classCell = state.classCell.copy(customColorInt = colorInt))
     }
 
-    private fun updateColorInternal(colorInt: Int?) {
-        val currentState = _uiState.value
-        if (currentState is ClassDetailUiState.Success) {
-            viewModelScope.launch {
-                _uiState.value = currentState.copy(isSaving = true)
-                try {
-                    // noteは既存の値を保持
-                    repository.updateClassInfo(currentState.classCell, currentState.classCell.note, colorInt)
+    fun addCustomLink(title: String, url: String) = updateLinks { it + CustomLink(title, url) }
 
-                    val updatedClassCell = currentState.classCell.copy(customColorInt = colorInt)
-                    _uiState.value = currentState.copy(classCell = updatedClassCell, isSaving = false)
-                } catch (e: Exception) {
-                    _uiState.value = currentState.copy(isSaving = false)
-                }
-            }
-        }
+    fun removeCustomLink(link: CustomLink) = updateLinks { it - link }
+
+    private fun updateLinks(transform: (List<CustomLink>) -> List<CustomLink>) = editClass { state ->
+        val links = transform(state.customLinks)
+        val json = customLinksToJson(links)
+        repository.updateCustomLinks(state.classCell, json)
+        state.copy(classCell = state.classCell.copy(customLinksJson = json), customLinks = links)
     }
 
-    fun addCustomLink(title: String, url: String) {
-        val currentState = _uiState.value
-        if (currentState is ClassDetailUiState.Success) {
-            val newLink = CustomLink(title, url)
-            val updatedLinks = currentState.customLinks + newLink
-            val json = customLinksToJson(updatedLinks)
-            val updatedClassCell = currentState.classCell.copy(customLinksJson = json)
-
-            viewModelScope.launch {
-                classCellDao.insertClassCell(updatedClassCell)
-                _uiState.value =
-                    currentState.copy(classCell = updatedClassCell, customLinks = updatedLinks)
-            }
-        }
-    }
-
-    fun removeCustomLink(link: CustomLink) {
-        val currentState = _uiState.value
-        if (currentState is ClassDetailUiState.Success) {
-            val updatedLinks = currentState.customLinks - link
-            val json = customLinksToJson(updatedLinks)
-            val updatedClassCell = currentState.classCell.copy(customLinksJson = json)
-
-            viewModelScope.launch {
-                classCellDao.insertClassCell(updatedClassCell)
-                _uiState.value =
-                    currentState.copy(classCell = updatedClassCell, customLinks = updatedLinks)
-            }
-        }
-    }
+    private val _errorEvent = Channel<String>(Channel.BUFFERED)
+    val errorEvent = _errorEvent.receiveAsFlow()
 
     private val _openUrlEvent = Channel<String>(Channel.BUFFERED)
     val openUrlEvent = _openUrlEvent.receiveAsFlow()
@@ -178,6 +148,7 @@ class ClassDetailViewModel @Inject constructor(
                 val url = repository.getClassUrl(classId)
                 _openUrlEvent.send(url)
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _uiState.value = ClassDetailUiState.Error(e.message ?: "URLの取得に失敗しました")
             }
         }
@@ -189,6 +160,7 @@ class ClassDetailViewModel @Inject constructor(
                 val url = repository.getTaskUrl(task)
                 _openUrlEvent.send(url)
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 // エラー時はトーストなどで通知したいが、ここではUI Stateのエラーにはしない（画面全体がエラーになるため）
                 // 簡易的にコンソールに出力し、失敗したらtask.urlをフォールバックとして開くようイベントを送る手もあるが
                 // ここではエラーメッセージを表示せずに既存のURLを試すようにする

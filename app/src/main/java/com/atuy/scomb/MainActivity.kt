@@ -7,8 +7,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.atuy.scomb.data.manager.SettingsManager
 import com.atuy.scomb.data.manager.AutoRefreshManager
@@ -21,16 +22,20 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    var notificationIntent by androidx.compose.runtime.mutableStateOf<Intent?>(null)
+        private set
+
     @Inject
     lateinit var autoRefreshManager: AutoRefreshManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        notificationIntent = intent
         enableEdgeToEdge()
 
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
-            val themeMode by mainViewModel.themeMode.collectAsState()
+            val themeMode by mainViewModel.themeMode.collectAsStateWithLifecycle()
 
             val darkTheme = when (themeMode) {
                 SettingsManager.THEME_MODE_LIGHT -> false
@@ -47,6 +52,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        notificationIntent = intent
     }
 
     override fun onResume() {
