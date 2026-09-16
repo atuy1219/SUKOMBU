@@ -8,6 +8,7 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -172,7 +173,7 @@ fun ScombApp(
     // smallestScreenWidthDp also remains stable when the device rotates.
     val isTablet = LocalConfiguration.current.smallestScreenWidthDp >= 600
     val navigationEffectsSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-    val navigationSpatialSpec = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.unit.IntOffset>()
+    val navigationSlideSpec = tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 150)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -265,11 +266,11 @@ fun ScombApp(
                         if (initialIndex == -1 || targetIndex == -1) {
                             fadeIn(animationSpec = navigationEffectsSpec)
                         } else if (initialIndex < targetIndex) {
-                            slideInHorizontally(initialOffsetX = { it }, animationSpec = navigationSpatialSpec)
+                            slideInHorizontally(initialOffsetX = { it }, animationSpec = navigationSlideSpec)
                         } else {
                             slideInHorizontally(
                                 initialOffsetX = { -it },
-                                animationSpec = navigationSpatialSpec
+                                animationSpec = navigationSlideSpec
                             )
                         }
                     },
@@ -284,10 +285,10 @@ fun ScombApp(
                         } else if (initialIndex < targetIndex) {
                             slideOutHorizontally(
                                 targetOffsetX = { -it },
-                                animationSpec = navigationSpatialSpec
+                                animationSpec = navigationSlideSpec
                             )
                         } else {
-                            slideOutHorizontally(targetOffsetX = { it }, animationSpec = navigationSpatialSpec)
+                            slideOutHorizontally(targetOffsetX = { it }, animationSpec = navigationSlideSpec)
                         }
                     }
                         ) {
