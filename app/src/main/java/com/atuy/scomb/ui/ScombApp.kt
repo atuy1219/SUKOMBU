@@ -135,8 +135,13 @@ fun ScombApp(
 
             if (destination == "tasks") {
                 Log.d("ScombApp_Debug", "Navigating to Tasks from Widget")
+                if (navController.currentDestination?.route == Screen.Login.route) {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                }
                 navController.navigate(Screen.Tasks.route) {
-                    popUpTo(navController.graph.findStartDestination().id) {
+                    popUpTo(Screen.Home.route) {
                         saveState = true
                     }
                     launchSingleTop = true
@@ -182,6 +187,9 @@ fun ScombApp(
     val mainScreens = remember {
         listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
     }
+    val homeEntry = remember(currentRoute) {
+        runCatching { navController.getBackStackEntry(Screen.Home.route) }.getOrNull()
+    }
     val pagerState = rememberPagerState {
         mainScreens.size
     }
@@ -191,7 +199,7 @@ fun ScombApp(
 
     LaunchedEffect(currentRoute) {
         val page = mainScreens.indexOfFirst { it.route == currentRoute }
-        if (page >= 0 && page != pagerState.settledPage && !pagerState.isScrollInProgress) {
+        if (page >= 0 && (page != pagerState.settledPage || pagerState.isScrollInProgress)) {
             syncingRoute = true
             try {
                 pagerState.scrollToPage(page)
@@ -209,7 +217,7 @@ fun ScombApp(
                     mainScreens.any { it.route == currentRouteState } && route != currentRouteState
                 ) {
                     navController.navigate(route) {
-                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        popUpTo(Screen.Home.route) { saveState = true }
                         launchSingleTop = true
                         restoreState = true
                     }
@@ -222,7 +230,7 @@ fun ScombApp(
 
     // Keep the actual page and its bars underneath details throughout the back gesture.
     Box(Modifier.fillMaxSize()) {
-        if (authState is AuthState.Authenticated) {
+        if (authState is AuthState.Authenticated && homeEntry != null && currentRoute != Screen.Login.route) {
             Scaffold(
                 modifier = Modifier.semantics {
                     if (currentRoute == Screen.ClassDetail.route) hideFromAccessibility()
@@ -279,7 +287,11 @@ fun ScombApp(
                     ) { page ->
                         when (mainScreens[page]) {
                             Screen.Home -> AdaptiveRouteContainer(isTablet, 1200.dp) {
-                                HomeScreen(navController = navController, paddingValues = innerPadding)
+                                HomeScreen(
+                                    navController = navController,
+                                    viewModel = hiltViewModel(homeEntry),
+                                    isActive = currentRoute == Screen.Home.route && !pagerState.isScrollInProgress
+                                )
                             }
                             Screen.Timetable -> AdaptiveRouteContainer(isTablet, 1400.dp) {
                                 TimetableScreen(navController, timetableViewModel)

@@ -82,8 +82,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     navController: NavController,
-    paddingValues: PaddingValues,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
+    isActive: Boolean = true
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -115,7 +115,8 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(isActive) {
+        if (!isActive) return@LaunchedEffect
         if (ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
@@ -126,7 +127,8 @@ fun HomeScreen(
     }
 
     // ViewModelからのURLオープンイベントを監視
-    LaunchedEffect(viewModel) {
+    LaunchedEffect(viewModel, isActive) {
+        if (!isActive) return@LaunchedEffect
         viewModel.openUrlEvent.collect { url ->
             openUrl(url)
         }
