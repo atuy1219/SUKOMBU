@@ -56,7 +56,7 @@ internal fun SwipeBackContainer(
     val minFlingVelocity = with(LocalDensity.current) { 600.dp.toPx() }
 
     suspend fun settle(finish: Boolean, velocity: Float = 0f) {
-        if (completed) return
+        if (completed || settling) return
         settling = true
         try {
             val target = if (finish) 1f else 0f
@@ -69,7 +69,7 @@ internal fun SwipeBackContainer(
                     easing = FastOutSlowInEasing
                 )
             ) { value, _ -> progress = value }
-            if (finish) {
+            if (finish && !completed) {
                 completed = true
                 latestOnBack()
             }
@@ -80,11 +80,14 @@ internal fun SwipeBackContainer(
 
     val navigateBack: () -> Unit = {
         if (enabled && !settling && !predictiveBack && !completed) {
-            settling = true
             scope.launch { settle(finish = true) }
         }
     }
     PredictiveBackHandler(enabled = enabled && !completed) { events ->
+        if (settling) {
+            events.collect {}
+            return@PredictiveBackHandler
+        }
         predictiveBack = true
         try {
             events.collect { event -> progress = event.progress.coerceIn(0f, 1f) }
