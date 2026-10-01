@@ -4,9 +4,6 @@ package com.atuy.scomb.ui.features
 
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -76,7 +73,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
 import com.atuy.scomb.R
 import com.atuy.scomb.data.db.ClassCell
 import com.atuy.scomb.data.db.CustomLink
@@ -88,16 +84,11 @@ import kotlin.math.atan2
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.OutlinedTextFieldDefaults
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClassDetailScreen(
-    navController: NavController,
-    viewModel: ClassDetailViewModel = hiltViewModel(),
-    classId: String?,
-    dayOfWeek: Int,
-    period: Int,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    onNavigateBack: () -> Unit,
+    viewModel: ClassDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -137,7 +128,7 @@ fun ClassDetailScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.screen_class_detail)) },
                 navigationIcon = {
-                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = { navController.popBackStack() }) {
+                    IconButton(shapes = IconButtonDefaults.shapes(), onClick = { onNavigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
@@ -158,46 +149,36 @@ fun ClassDetailScreen(
         },
         contentWindowInsets = WindowInsets(0.dp)
     ) { paddingValues ->
-        with(sharedTransitionScope) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .then(
-                        if (classId != null && dayOfWeek != -1 && period != -1) {
-                            Modifier.sharedElement(
-                                sharedContentState = rememberSharedContentState(key = "class-$classId-$dayOfWeek-$period"),
-                                animatedVisibilityScope = animatedVisibilityScope
-                            )
-                        } else Modifier
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when (val state = uiState) {
+                is ClassDetailUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        LoadingIndicator()
+                    }
+                }
+
+                is ClassDetailUiState.Success -> {
+                    ClassDetailContent(
+                        classCell = state.classCell,
+                        tasks = state.tasks,
+                        customLinks = state.customLinks,
+                        isSaving = state.isSaving,
+                        onClassPageClick = { viewModel.onClassPageClick() },
+                        onUpdateUserNote = { viewModel.updateUserNote(it) },
+                        onAddLink = { title, url -> viewModel.addCustomLink(title, url) },
+                        onRemoveLink = { viewModel.removeCustomLink(it) },
+                        onTaskClick = { viewModel.onTaskClick(it) }
                     )
-            ) {
-                when (val state = uiState) {
-                    is ClassDetailUiState.Loading -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            LoadingIndicator()
-                        }
-                    }
+                }
 
-                    is ClassDetailUiState.Success -> {
-                        ClassDetailContent(
-                            classCell = state.classCell,
-                            tasks = state.tasks,
-                            customLinks = state.customLinks,
-                            isSaving = state.isSaving,
-                            onClassPageClick = { viewModel.onClassPageClick() },
-                            onUpdateUserNote = { viewModel.updateUserNote(it) },
-                            onAddLink = { title, url -> viewModel.addCustomLink(title, url) },
-                            onRemoveLink = { viewModel.removeCustomLink(it) },
-                            onTaskClick = { viewModel.onTaskClick(it) }
-                        )
-                    }
-
-                    is ClassDetailUiState.Error -> {
-                        ErrorState(
-                            message = state.message,
-                            onRetry = { viewModel.loadClassDetails() })
-                    }
+                is ClassDetailUiState.Error -> {
+                    ErrorState(
+                        message = state.message,
+                        onRetry = { viewModel.loadClassDetails() })
                 }
             }
         }

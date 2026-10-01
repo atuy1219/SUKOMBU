@@ -2,16 +2,29 @@
 
 package com.atuy.scomb.ui
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.currentStateAsState
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 import android.app.Activity
 import android.util.Log
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -48,12 +61,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -86,7 +100,7 @@ import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.WideNavigationRail
 import androidx.compose.material3.WideNavigationRailItem
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScombApp(
     mainViewModel: MainViewModel = hiltViewModel()
@@ -163,199 +177,180 @@ fun ScombApp(
     }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
-
-    val bottomBarScreens =
+    val currentRoute = navBackStackEntry?.destination?.route
+    val currentRouteState by rememberUpdatedState(currentRoute)
+    val mainScreens = remember {
         listOf(Screen.Home, Screen.Timetable, Screen.Tasks, Screen.News, Screen.Settings)
-    val shouldShowBottomBar = currentDestination?.route in bottomBarScreens.map { it.route }
-    // Tablet layouts should be selected by available logical width, not physical dpi.
-    // smallestScreenWidthDp also remains stable when the device rotates.
+    }
+    val pagerState = rememberPagerState {
+        mainScreens.size
+    }
+    val scope = rememberCoroutineScope()
     val isTablet = LocalConfiguration.current.smallestScreenWidthDp >= 600
-    val navigationEffectsSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-    val navigationSpatialSpec = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.unit.IntOffset>()
+    var syncingRoute by remember { mutableStateOf(false) }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
-        topBar = {
-            if (shouldShowBottomBar) {
-                AppTopBar(
-                    currentRoute = currentDestination?.route,
-                    timetableViewModel = timetableViewModel,
-                    newsViewModel = newsViewModel,
-                    taskListViewModel = taskListViewModel
-                )
+    LaunchedEffect(currentRoute) {
+        val page = mainScreens.indexOfFirst { it.route == currentRoute }
+        if (page >= 0 && page != pagerState.settledPage && !pagerState.isScrollInProgress) {
+            syncingRoute = true
+            try {
+                pagerState.scrollToPage(page)
+            } finally {
+                syncingRoute = false
             }
-        },
-        bottomBar = {
-            if (shouldShowBottomBar && authState is AuthState.Authenticated && !isTablet) {
-                ShortNavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    arrangement = ShortNavigationBarArrangement.EqualWeight
+        }
+    }
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage to pagerState.isScrollInProgress }
+            .drop(1)
+            .collect { (page, scrolling) ->
+                val route = mainScreens[page].route
+                if (!scrolling && !syncingRoute &&
+                    mainScreens.any { it.route == currentRouteState } && route != currentRouteState
                 ) {
-                    bottomBarScreens.forEach { screen ->
-                        ShortNavigationBarItem(
-                            icon = { Icon(screen.icon, contentDescription = null) },
-                            label = { Text(stringResource(screen.resourceId)) },
-                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            }
+    }
+    val selectPage: (Int) -> Unit = { page ->
+        scope.launch { pagerState.animateScrollToPage(page) }
+    }
+
+    // Keep the actual page and its bars underneath details throughout the back gesture.
+    Box(Modifier.fillMaxSize()) {
+        if (authState is AuthState.Authenticated) {
+            Scaffold(
+                modifier = Modifier.semantics {
+                    if (currentRoute == Screen.ClassDetail.route) hideFromAccessibility()
+                },
+                containerColor = MaterialTheme.colorScheme.surface,
+                topBar = {
+                    AppTopBar(
+                        currentRoute = mainScreens[pagerState.currentPage].route,
+                        timetableViewModel = timetableViewModel,
+                        newsViewModel = newsViewModel,
+                        taskListViewModel = taskListViewModel
+                    )
+                },
+                bottomBar = {
+                    if (!isTablet) {
+                        ShortNavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            arrangement = ShortNavigationBarArrangement.EqualWeight
+                        ) {
+                            mainScreens.forEachIndexed { index, screen ->
+                                ShortNavigationBarItem(
+                                    icon = { Icon(screen.icon, contentDescription = null) },
+                                    label = { Text(stringResource(screen.resourceId)) },
+                                    selected = pagerState.currentPage == index,
+                                    onClick = { selectPage(index) }
+                                )
                             }
-                        )
+                        }
+                    }
+                }
+            ) { innerPadding ->
+                Row(Modifier.fillMaxSize().padding(innerPadding)) {
+                    if (isTablet) {
+                        WideNavigationRail(
+                            modifier = Modifier.fillMaxHeight(),
+                            arrangement = androidx.compose.foundation.layout.Arrangement.Center
+                        ) {
+                            mainScreens.forEachIndexed { index, screen ->
+                                WideNavigationRailItem(
+                                    icon = { Icon(screen.icon, contentDescription = null) },
+                                    label = { Text(stringResource(screen.resourceId)) },
+                                    railExpanded = false,
+                                    selected = pagerState.currentPage == index,
+                                    onClick = { selectPage(index) }
+                                )
+                            }
+                        }
+                    }
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        key = { mainScreens[it].route },
+                        userScrollEnabled = currentRoute in mainScreens.map { it.route }
+                    ) { page ->
+                        when (mainScreens[page]) {
+                            Screen.Home -> AdaptiveRouteContainer(isTablet, 1200.dp) {
+                                HomeScreen(navController = navController, paddingValues = innerPadding)
+                            }
+                            Screen.Timetable -> AdaptiveRouteContainer(isTablet, 1400.dp) {
+                                TimetableScreen(navController, timetableViewModel)
+                            }
+                            Screen.Tasks -> AdaptiveRouteContainer(isTablet, 900.dp) {
+                                TaskListScreen(viewModel = taskListViewModel)
+                            }
+                            Screen.News -> AdaptiveRouteContainer(isTablet, 900.dp) {
+                                NewsScreen(newsViewModel)
+                            }
+                            Screen.Settings -> AdaptiveRouteContainer(isTablet, 900.dp) {
+                                SettingsScreen(navController = navController)
+                            }
+                            else -> Unit
+                        }
                     }
                 }
             }
         }
-    ) { innerPadding ->
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            if (isTablet && shouldShowBottomBar && authState is AuthState.Authenticated) {
-                WideNavigationRail(
-                    modifier = Modifier.fillMaxHeight(),
-                    arrangement = androidx.compose.foundation.layout.Arrangement.Center
-                ) {
-                    bottomBarScreens.forEach { screen ->
-                        WideNavigationRailItem(
-                            icon = { Icon(screen.icon, contentDescription = null) },
-                            label = { Text(stringResource(screen.resourceId)) },
-                            railExpanded = false,
-                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        )
-                    }
-                }
-            }
 
-            Box(modifier = Modifier.weight(1f)) {
-                if (authState is AuthState.Loading) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        LoadingIndicator()
-                    }
-                } else {
-                    val startDestination =
-                        if (authState is AuthState.Authenticated) Screen.Home.route else Screen.Login.route
-
-                    SharedTransitionLayout {
-                        NavHost(
-                            navController = navController,
-                            startDestination = startDestination,
-                            modifier = Modifier.fillMaxSize(),
-                    enterTransition = {
-                        val initialIndex =
-                            bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
-                        val targetIndex =
-                            bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
-
-                        if (initialIndex == -1 || targetIndex == -1) {
-                            fadeIn(animationSpec = navigationEffectsSpec)
-                        } else if (initialIndex < targetIndex) {
-                            slideInHorizontally(initialOffsetX = { it }, animationSpec = navigationSpatialSpec)
-                        } else {
-                            slideInHorizontally(
-                                initialOffsetX = { -it },
-                                animationSpec = navigationSpatialSpec
-                            )
-                        }
-                    },
-                    exitTransition = {
-                        val initialIndex =
-                            bottomBarScreens.indexOfFirst { it.route == initialState.destination.route }
-                        val targetIndex =
-                            bottomBarScreens.indexOfFirst { it.route == targetState.destination.route }
-
-                        if (initialIndex == -1 || targetIndex == -1) {
-                            fadeOut(animationSpec = navigationEffectsSpec)
-                        } else if (initialIndex < targetIndex) {
-                            slideOutHorizontally(
-                                targetOffsetX = { -it },
-                                animationSpec = navigationSpatialSpec
-                            )
-                        } else {
-                            slideOutHorizontally(targetOffsetX = { it }, animationSpec = navigationSpatialSpec)
-                        }
-                    }
-                        ) {
-                    composable(Screen.Login.route) {
+        if (authState is AuthState.Loading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator() }
+        } else {
+            val startDestination =
+                if (authState is AuthState.Authenticated) Screen.Home.route else Screen.Login.route
+            NavHost(
+                navController = navController,
+                startDestination = startDestination,
+                modifier = Modifier.fillMaxSize(),
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None }
+            ) {
+                composable(Screen.Login.route) {
+                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
                         AdaptiveRouteContainer(isTablet, 520.dp) { LoginScreen() }
                     }
-                    composable(Screen.Home.route) {
-                        AdaptiveRouteContainer(isTablet, 1200.dp) {
-                            HomeScreen(
-                                navController = navController,
-                                paddingValues = innerPadding,
-                                sharedTransitionScope = this@SharedTransitionLayout,
-                                animatedVisibilityScope = this@composable
-                            )
-                        }
-                    }
-                    composable(Screen.Tasks.route) {
-                        AdaptiveRouteContainer(isTablet, 900.dp) {
-                            TaskListScreen(viewModel = taskListViewModel)
-                        }
-                    }
-                    composable(Screen.Timetable.route) {
-                        AdaptiveRouteContainer(isTablet, 1400.dp) {
-                            TimetableScreen(
-                                navController,
-                                timetableViewModel,
-                                sharedTransitionScope = this@SharedTransitionLayout,
-                                animatedVisibilityScope = this@composable
-                            )
-                        }
-                    }
-                    composable(Screen.News.route) {
-                        AdaptiveRouteContainer(isTablet, 900.dp) { NewsScreen(newsViewModel) }
-                    }
-                    composable(Screen.Settings.route) {
-                        AdaptiveRouteContainer(isTablet, 900.dp) {
-                            SettingsScreen(navController = navController)
-                        }
-                    }
-                    composable(
-                        route = Screen.ClassDetail.route,
-                        arguments = listOf(
-                            navArgument("classId") { type = NavType.StringType },
-                            navArgument("dayOfWeek") {
-                                type = NavType.IntType
-                                defaultValue = -1
-                            },
-                            navArgument("period") {
-                                type = NavType.IntType
-                                defaultValue = -1
-                            }
+                }
+                mainScreens.forEach { screen -> composable(screen.route) {} }
+                composable(
+                    route = Screen.ClassDetail.route,
+                    arguments = listOf(
+                        navArgument("classId") { type = NavType.StringType },
+                        navArgument("dayOfWeek") { type = NavType.IntType; defaultValue = -1 },
+                        navArgument("period") { type = NavType.IntType; defaultValue = -1 }
+                    ),
+                    enterTransition = {
+                        slideInHorizontally(
+                            initialOffsetX = { it },
+                            animationSpec = tween(260, easing = FastOutSlowInEasing)
                         )
-                    ) { backStackEntry ->
-                        val classId = backStackEntry.arguments?.getString("classId")
-                        val dayOfWeek = backStackEntry.arguments?.getInt("dayOfWeek") ?: -1
-                        val period = backStackEntry.arguments?.getInt("period") ?: -1
-
-                        AdaptiveRouteContainer(isTablet, 1000.dp) {
-                            ClassDetailScreen(
-                                navController = navController,
-                                classId = classId,
-                                dayOfWeek = dayOfWeek,
-                                period = period,
-                                sharedTransitionScope = this@SharedTransitionLayout,
-                                animatedVisibilityScope = this@composable
-                            )
-                        }
-                    }
+                    },
+                    exitTransition = { ExitTransition.None },
+                    popEnterTransition = { EnterTransition.None },
+                    popExitTransition = { ExitTransition.None }
+                ) { entry ->
+                    val lifecycleState by entry.lifecycle.currentStateAsState()
+                    SwipeBackContainer(
+                        enabled = currentRoute == Screen.ClassDetail.route &&
+                            lifecycleState == Lifecycle.State.RESUMED,
+                        onBack = { navController.popBackStack() }
+                    ) { navigateBack ->
+                        Box(
+                            Modifier.fillMaxSize()
+                                .background(MaterialTheme.colorScheme.surface)
+                                .windowInsetsPadding(WindowInsets.safeDrawing)
+                        ) {
+                            AdaptiveRouteContainer(isTablet, 1000.dp) {
+                                ClassDetailScreen(onNavigateBack = navigateBack)
+                            }
                         }
                     }
                 }

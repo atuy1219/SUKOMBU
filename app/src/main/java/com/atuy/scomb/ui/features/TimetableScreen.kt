@@ -3,9 +3,6 @@
 package com.atuy.scomb.ui.features
 
 import android.util.Log
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -65,13 +62,11 @@ data class TimetableTerm(val year: Int, val term: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimetableScreen(
     navController: NavController,
-    viewModel: TimetableViewModel = hiltViewModel(),
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    viewModel: TimetableViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -118,9 +113,7 @@ fun TimetableScreen(
                                     "Clicked ClassCell with empty classId: ${classCell.name}"
                                 )
                             }
-                        },
-                        sharedTransitionScope = sharedTransitionScope,
-                        animatedVisibilityScope = animatedVisibilityScope
+                        }
                     )
                 }
             }
@@ -136,7 +129,6 @@ fun TimetableScreen(
 }
 
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun TimetableGrid(
     timetable: List<List<ClassCell?>>,
@@ -144,9 +136,7 @@ fun TimetableGrid(
     undoneTaskClassIds: Set<String>,
     displayWeekDays: Set<Int>,
     periodCount: Int,
-    onClassClick: (ClassCell) -> Unit,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    onClassClick: (ClassCell) -> Unit
 ) {
     val allWeekDays = listOf(
         stringResource(R.string.day_mon),
@@ -260,9 +250,7 @@ fun TimetableGrid(
                                     if (classCell != null) {
                                         onClassClick(classCell)
                                     }
-                                },
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope
+                                }
                             )
                         }
                     }
@@ -289,9 +277,7 @@ fun TimetableGrid(
                     OtherClassCellView(
                         classCell = classCell,
                         hasUndoneTasks = undoneTaskClassIds.contains(classCell.classId),
-                        onClick = { onClassClick(classCell) },
-                        sharedTransitionScope = sharedTransitionScope,
-                        animatedVisibilityScope = animatedVisibilityScope
+                        onClick = { onClassClick(classCell) }
                     )
                 }
             }
@@ -326,14 +312,11 @@ fun getDynamicClassColors(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ClassCellView(
     classCell: ClassCell?,
     hasUndoneTasks: Boolean,
-    onClick: () -> Unit,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    onClick: () -> Unit
 ) {
     val cellHeight = 106.dp
 
@@ -351,97 +334,14 @@ fun ClassCellView(
             defaultContentColor = MaterialTheme.colorScheme.onPrimaryContainer
         )
 
-        with(sharedTransitionScope) {
-            Box(
-                modifier = Modifier
-                    .height(cellHeight)
-                    .fillMaxWidth()
-            ) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .sharedElement(
-                            sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
-                            animatedVisibilityScope = animatedVisibilityScope
-                        )
-                        .clickable(onClick = onClick),
-                    shape = MaterialTheme.shapes.largeIncreased,
-                    colors = CardDefaults.cardColors(
-                        containerColor = containerColor,
-                        contentColor = contentColor
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp),
-                        verticalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = classCell.name ?: "",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp,
-                                lineHeight = 14.sp
-                            ),
-                            maxLines = 4,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        if (!classCell.room.isNullOrBlank()) {
-                            Text(
-                                text = classCell.room,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 9.sp
-                                ),
-                                color = contentColor.copy(alpha = 0.8f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.align(Alignment.End)
-                            )
-                        }
-                    }
-                }
-
-                if (hasUndoneTasks) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .background(MaterialTheme.colorScheme.error, CircleShape)
-                            .align(Alignment.TopEnd)
-                            .offset(x = (-6).dp, y = 6.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalSharedTransitionApi::class)
-@Composable
-fun OtherClassCellView(
-    classCell: ClassCell,
-    hasUndoneTasks: Boolean,
-    onClick: () -> Unit,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope
-) {
-    val (containerColor, contentColor) = getDynamicClassColors(
-        customColorInt = classCell.customColorInt,
-        defaultContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        defaultContentColor = Color.Unspecified
-    )
-
-    with(sharedTransitionScope) {
-        Box(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .height(cellHeight)
+                .fillMaxWidth()
+        ) {
             Card(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .sharedElement(
-                        sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
-                        animatedVisibilityScope = animatedVisibilityScope
-                    )
+                    .fillMaxSize()
                     .clickable(onClick = onClick),
                 shape = MaterialTheme.shapes.largeIncreased,
                 colors = CardDefaults.cardColors(
@@ -450,34 +350,33 @@ fun OtherClassCellView(
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
-                Row(
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .fillMaxSize()
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = classCell.name ?: "",
-                            style = MaterialTheme.typography.titleMedium,
+                    Text(
+                        text = classCell.name ?: "",
+                        style = MaterialTheme.typography.bodySmall.copy(
                             fontWeight = FontWeight.Bold,
-                        )
-                        if (!classCell.teachers.isNullOrBlank()) {
-                            Text(
-                                text = classCell.teachers,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (contentColor != Color.Unspecified) contentColor.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                            fontSize = 11.sp,
+                            lineHeight = 14.sp
+                        ),
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
                     if (!classCell.room.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = classCell.room,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (contentColor != Color.Unspecified) contentColor else MaterialTheme.colorScheme.primary
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 9.sp
+                            ),
+                            color = contentColor.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.align(Alignment.End)
                         )
                     }
                 }
@@ -489,9 +388,78 @@ fun OtherClassCellView(
                         .size(10.dp)
                         .background(MaterialTheme.colorScheme.error, CircleShape)
                         .align(Alignment.TopEnd)
-                        .offset(x = (-8).dp, y = 8.dp)
+                        .offset(x = (-6).dp, y = 6.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun OtherClassCellView(
+    classCell: ClassCell,
+    hasUndoneTasks: Boolean,
+    onClick: () -> Unit
+) {
+    val (containerColor, contentColor) = getDynamicClassColors(
+        customColorInt = classCell.customColorInt,
+        defaultContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        defaultContentColor = Color.Unspecified
+    )
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
+            shape = MaterialTheme.shapes.largeIncreased,
+            colors = CardDefaults.cardColors(
+                containerColor = containerColor,
+                contentColor = contentColor
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = classCell.name ?: "",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (!classCell.teachers.isNullOrBlank()) {
+                        Text(
+                            text = classCell.teachers,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (contentColor != Color.Unspecified) contentColor.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                if (!classCell.room.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = classCell.room,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (contentColor != Color.Unspecified) contentColor else MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        if (hasUndoneTasks) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .background(MaterialTheme.colorScheme.error, CircleShape)
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-8).dp, y = 8.dp)
+            )
         }
     }
 }
