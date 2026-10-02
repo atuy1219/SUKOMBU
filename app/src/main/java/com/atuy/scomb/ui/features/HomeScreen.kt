@@ -7,9 +7,6 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabsIntent
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -81,14 +78,12 @@ import com.atuy.scomb.util.DateUtils
 import kotlinx.coroutines.launch
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    paddingValues: PaddingValues,
     viewModel: HomeViewModel = hiltViewModel(),
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    isActive: Boolean = true
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -120,7 +115,8 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(isActive) {
+        if (!isActive) return@LaunchedEffect
         if (ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
@@ -131,7 +127,8 @@ fun HomeScreen(
     }
 
     // ViewModelからのURLオープンイベントを監視
-    LaunchedEffect(viewModel) {
+    LaunchedEffect(viewModel, isActive) {
+        if (!isActive) return@LaunchedEffect
         viewModel.openUrlEvent.collect { url ->
             openUrl(url)
         }
@@ -171,9 +168,7 @@ fun HomeScreen(
                         },
                         onTaskClick = { task -> viewModel.onTaskClick(task) },
                         onNewsClick = { url -> openUrl(url) },
-                        onLinkClick = { url -> openUrl(url) },
-                        sharedTransitionScope = sharedTransitionScope,
-                        animatedVisibilityScope = animatedVisibilityScope
+                        onLinkClick = { url -> openUrl(url) }
                     )
                 }
             }
@@ -188,7 +183,6 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Dashboard(
     homeData: HomeData,
@@ -196,9 +190,7 @@ fun Dashboard(
     onClassClick: (String, Int, Int) -> Unit, // 引数を変更
     onTaskClick: (Task) -> Unit,
     onNewsClick: (String) -> Unit,
-    onLinkClick: (String) -> Unit,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    onLinkClick: (String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -208,9 +200,7 @@ fun Dashboard(
         item {
             TodaysClassesSection(
                 classes = homeData.todaysClasses,
-                onClassClick = onClassClick,
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope
+                onClassClick = onClassClick
             )
         }
         item {
@@ -280,13 +270,10 @@ fun DashboardSection(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun TodaysClassesSection(
     classes: List<ClassCell>,
-    onClassClick: (String, Int, Int) -> Unit, // 引数を変更
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    onClassClick: (String, Int, Int) -> Unit
 ) {
     val currentPeriod = DateUtils.getCurrentPeriod()
 
@@ -297,68 +284,63 @@ fun TodaysClassesSection(
         if (classes.isEmpty()) {
             EmptyStateItem(text = stringResource(R.string.home_no_classes_today))
         } else {
-            with(sharedTransitionScope) {
-                classes.forEachIndexed { index, classCell ->
-                    val isCurrent = classCell.period == currentPeriod
+            classes.forEachIndexed { index, classCell ->
+                val isCurrent = classCell.period == currentPeriod
 
-                    // 現在の授業の場合は背景色を変えて強調する
-                    val backgroundColor = if (isCurrent)
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                    else
-                        Color.Transparent
+                // 現在の授業の場合は背景色を変えて強調する
+                val backgroundColor = if (isCurrent)
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                else
+                    Color.Transparent
 
-                    ListItem(
-                        onClick = {
-                            if (classCell.classId.isNotEmpty()) {
-                                onClassClick(classCell.classId, classCell.dayOfWeek, classCell.period)
-                            }
-                        },
-                        colors = ListItemDefaults.colors(containerColor = backgroundColor),
-                        shapes = ListItemDefaults.shapes(),
-                        supportingContent = {
-                            Text(
-                                text = classCell.room ?: stringResource(R.string.home_room_unset),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        leadingContent = {
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
-                                ),
-                                shape = MaterialTheme.shapes.small,
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "${classCell.period + 1}",
-                                        style = MaterialTheme.typography.titleMediumEmphasized
-                                    )
-                                }
-                            }
-                        },
-                        modifier = Modifier.sharedElement(
-                            sharedContentState = rememberSharedContentState(key = "class-${classCell.classId}-${classCell.dayOfWeek}-${classCell.period}"),
-                            animatedVisibilityScope = animatedVisibilityScope
-                        )
-                    ) {
+                ListItem(
+                    onClick = {
+                        if (classCell.classId.isNotEmpty()) {
+                            onClassClick(classCell.classId, classCell.dayOfWeek, classCell.period)
+                        }
+                    },
+                    colors = ListItemDefaults.colors(containerColor = backgroundColor),
+                    shapes = ListItemDefaults.shapes(),
+                    supportingContent = {
                         Text(
-                            text = classCell.name ?: "",
-                            style = if (isCurrent) MaterialTheme.typography.bodyLargeEmphasized else MaterialTheme.typography.bodyLarge,
-                            maxLines = 1,
-                            color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            text = classCell.room ?: stringResource(R.string.home_room_unset),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                    if (index < classes.size - 1) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                    }
+                    },
+                    leadingContent = {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            shape = MaterialTheme.shapes.small,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${classCell.period + 1}",
+                                    style = MaterialTheme.typography.titleMediumEmphasized
+                                )
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                ) {
+                    Text(
+                        text = classCell.name ?: "",
+                        style = if (isCurrent) MaterialTheme.typography.bodyLargeEmphasized else MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (index < classes.size - 1) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
                 }
             }
         }
