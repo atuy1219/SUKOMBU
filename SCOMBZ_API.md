@@ -1,6 +1,8 @@
 # ScombZ Mobile API仕様
 
-この文書は、SUKOMBUが扱うScombZ Mobile APIの非公式仕様です。サーバー側の変更により、予告なく利用できなくなる可能性があります。
+この文書は、ScombZ Mobile APIの非公式リファレンスです。SUKOMBUで未使用の通信も含め、公式AndroidアプリScombApp 3.8.0（versionCode 93）の静的解析で確認した内容を記録します。解析対象・再確認の手順・関連Web通信・モデル一覧は[調査記録](docs/SCOMBAPP_3_8_0.md)を参照してください。
+
+大学が正式に公開・サポートするAPI仕様ではありません。アプリ内で確認できるAPIとサーバー側の全APIは同一ではなく、サーバーの必須条件・権限・現在の動作は未検証です。JSON例は説明用であり、実際の利用者のレスポンスではありません。サーバー側の変更により、予告なく利用できなくなる可能性があります。
 
 認証情報、Bearerトークン、セッションID、OTKEY、FCMトークンをログやIssueへ投稿しないでください。
 
@@ -23,24 +25,27 @@ SUKOMBUではHTTP 401をセッション失効として扱い、保存済み認�
 
 ## エンドポイント一覧
 
-| Method | Path | SUKOMBU | 用途 |
-| --- | --- | --- | --- |
-| POST | `/login` | 実装済み | ログインとBearerトークン取得 |
-| POST | `/reg_fcm` | 実装済み | FCMトークン登録 |
-| 未確定 | `/unreg_fcm` | 未実装 | FCMトークン登録解除 |
-| POST | `/sessionid` | 定義済み | ScombZセッションID送信 |
-| GET | `/otkey` | 実装済み | Web画面用OTKEY取得 |
-| GET | `/timetable/{yearMonth}` | 実装済み | 時間割取得 |
-| POST | `/timetable/{yearMonth}` | 実装済み | 授業メモ・色などの更新 |
-| GET | `/home/{yearMonth}` | 定義済み | ホーム情報取得 |
-| GET | `/task/{yearMonth}` | 実装済み | 課題・テスト・アンケート取得 |
-| GET | `/news` | 実装済み | お知らせ取得 |
-| POST | `/attend` | 未実装 | 出席登録 |
-| 未確定 | `/attend/{suffix}` | 未実装 | 登下校・打刻履歴取得 |
+| Method | Path | SUKOMBU | 用途 | 3.8.0での根拠 |
+| --- | --- | --- | --- | --- |
+| POST | `/login` | 実装済み | ログインとBearerトークン取得 | `LoginAPI.login` → `API.post` |
+| POST | `/reg_fcm` | 実装済み | FCMトークン登録 | `RegFcmApi.registerFCM` → `API.post` |
+| POST | `/unreg_fcm` | 未実装 | FCMトークン登録解除 | ログアウト処理 → 共通化された`registerFCM` → `API.post` |
+| GET | `/sessionid` | 未実装 | 保存されたWebセッションID取得 | `SetSessionIdAPI.getCurrentSessionId` → `API.get` |
+| POST | `/sessionid` | 定義済み | ScombZセッションID送信 | `SetSessionIdAPI.setSessionId` → `API.post` |
+| GET | `/otkey` | 実装済み | Web画面用OTKEY取得 | `OTKeyAPI.getOTKey` → `API.get` |
+| GET | `/timetable/{yearMonth}` | 実装済み | 時間割取得 | `TimetableAPI.fetchTimetable` → `API.get` |
+| POST | `/timetable/{yearMonth}` | 実装済み | 授業メモ・色などの更新 | `TimetableAPI.updateCellInfo` → `API.post` |
+| GET | `/home/{yearMonth}` | 定義済み | ホーム情報取得 | `HomeAPI.fetchHomeInfo` → `API.get` |
+| GET | `/task/{yearMonth}` | 実装済み | 課題・テスト・アンケート取得 | `TaskAPI.fetchAllTasks` → `API.get` |
+| GET | `/news` | 実装済み | お知らせ取得 | `NewsAPI.fetchAllNews` → `API.get` |
+| POST | `/attend` | 未実装 | 出席登録 | `AttendApi.postAttend` → `API.post` |
+| GET | `/attend/{classId}` | 未実装 | 授業の出席履歴取得 | `AttendHistoryApi.getAttendHistory` → `API.get` |
 
 `yearMonth`は年度と学期を表す6桁の値です。SUKOMBUでは前期を`YYYY01`、後期を`YYYY02`として扱います。
 
-`/unreg_fcm`と`/attend/{suffix}`は、HTTPメソッド、パス末尾、完全なリクエスト形式が未確定です。
+Mobile APIは13操作を通信処理で確認しました。教室推定APIの2操作は別ホストを使用します。
+
+レスポンス表のnull許容性はクライアントモデル・処理の許容範囲であり、サーバー契約ではありません。公式アプリで確認した追加キーとSUKOMBUのモデルを区別して記載します。
 
 ## POST `/login`
 
@@ -67,6 +72,7 @@ SUKOMBUではHTTP 401をセッション失効として扱い、保存済み認�
   "gakubu": "...",
   "gakka": "...",
   "token": "...",
+  "features": { "attend_test": false },
   "terms": [
     {
       "year": 2026,
@@ -83,6 +89,8 @@ SUKOMBUではHTTP 401をセッション失効として扱い、保存済み認�
 | `gakubu` | string | yes | 学部情報 |
 | `gakka` | string | yes | 学科情報 |
 | `token` | string | yes | Bearerトークン |
+| `features` | object | yes | 公式アプリで読み取る機能フラグ。SUKOMBU未使用 |
+| `features.attend_test` | boolean相当 | yes | 公式アプリの出席機能フラグ。サーバー上の意味・権限は未検証 |
 | `terms` | array | yes | 学期情報 |
 | `terms[].year` | integer | no | 年度 |
 | `terms[].start` | string[] | no | 学期開始情報。各要素の意味は未確定 |
@@ -105,15 +113,39 @@ SUKOMBUではHTTP 401をセッション失効として扱い、保存済み認�
 }
 ```
 
-## `/unreg_fcm`
+## POST `/unreg_fcm`
 
-FCMトークン登録解除用のエンドポイントです。
+FCMトークン登録を解除します。ログアウト画面の処理は、`UnregFcmApi`のURLを設定した後にFCM登録と共通化された関数を呼び、Bearerトークンを付けてPOSTします。
 
 ```text
 https://smob.sic.shibaura-it.ac.jp/smob/api/unreg_fcm
 ```
 
-正確なHTTPメソッドとRequest bodyは未確定です。`/reg_fcm`と同じ`fcm_token`を使用する可能性があります。
+### Request
+
+```json
+{
+  "fcm_token": "firebase-registration-token"
+}
+```
+
+登録と同じJSONキーを使用することを、ログアウト画面の呼び出し元まで追って確認しました。公式アプリはレスポンスを専用モデルへ変換しないため、成功時の全キーは未確定です。解除後にFirebase側の`deleteToken`も呼びます。
+
+`UnregFcmApi`の復元クラスだけを見るとメソッドが空に見えますが、このビルドには`dedup_instructions`によるコード共有があります。空のクラス出力だけで「通信処理がない」と判断しないでください。[調査記録](docs/SCOMBAPP_3_8_0.md)に呼び出し命令の位置を記載しています。
+
+## GET `/sessionid`
+
+Bearerトークンを付けて、保存済みのScombZ WebセッションIDを取得します。公式アプリは`SetSessionIdAPI.getCurrentSessionId`でレスポンスの`sessionid`を読み、nullまたは空文字ならセッションなしとして扱います。
+
+### Response（読み取るキー）
+
+```json
+{
+  "sessionid": "session-id"
+}
+```
+
+`sessionid`はstring / nullです。`status`の有無など、読み取らないキーは未確定です。SUKOMBUにはこのGETメソッドの定義がありません。
 
 ## POST `/sessionid`
 
@@ -169,7 +201,8 @@ ScombZ WebセッションのIDをAPIへ送信します。現行SUKOMBUではRetr
     "note": "Base64 encoded value",
     "customColor": "4294967295",
     "otkey": "...",
-    "basyoCD": "...",
+    "basyo_cd": "...",
+    "customizedNumberOfCredit": 2,
     "quarter": "..."
   }
 ]
@@ -191,10 +224,13 @@ ScombZ WebセッションのIDをAPIへ送信します。現行SUKOMBUではRetr
 | `note` | string | yes | Base64文字列 |
 | `customColor` | string | yes | 符号なし整数を文字列化した色値 |
 | `otkey` | string | yes | Web画面用キー |
-| `basyoCD` | string | yes | 教室・場所コード |
+| `basyo_cd` | string | yes | 公式アプリが読み取る教室・場所コード。`basyoCD`ではない |
+| `customizedNumberOfCredit` | integer相当 | yes | 公式アプリが読み取るユーザー設定の単位数 |
 | `quarter` | string / integer | yes | クォーター情報。型は未確定 |
 
 一部の追加項目は、すべてのレスポンスで返るとは限りません。
+
+`otkey`はSUKOMBUのモデルにある項目です。3.8.0の`ClassCell.fromJson`では読み取りを確認していません。
 
 ## POST `/timetable/{yearMonth}`
 
@@ -231,7 +267,9 @@ ScombZ WebセッションのIDをAPIへ送信します。現行SUKOMBUではRetr
   "home_task": [],
   "home_news": [],
   "home_dakoku": {
-    "dakoku_time": "...",
+    "dakoku_time": "09:00",
+    "dakoku_kbn": "...",
+    "dakoku_loc": "...",
     "dakoku_campus": "..."
   }
 }
@@ -244,9 +282,13 @@ ScombZ WebセッションのIDをAPIへ送信します。現行SUKOMBUではRetr
 | `home_news` | array | yes | お知らせ |
 | `home_dakoku` | object | yes | 登下校・打刻情報 |
 | `home_dakoku.dakoku_time` | string | yes | 打刻時刻 |
+| `home_dakoku.dakoku_kbn` | string | yes | 打刻区分。コード値の意味は未確定 |
+| `home_dakoku.dakoku_loc` | string | yes | 打刻場所 |
 | `home_dakoku.dakoku_campus` | string | yes | 打刻キャンパス |
 
 空データ時の表現と各配列要素の完全なnull許容性は未確定です。
+
+公式アプリの`DakokuInfoModel.fromJson`は`dakoku_time`を`HH:mm`で解析します。授業の出席履歴APIとは別の情報です。
 
 ## GET `/task/{yearMonth}`
 
@@ -292,6 +334,8 @@ ScombZ WebセッションのIDをAPIへ送信します。現行SUKOMBUではRetr
 
 日時文字列は通常`yyyy-MM-dd HH:mm:ss`形式です。
 
+`url`・`relatedClassId`・`otkey`はSUKOMBUのモデルにある項目です。3.8.0の`Task.fromJson`では、これらをレスポンスから読み取る処理を確認していません。Web画面のURLは授業ID・課題IDなどから組み立てています。
+
 ## GET `/news`
 
 ### Response
@@ -307,12 +351,12 @@ ScombZ WebセッションのIDをAPIへ送信します。現行SUKOMBUではRetr
     "tags": "LMS,重要",
     "tagsEnglish": "LMS,Important",
     "readTime": null,
-    "objectName1": null,
-    "objectName2": null,
-    "objectName3": null,
-    "fileName1": null,
-    "fileName2": null,
-    "fileName3": null,
+    "obj_name1": null,
+    "obj_name2": null,
+    "obj_name3": null,
+    "file_name1": null,
+    "file_name2": null,
+    "file_name3": null,
     "otkey": "..."
   }
 ]
@@ -328,44 +372,69 @@ ScombZ WebセッションのIDをAPIへ送信します。現行SUKOMBUではRetr
 | `tags` | string | yes | カンマ区切り。先頭要素をカテゴリとして使用 |
 | `tagsEnglish` | string | yes | タグの英語表記 |
 | `readTime` | string | yes | 空またはnullなら未読 |
-| `objectName1`～`objectName3` | string | yes | 添付オブジェクト名 |
-| `fileName1`～`fileName3` | string | yes | 添付ファイル名 |
+| `obj_name1`～`obj_name3` | string | yes | 公式アプリが読み取る添付オブジェクト名 |
+| `file_name1`～`file_name3` | string | yes | 公式アプリが読み取る添付ファイル名 |
 | `otkey` | string | yes | Web画面用キー |
 
 SUKOMBUの既読・未読切替はローカルRoomデータベース上で行います。現在のAPI定義には、既読状態を書き戻すエンドポイントはありません。
 
 `archived`と`starred`はローカル状態として扱われる可能性があります。
 
+SUKOMBUの現行モデルは添付キーを`objectName1`～`objectName3`、`fileName1`～`fileName3`と定義しています。上表は公式アプリがJSONから読むキーの記録であり、モデルの互換性修正はこの資料更新に含めません。`otkey`もSUKOMBUモデルの項目で、公式アプリの`NewsItemModel.fromJson`では読み取りを確認していません。
+
 ## POST `/attend`
 
-出席登録を行います。
+出席登録を行います。公式アプリの`AttendApi.postAttend`で、次の5キーをJSON化して`API.post`へ渡す処理を確認しました。以前の資料の`classId`・`seatId`・`roomId`という例はこのビルドのリクエストと一致しません。
 
 ### Request
 
 ```json
 {
-  "classId": "class-id",
-  "seatId": "seat-id",
-  "roomId": "room-id"
+  "student_id": "USER_ID",
+  "class_id": "class-id",
+  "seat_id": "seat-id",
+  "time": "2026-10-03T09:00:00",
+  "hash": "verification-hash"
 }
 ```
 
-正確なキー表記、必須条件、追加項目、Response形式は未確定です。
+| Field | 公式アプリの送信値 | 説明 |
+| --- | --- | --- |
+| `student_id` | string / null | 学生ID |
+| `class_id` | string / null | 授業ID |
+| `seat_id` | string / null | 座席ID |
+| `time` | string | `yyyy-MM-dd'T'HH:mm:ss`で時刻を文字列化 |
+| `hash` | string | 検証用ハッシュ。MD5処理を確認 |
 
-## `/attend/{suffix}`
+ハッシュ生成では`ssHHmmMMddyyyy`形式の時刻、学生ID、追加の文字列を結合し、UTF-8化した後にMD5を計算しています。追加文字列の運用仕様やサーバー側の検証条件は未確認です。正しい出席登録を再現できることを保証するサンプルではありません。
 
-登下校・打刻履歴を取得します。パス末尾の値と完全なレスポンス構造は未確定です。
+公式アプリは返り値を個別のレスポンスモデルへ変換しません。サーバーの必須条件・成功レスポンスの全キーは未確定です。
 
-関連する項目：
+## GET `/attend/{classId}`
 
-```text
-dakoku_kbn
-dakoku_loc
-dakoku_time
-dakoku_campus
+授業の出席履歴を取得します。`AttendHistoryApi`は`/attend/`に引数を結合し、出席確認画面は選択した`ClassCell.classId`を渡しています。以前の資料の「登下校・打刻履歴」という説明を訂正します。登下校情報は`GET /home/{yearMonth}`の`home_dakoku`と区別してください。
+
+### Response（公式アプリが読み取る構造）
+
+```json
+[
+  {
+    "dakoku_kbn": "...",
+    "date": "2026-10-03 09:00:00",
+    "class_id": "class-id",
+    "kyositu_cd": "room-code"
+  }
+]
 ```
 
-コード値の意味は未確定です。
+| Field | 公式モデルの入力型 | 説明 |
+| --- | --- | --- |
+| `dakoku_kbn` | string | 打刻・出席区分。コードの意味は未確定 |
+| `date` | string | 出席日時 |
+| `class_id` | string | 授業ID |
+| `kyositu_cd` | string | 教室コード |
+
+公式アプリは`date`を`yyyy-MM-dd hh:mm:ss`（小文字の`hh`）で解析しています。API側の時刻仕様が12時間表記であると断定する根拠ではありません。
 
 ## 教室推定API
 
@@ -375,25 +444,81 @@ ScombZ Mobile APIとは別に、次のBase URLを使用します。
 https://smobatnd.sic.shibaura-it.ac.jp/api
 ```
 
-| Method | Path | 用途 |
-| --- | --- | --- |
-| GET | `/estimate_room/auth` | 教室推定用チャレンジ取得 |
-| POST | `/estimate_room/estimate` | ビーコン情報などから教室を推定 |
+| Method | Path | SUKOMBU | 用途 |
+| --- | --- | --- | --- |
+| GET | `/estimate_room/auth` | 未実装 | 教室推定用チャレンジ取得 |
+| POST | `/estimate_room/estimate` | 未実装 | ビーコン情報などから教室を推定 |
 
-関連するJSONキー：
+公式アプリの生成OpenAPIクライアント`DefaultApi`がメソッドとURLを渡す処理で確認しました。Mobile APIのBearer認証を、この別ホストにもそのまま適用できるとは限りません。認証の全条件は未確認です。
 
-```text
-challenge
-challenge_key
-challenge_response
-gimbal_rssis
-seat_id
-scomb_auth_otkey
-estimated_rooms
-estimated_room_from_class
+### GET `/estimate_room/auth`
+
+クライアントは次のレスポンスモデルを読みます。
+
+```json
+{
+  "challenge": "...",
+  "challenge_key": "..."
+}
 ```
 
-チャレンジ計算方式と配列要素の完全な構造は未確定です。
+両キーともstringです。チャレンジ応答の生成に必要な追加条件は未確定です。
+
+### POST `/estimate_room/estimate`
+
+Requestのシリアライズ処理で確認したキーは`challenge_response`・`challenge_key`・`room`・`roomEnglish`・`gimbalRssis`です。`gimbal_rssis`ではありません。`seat_id`はこのリクエストモデルにはありません。
+
+```json
+{
+  "challenge_response": "...",
+  "challenge_key": "...",
+  "room": "教室名",
+  "roomEnglish": "Room name",
+  "gimbalRssis": [
+    {
+      "gimbal_id": "beacon-id",
+      "rssis": ["-60", "-63"],
+      "time": "...",
+      "batteryLevel": 90
+    }
+  ]
+}
+```
+
+| Field | 公式クライアントのモデル | 備考 |
+| --- | --- | --- |
+| `challenge_response` | string | チャレンジ応答 |
+| `challenge_key` | string | authレスポンスのキー |
+| `room` / `roomEnglish` | string / null | 教室情報。モデルはnullの場合にキーを省略 |
+| `gimbalRssis` | `BeaconSighting[]` | ビーコン観測情報 |
+| `gimbalRssis[].gimbal_id` | string | ビーコンID |
+| `gimbalRssis[].rssis` | string[] | 公式モデルの型。サーバーが数値配列も受理するかは未検証 |
+| `gimbalRssis[].time` | string | 観測時刻。文字列形式は未確定 |
+| `gimbalRssis[].batteryLevel` | integer / null | モデルはnullの場合にキーを省略 |
+
+Responseの読み取りキー：
+
+```json
+{
+  "scomb_auth_otkey": "...",
+  "timestamp": "...",
+  "estimated_room_from_class": null,
+  "estimated_rooms": []
+}
+```
+
+| Field | 公式クライアントのモデル |
+| --- | --- |
+| `scomb_auth_otkey` | string / null |
+| `timestamp` | string / null |
+| `estimated_room_from_class` | `Room` / null |
+| `estimated_rooms` | `Room[]` |
+
+`Room`は`basyo_cd`・`basyo_name_ja`・`basyo_name_en`・`basyo_tiku`・`basyo_last_upd`・`floor_id`を読み取ります。これらはクライアントモデルの構造であり、サーバーが常にすべて返すことを保証しません。
+
+## シラバス検索
+
+公式アプリには、Mobile APIとは別の`GET http://syllabus.sic.shibaura-it.ac.jp/namazu/namazu.cgi`もあります。`ajaxmode=true`を付けていますが、返り値はHTMLとして解析しています。URLテンプレートと引数は[調査記録のシラバス検索](docs/SCOMBAPP_3_8_0.md#シラバス検索)を参照してください。
 
 ## Base64処理
 

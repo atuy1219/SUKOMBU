@@ -44,6 +44,13 @@ alt="Get it on Obtainium" align="center" height="54" /></a>
 
 自動更新してくれる<a href="https://github.com/ImranR98/Obtainium">Obtanium</a>を用いてインストールすることを推奨します。
 
+## 📖 API資料
+
+- [ScombZ Mobile API仕様](SCOMBZ_API.md)：SUKOMBUで未使用のAPIも含む非公式リファレンス
+- [公式アプリ3.8.0の調査記録](docs/SCOMBAPP_3_8_0.md)：解析対象、確認根拠、関連Web通信と外部SDKの範囲
+
+アプリから確認した通信仕様の記録です。大学が公開・サポートする正式なAPI仕様ではありません。
+
 ## ⚠️ 免責事項
 
 * 本アプリは個人によって開発された**非公式**アプリです。芝浦工業大学およびScombZ、ScombApp公式とは一切関係ありません。
