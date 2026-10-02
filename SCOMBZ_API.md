@@ -29,7 +29,7 @@ SUKOMBUではHTTP 401をセッション失効として扱い、保存済み認�
 | --- | --- | --- | --- | --- |
 | POST | `/login` | 実装済み | ログインとBearerトークン取得 | `LoginAPI.login` → `API.post` |
 | POST | `/reg_fcm` | 実装済み | FCMトークン登録 | `RegFcmApi.registerFCM` → `API.post` |
-| 未確定 | `/unreg_fcm` | 未実装 | FCMトークン登録解除の候補 | URL定数と`UnregFcmApi`クラスのみ |
+| POST | `/unreg_fcm` | 未実装 | FCMトークン登録解除 | ログアウト処理 → 共通化された`registerFCM` → `API.post` |
 | GET | `/sessionid` | 未実装 | 保存されたWebセッションID取得 | `SetSessionIdAPI.getCurrentSessionId` → `API.get` |
 | POST | `/sessionid` | 定義済み | ScombZセッションID送信 | `SetSessionIdAPI.setSessionId` → `API.post` |
 | GET | `/otkey` | 実装済み | Web画面用OTKEY取得 | `OTKeyAPI.getOTKey` → `API.get` |
@@ -43,7 +43,7 @@ SUKOMBUではHTTP 401をセッション失効として扱い、保存済み認�
 
 `yearMonth`は年度と学期を表す6桁の値です。SUKOMBUでは前期を`YYYY01`、後期を`YYYY02`として扱います。
 
-Mobile APIは12操作を通信処理で確認しました。`/unreg_fcm`は別に残す未確定候補です。教室推定APIの2操作は別ホストを使用します。
+Mobile APIは13操作を通信処理で確認しました。教室推定APIの2操作は別ホストを使用します。
 
 レスポンス表のnull許容性はクライアントモデル・処理の許容範囲であり、サーバー契約ではありません。公式アプリで確認した追加キーとSUKOMBUのモデルを区別して記載します。
 
@@ -113,15 +113,25 @@ Mobile APIは12操作を通信処理で確認しました。`/unreg_fcm`は別�
 }
 ```
 
-## `/unreg_fcm`
+## POST `/unreg_fcm`
 
-FCMトークン登録解除用と考えられるURL定数です。実際に呼び出される通信処理は確認できません。
+FCMトークン登録を解除します。ログアウト画面の処理は、`UnregFcmApi`のURLを設定した後にFCM登録と共通化された関数を呼び、Bearerトークンを付けてPOSTします。
 
 ```text
 https://smob.sic.shibaura-it.ac.jp/smob/api/unreg_fcm
 ```
 
-オブジェクトプールにURL定数、復元クラス一覧に`UnregFcmApi extends API`が存在します。ただし、このビルドには登録解除メソッドの復元可能な実行コードがなく、HTTPメソッドとRequest bodyは確認できません。`/reg_fcm`から類推してPOSTや`fcm_token`と断定しません。
+### Request
+
+```json
+{
+  "fcm_token": "firebase-registration-token"
+}
+```
+
+登録と同じJSONキーを使用することを、ログアウト画面の呼び出し元まで追って確認しました。公式アプリはレスポンスを専用モデルへ変換しないため、成功時の全キーは未確定です。解除後にFirebase側の`deleteToken`も呼びます。
+
+`UnregFcmApi`の復元クラスだけを見るとメソッドが空に見えますが、このビルドには`dedup_instructions`によるコード共有があります。空のクラス出力だけで「通信処理がない」と判断しないでください。[調査記録](docs/SCOMBAPP_3_8_0.md)に呼び出し命令の位置を記載しています。
 
 ## GET `/sessionid`
 

@@ -24,16 +24,17 @@ APKや復元したアプリ全体のソースはリポジトリに含めませ�
 - サーバーが受理する全パラメーター、必須条件、権限、現在の動作は静的解析では保証できません。アプリが知らないサーバー側APIも対象外です。
 - HTTPメソッドごとに数えます。同じURLのGETとPOSTは別の操作です。
 
-Mobile APIは12操作、教室推定は2操作を実行コードで確認しました。`/unreg_fcm`はURL定数とクラスのみ確認できる未確定候補です。別途、GETによるシラバス検索と任意URLの添付ダウンロード処理があります。
+Mobile APIは13操作、教室推定は2操作を実行コードで確認しました。別途、GETによるシラバス検索と任意URLの添付ダウンロード処理があります。
 
 ## 通信処理の確認箇所
 
-アドレスは上記`libapp.so`の関数開始オフセットです。バージョンが異なるバイナリにはそのまま適用できません。
+アドレスは上記`libapp.so`の関数開始オフセットです。呼び出し命令を示す場合は表内に注記します。バージョンが異なるバイナリにはそのまま適用できません。
 
 | 操作 | 公式アプリ内の確認箇所 | オフセット |
 | --- | --- | --- |
 | POST `/login` | `LoginAPI.login` → `API.post` | `0x68f6e0` |
 | POST `/reg_fcm` | `RegFcmApi.registerFCM` → `API.post` | `0x68f4bc` |
+| POST `/unreg_fcm` | `setting_screen.dart`のログアウト処理 → 共通関数 → `API.post` | 呼び出し命令`0x69b89c`、共通関数`0x68f4bc` |
 | GET `/sessionid` | `SetSessionIdAPI.getCurrentSessionId` → `API.get` | `0x6129f4` |
 | POST `/sessionid` | `SetSessionIdAPI.setSessionId` → `API.post` | `0x6919cc` |
 | GET `/otkey` | `OTKeyAPI.getOTKey` → `API.get` | `0x612388` |
@@ -49,7 +50,9 @@ Mobile APIは12操作、教室推定は2操作を実行コードで確認しま�
 
 `API.get` / `API.post`は`package:scomb_mobile/common/api/api.dart`にあり、さらに`package:http/http.dart`のget / postを呼びます。教室推定の処理とモデルは`package:openapi/api.dart`です。Mobile APIの固定URLはオブジェクトプール、動的URLは各APIのコンストラクターで確認しています。
 
-`/unreg_fcm`はオブジェクトプールの`pp+0x1c338`にURLがありますが、`UnregFcmApi`に対応する登録解除メソッドは復元出力にありません。存在・可用性・HTTPメソッド・bodyをこのURLから断定しません。
+`/unreg_fcm`はオブジェクトプールの`pp+0x1c338`にURLがあります。`setting_screen.dart`ではURLを読む`0x69b864`、`UnregFcmApi`を生成する`0x69b878`、そのURLを`field_7`へ格納する`0x69b884`を経て、`0x69b89c`で`0x68f4bc`を呼びます。共通関数は`fcm_token`をJSON化して`API.post`へ渡します。
+
+このビルドには`dedup_instructions`によるコード共有があり、共通関数が復元出力では`RegFcmApi.registerFCM`と表示されます。`UnregFcmApi`のクラス出力にメソッドがなくても、通信がないとは限りません。URL定数と呼び出し先だけでなく、APIインスタンスへ設定したURLまで照合する必要があります。
 
 ## 関連Web通信
 
